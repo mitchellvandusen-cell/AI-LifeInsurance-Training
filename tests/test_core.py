@@ -288,6 +288,153 @@ def test_resistance_calculation():
     print("[PASS] Resistance calculation with preframe penalties")
 
 
+def test_root_cause_mapping():
+    """Verify objections carry the correct root cause."""
+    from src.models.state import ObjectionRootCause
+    sm = StateManager()
+    sm.advance_phase(ConversationPhase.PRESENTATION)
+
+    # Think about it = MONEY
+    obj = sm.raise_objection(
+        ObjectionCategory.THINK_ABOUT_IT,
+        ObjectionType.SMOKESCREEN,
+        "I need to think about it.",
+        root_cause=ObjectionRootCause.MONEY,
+    )
+    assert obj.root_cause == ObjectionRootCause.MONEY
+
+    # Spouse = DECISION_MAKER
+    obj2 = sm.raise_objection(
+        ObjectionCategory.SPOUSE_APPROVAL,
+        ObjectionType.SMOKESCREEN,
+        "Let me talk to my wife.",
+        root_cause=ObjectionRootCause.DECISION_MAKER,
+    )
+    assert obj2.root_cause == ObjectionRootCause.DECISION_MAKER
+    print("[PASS] Root cause mapping")
+
+
+def test_objection_handle_analysis():
+    """Test the new analyze_agent_handle method."""
+    from src.engine.objection_engine import ObjectionEngine
+    oe = ObjectionEngine()
+    sm = StateManager()
+
+    # Test isolation detection
+    analysis = oe.analyze_agent_handle(sm, "Is it just the budget, or is there something else holding you back?")
+    assert analysis["attempted_isolation"] is True
+    assert analysis["asked_followup"] is True
+
+    # Test hypothetical + decision maker probe (the spouse scenario)
+    analysis2 = oe.analyze_agent_handle(
+        sm,
+        "What do you think she'd like about this? Let's say she had a really bad day "
+        "and she comes home and says NO — what would you do?"
+    )
+    assert analysis2["hypothetical_test"] is True
+    assert analysis2["decision_maker_probe"] is True
+
+    # Test empathy detection
+    analysis3 = oe.analyze_agent_handle(sm, "I totally understand, that makes sense.")
+    assert analysis3["empathy_shown"] is True
+
+    # Test pressure detection
+    analysis4 = oe.analyze_agent_handle(sm, "Let's get this done right now, lock in the rate today!")
+    assert analysis4["pressure_detected"] is True
+
+    # Test consequence redirect
+    analysis5 = oe.analyze_agent_handle(sm, "Remember you said if something happened your wife would lose the house. What happens if we wait?")
+    assert analysis5["redirect_to_consequence"] is True
+
+    print("[PASS] Objection handle analysis")
+
+
+def test_sales_style_detection():
+    """Test sales style detection from conversation patterns."""
+    sm = StateManager()
+
+    # Simulate consultative style (many questions, empathy, consequence)
+    for i in range(5):
+        sm.increment_turn()
+        sm.log_message("agent", "Tell me, what's important to you about this coverage? Why is that important? What happens if you don't get it?")
+        sm.log_message("client", "Yeah, I want to protect my family.")
+
+    style = sm.detect_sales_style()
+    assert style.value in ("consultative", "hybrid", "unknown")
+    print(f"[PASS] Sales style detection (detected: {style.value})")
+
+
+def test_deal_killers_in_report():
+    """Test that the grading report includes deal-killer analysis."""
+    from src.engine.grading_engine import GradingEngine
+    ge = GradingEngine()
+    sm = StateManager()
+    ct = ComplianceTracker()
+
+    sm.set_flag("consequence_established", True)
+    sm.set_flag("preframed_banking", True)
+    report = ge.grade(sm, ct)
+
+    assert "deal_killers" in report
+    assert "money" in report["deal_killers"]
+    assert "time" in report["deal_killers"]
+    assert "decision_maker" in report["deal_killers"]
+    assert "sales_style" in report
+    assert "pros" in report["sales_style"]
+    assert "consequences" in report["sales_style"]
+    print(f"[PASS] Deal killers in report (style: {report['sales_style']['detected']})")
+
+
+def test_spouse_objection_lock_via_hypothetical():
+    """Test the full spouse objection lifecycle via hypothetical testing."""
+    from src.core.orchestrator import ConversationOrchestrator
+    orch = ConversationOrchestrator(seed=42)
+
+    # Agent does intro
+    orch.process_agent_turn("Hi, is this John? My name is Mike, I'm calling about the form you filled out.")
+    orch.process_client_response("Yeah, what's this about?")
+
+    # Manually set up a spouse objection
+    from src.models.state import ObjectionRootCause
+    obj = orch.sm.raise_objection(
+        ObjectionCategory.SPOUSE_APPROVAL,
+        ObjectionType.SMOKESCREEN,
+        "I need to talk to my wife first.",
+        root_cause=ObjectionRootCause.DECISION_MAKER,
+    )
+    orch._pending_objection = obj
+
+    # Agent handles with hypothetical
+    result = orch.handle_objection_response(
+        "I totally understand. What do you think she'd like about this? "
+        "Let's say she had a really bad day, comes home, you bring it up, "
+        "she says NO — what would you do?"
+    )
+    assert result["hypothetical_tested"] is True
+    assert result["decision_maker_probed"] is True
+    # With default trust at 50 and hypothetical + DM probe, should resolve
+    assert result.get("resolved", False) is True
+    assert orch.sm.is_objection_locked(ObjectionCategory.SPOUSE_APPROVAL)
+    print("[PASS] Spouse objection locked via hypothetical testing")
+
+
+def test_grading_pros_and_consequences():
+    """Verify report categories include pros and consequences."""
+    from src.engine.grading_engine import GradingEngine
+    ge = GradingEngine()
+    sm = StateManager()
+    ct = ComplianceTracker()
+
+    # Don't set consequence — should generate consequences in report
+    report = ge.grade(sm, ct)
+    rapport_grade = report["categories"]["rapport_discovery"]
+    assert "pros" in rapport_grade
+    assert "consequences" in rapport_grade
+    # Missing consequence should produce consequences
+    assert len(rapport_grade["consequences"]) > 0
+    print("[PASS] Grading pros and consequences present")
+
+
 if __name__ == "__main__":
     test_state_manager_initialization()
     test_score_adjustments()
@@ -302,6 +449,12 @@ if __name__ == "__main__":
     test_grading_engine()
     test_full_conversation_flow()
     test_resistance_calculation()
+    test_root_cause_mapping()
+    test_objection_handle_analysis()
+    test_sales_style_detection()
+    test_deal_killers_in_report()
+    test_spouse_objection_lock_via_hypothetical()
+    test_grading_pros_and_consequences()
     print("\n" + "=" * 60)
     print("  ALL TESTS PASSED")
     print("=" * 60)

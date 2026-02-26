@@ -13,9 +13,11 @@ from src.models.state import (
     HiddenState,
     ObjectionCategory,
     ObjectionRecord,
+    ObjectionRootCause,
     ObjectionType,
     PHASE_ORDER,
     PhaseFlags,
+    SalesStyle,
     ScoreSnapshot,
     SessionState,
     TonalitySnapshot,
@@ -156,6 +158,7 @@ class StateManager:
         category: ObjectionCategory,
         objection_type: ObjectionType,
         text: str,
+        root_cause: ObjectionRootCause = ObjectionRootCause.MONEY,
     ) -> ObjectionRecord | None:
         """Raise an objection if the category is not locked."""
         if category in self.state.locked_objections:
@@ -163,6 +166,7 @@ class StateManager:
         record = ObjectionRecord(
             category=category,
             objection_type=objection_type,
+            root_cause=root_cause,
             text=text,
             raised_at_phase=self.state.current_phase,
             raised_at_turn=self.state.turn_number,
@@ -286,6 +290,84 @@ class StateManager:
             }
         )
 
+    # ── Sales Style Detection ──────────────────────────────────────
+
+    def detect_sales_style(self) -> SalesStyle:
+        """
+        Analyze conversation patterns to detect the agent's selling style.
+        This informs how the AI client reacts and how the report card grades.
+
+        Indicators:
+        - HIGH_ENERGY: High pressure phrases, fast pace, urgency language, high authority
+          attempts, fewer pauses, direct closes early
+        - CONSULTATIVE: Many questions, discovery-focused, consequence-driven, patient,
+          methodical progression through phases
+        - RELATIONSHIP: Lots of rapport, humor, personal stories, slower pace, high trust
+          but may lack structure
+        - HYBRID: Mix of approaches
+        """
+        log = self.state.conversation_log
+        agent_msgs = [m for m in log if m["role"] == "agent"]
+        if len(agent_msgs) < 3:
+            return SalesStyle.UNKNOWN
+
+        all_text = " ".join(m["content"].lower() for m in agent_msgs)
+        total_words = len(all_text.split())
+
+        # Count indicators
+        question_count = all_text.count("?")
+        questions_per_100_words = (question_count / max(total_words, 1)) * 100
+
+        pressure_words = sum(1 for w in [
+            "right now", "today", "lock in", "let's do this", "pull the trigger",
+            "let's get this done", "don't wait", "can't afford to wait",
+            "before it's too late", "act now", "move forward",
+        ] if w in all_text)
+
+        empathy_words = sum(1 for w in [
+            "i understand", "i hear you", "tell me more", "help me understand",
+            "what's important to you", "that makes sense", "i appreciate",
+        ] if w in all_text)
+
+        rapport_words = sum(1 for w in [
+            "haha", "that's funny", "i love that", "no kidding",
+            "me too", "same here", "i get it", "been there",
+        ] if w in all_text)
+
+        consequence_words = sum(1 for w in [
+            "what happens if", "god forbid", "if something happened",
+            "left behind", "without coverage", "imagine",
+        ] if w in all_text)
+
+        # Score each style
+        high_energy_score = pressure_words * 3 + (1 if questions_per_100_words < 2 else 0) * 2
+        consultative_score = (
+            (1 if questions_per_100_words > 3 else 0) * 3
+            + empathy_words * 2
+            + consequence_words * 3
+        )
+        relationship_score = rapport_words * 3 + empathy_words * 1
+
+        scores = {
+            SalesStyle.HIGH_ENERGY: high_energy_score,
+            SalesStyle.CONSULTATIVE: consultative_score,
+            SalesStyle.RELATIONSHIP: relationship_score,
+        }
+
+        max_style = max(scores, key=scores.get)
+        max_score = scores[max_style]
+
+        # If two styles are close, it's a hybrid
+        sorted_scores = sorted(scores.values(), reverse=True)
+        if len(sorted_scores) >= 2 and sorted_scores[0] - sorted_scores[1] <= 2:
+            self.state.detected_sales_style = SalesStyle.HYBRID
+        elif max_score == 0:
+            self.state.detected_sales_style = SalesStyle.UNKNOWN
+        else:
+            self.state.detected_sales_style = max_style
+
+        return self.state.detected_sales_style
+
     # ── State Export ────────────────────────────────────────────────
 
     def get_state_for_prompt(self) -> dict:
@@ -305,6 +387,7 @@ class StateManager:
             "locked_objections": [o.value for o in self.state.locked_objections],
             "compliance_ratio": round(self.get_compliance_ratio(), 2),
             "consecutive_client_questions": self.state.consecutive_client_questions,
+            "detected_sales_style": self.state.detected_sales_style.value,
         }
 
     def export_full_state(self) -> dict:

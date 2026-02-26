@@ -136,18 +136,36 @@ class ConversationOrchestrator:
         if phase_analysis["advancing_questions"] > 0:
             self.sm.adjust_engagement(3, "engaging questions")
 
-        # ── Step 3: Objection Evaluation ────────────────────────
+        # ── Step 3: Check if agent is handling a pending objection ──
+        if self._pending_objection and not self._pending_objection.locked:
+            handle_analysis = self.objection_engine.analyze_agent_handle(self.sm, agent_text)
+            accept, conviction, reason = self.objection_engine.should_accept_handle(
+                self.sm, handle_analysis
+            )
+            if accept and conviction > 50:
+                obj = self._pending_objection
+                self.sm.isolate_objection(obj.category)
+                self.sm.confirm_isolation(obj.category)
+                if handle_analysis.get("hypothetical_test"):
+                    obj.hypothetical_tested = True
+                if handle_analysis.get("decision_maker_probe"):
+                    obj.decision_maker_confirmed = True
+                self.sm.resolve_objection(obj.category, conviction)
+                self._pending_objection = None
+
+        # ── Step 4: Objection Evaluation ────────────────────────
         objection = self.objection_engine.evaluate(self.sm)
         objection_data = None
         if objection:
             objection_data = {
                 "category": objection.category.value,
                 "type": objection.objection_type.value,
+                "root_cause": objection.root_cause.value,
                 "text": objection.text,
             }
             self._pending_objection = objection
 
-        # ── Step 4: Build System Prompt ─────────────────────────
+        # ── Step 5: Build System Prompt ─────────────────────────
         state_vars = self.sm.get_state_for_prompt()
         objection_context = self.objection_engine.get_objection_context(self.sm)
 
@@ -163,6 +181,7 @@ class ConversationOrchestrator:
             system_prompt += "\n\n" + build_objection_injection(
                 objection_data["text"],
                 objection_data["type"],
+                objection_data.get("root_cause", "money"),
             )
 
         # Frame control test injection
@@ -216,41 +235,51 @@ class ConversationOrchestrator:
     def handle_objection_response(self, agent_handle: str) -> dict:
         """
         Process the agent's response to an objection.
-        Determines if the handle was accepted.
+        Uses the new analyze_agent_handle method for detailed analysis.
         """
         if not self._pending_objection:
             return {"no_pending_objection": True}
 
         obj = self._pending_objection
+        handle_analysis = self.objection_engine.analyze_agent_handle(self.sm, agent_handle)
+        accept, conviction, reason = self.objection_engine.should_accept_handle(
+            self.sm, handle_analysis
+        )
 
-        # Check if agent isolated
-        isolation_patterns = [
-            "is it just", "is that the only", "besides that",
-            "other than", "if we could", "is there anything else",
-            "apart from", "what else", "or is there something",
-        ]
-        isolated = any(p in agent_handle.lower() for p in isolation_patterns)
+        result = {
+            "handle_analysis": handle_analysis,
+            "conviction": conviction,
+            "reason": reason,
+        }
 
-        if isolated:
+        if handle_analysis["attempted_isolation"]:
             self.sm.isolate_objection(obj.category)
-            result = {"isolated": True, "awaiting_confirmation": True}
-        else:
-            # Agent tried to handle without isolating
-            accept, conviction = self.objection_engine.should_accept_handle(self.sm, agent_handle)
-            if accept and conviction > 60:
-                # Strong handle even without isolation
-                self.sm.confirm_isolation(obj.category)
-                self.sm.resolve_objection(obj.category, conviction)
-                result = {"resolved": True, "conviction": conviction}
-            else:
-                result = {
-                    "not_isolated": True,
-                    "handle_weak": True,
-                    "suggestion": "Agent should isolate the objection first before handling.",
-                }
-                self.sm.adjust_authority(-5, "handled without isolating")
+            result["isolated"] = True
 
-        self._pending_objection = None
+        if handle_analysis["hypothetical_test"]:
+            obj.hypothetical_tested = True
+            result["hypothetical_tested"] = True
+
+        if handle_analysis["decision_maker_probe"]:
+            obj.decision_maker_confirmed = True
+            result["decision_maker_probed"] = True
+
+        if accept and conviction > 50:
+            # A hypothetical test or isolation attempt both count as isolation
+            self.sm.isolate_objection(obj.category)
+            self.sm.confirm_isolation(obj.category)
+            self.sm.resolve_objection(obj.category, conviction)
+            result["resolved"] = True
+            result["locked"] = True
+            self._pending_objection = None
+        elif not handle_analysis["attempted_isolation"] and not handle_analysis["hypothetical_test"]:
+            result["handle_weak"] = True
+            result["suggestion"] = (
+                "Isolate first: 'Is it just [X], or is there something else?' "
+                "For spouse objections: test with a hypothetical scenario."
+            )
+            self.sm.adjust_authority(-5, "handled without isolating")
+
         return result
 
     def confirm_objection_isolation(self, category_str: str) -> dict:

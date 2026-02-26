@@ -53,14 +53,40 @@ class ObjectionCategory(str, Enum):
     THINK_ABOUT_IT = "think_about_it"
 
 
+class ObjectionRootCause(str, Enum):
+    """Every smokescreen/objection traces back to one of three deal-killers."""
+    MONEY = "money"
+    TIME = "time"
+    DECISION_MAKER = "decision_maker"
+
+
+class SalesStyle(str, Enum):
+    """Detected selling approach of the agent."""
+    CONSULTATIVE = "consultative"
+    HIGH_ENERGY = "high_energy"
+    RELATIONSHIP = "relationship"
+    HYBRID = "hybrid"
+    UNKNOWN = "unknown"
+
+
 class ObjectionRecord(BaseModel):
-    """Tracks a single objection through its lifecycle."""
+    """Tracks a single objection through its full lifecycle.
+
+    Isolation in this system means: the agent tests whether removing
+    this specific concern would result in the client moving forward.
+    For spouse/third-party objections, this means establishing that the
+    client IS the decision maker — if the spouse said no, would they
+    do it anyway? If yes, the objection is void and gets locked.
+    """
     category: ObjectionCategory
     objection_type: ObjectionType
+    root_cause: ObjectionRootCause = ObjectionRootCause.MONEY
     text: str
     raised_at_phase: ConversationPhase
     isolated: bool = False
     isolation_confirmed: bool = False
+    decision_maker_confirmed: bool = False
+    hypothetical_tested: bool = False
     locked: bool = False
     resolved: bool = False
     resolution_conviction_score: float = 0.0
@@ -188,6 +214,7 @@ class SessionState(BaseModel):
     hidden: HiddenState = Field(default_factory=HiddenState)
     flags: PhaseFlags = Field(default_factory=PhaseFlags)
     persona: ClientPersona = Field(default_factory=ClientPersona)
+    detected_sales_style: SalesStyle = SalesStyle.UNKNOWN
     objections_raised: list[ObjectionRecord] = Field(default_factory=list)
     locked_objections: list[ObjectionCategory] = Field(default_factory=list)
     compliance_checks_attempted: int = 0

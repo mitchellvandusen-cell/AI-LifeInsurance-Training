@@ -156,7 +156,7 @@ def _state_injection(state_vars: dict) -> str:
 def _objection_rules(state_vars: dict, objection_context: dict) -> str:
     active = objection_context.get("active_objections", [])
     active_text = "None active" if not active else "\n".join(
-        f"  - {o['category']}: \"{o['text']}\" (isolated: {o['isolated']}, confirmed: {o['isolation_confirmed']})"
+        f"  - {o['category']}: \"{o['text']}\" (root cause: {o.get('root_cause', 'unknown')}, isolated: {o['isolated']})"
         for o in active
     )
 
@@ -165,40 +165,66 @@ def _objection_rules(state_vars: dict, objection_context: dict) -> str:
 **Your current active objections:**
 {active_text}
 
+**The Three Deal-Killers (root causes of ALL objections):**
+Every objection traces back to one of three things:
+1. **MONEY** — "I need to think about it" = thinking about spending the money.
+   "Let me talk to my spouse" = talking about spending the money. Budget, banking info,
+   SSN resistance — all money at the root.
+2. **TIME** — No urgency. If the agent never established what happens if you DON'T act,
+   there's no reason to act NOW. "I'll call you back next month" = no urgency.
+3. **DECISION MAKER** — Is the person on the phone the one who says yes? If they need
+   permission from someone else, the sale can't close.
+
 **Rules for objections:**
 
-1. **NEVER raise a random objection.** Objections only fire when specific conditions are met.
-   The system will tell you when to object and what to say. If no objection instruction is
-   provided, DO NOT object — just respond naturally.
+1. **NEVER raise a random objection.** The system tells you when and what. If no
+   instruction is given, respond naturally.
 
 2. **Smokescreen vs True Objection vs Condition:**
-   - SMOKESCREEN: You say "I need to think about it" but the REAL issue is you don't see
-     the consequence of not acting (because the agent never established it). Smokescreens
-     deflect. They are NOT the real problem.
-   - TRUE OBJECTION: A genuine concern — budget, trust, product fit. These CAN be resolved
-     if the agent isolates them properly and provides a logical answer.
-   - CONDITION: Something NEITHER you NOR the agent can control. Example: you were just
-     diagnosed terminal. This is NOT an objection. It CANNOT be overcome. You should never
-     present a condition as an objection in training.
+   - SMOKESCREEN: Surface deflection. "Think about it" when the real issue is no urgency.
+     "Talk to spouse" when the real issue is the client can't decide alone (or it's about money).
+   - TRUE OBJECTION: Genuine concern. Budget, trust, product fit. CAN be resolved.
+   - CONDITION: NEITHER party can control. Terminal diagnosis, bankruptcy, not a citizen.
+     This is NOT an objection. It CANNOT be overcome. NEVER train it as one.
 
-3. **Isolation Protocol:** If the agent asks "Is it JUST the [budget/timing/etc.], or is there
-   something else?" — you must answer honestly based on the state. If trust is above 55 and
-   it truly IS just that one thing, confirm it. If trust is below 55, hedge: "Well, that's
-   part of it..."
+3. **Isolation Protocol (CRITICAL — how real isolation works):**
+   Isolation is NOT just "is it just this?" Isolation means the agent tests whether
+   removing this concern would result in you moving forward.
 
-4. **Locked Objections:** Once an objection is resolved and locked, you CANNOT bring it back
-   up. It's done. Move on. The agent earned it.
+   **For spouse/third-party objections, here's exactly how it works:**
+   - Agent asks: "What do you think she would like about this?" (gets you selling it
+     to yourself — you're now thinking about positives)
+   - Agent then pushes: "Let's say you go to talk to her and she says no."
+   - You probably won't answer directly, so agent pushes harder:
+     "Yeah but let's say she had a really bad day, everyone was mean to her, she comes
+     home, she's in the kitchen, you bring it up and she says NO! What are you going to do?"
+   - If your Trust > 50 and the agent did this right, you answer: "Well... I'd probably
+     just do it anyway. It's the right thing."
+   - **The MOMENT you say "I'd do it anyway" — that objection is DEAD. It makes ZERO
+     sense for you to EVER bring up needing to talk to your spouse again.** You just told
+     the agent it doesn't matter what they think. LOCK IT. Never revisit.
 
-5. **Accepting a Handle:** If the agent isolates, you confirm, and then they give a logical
-   resolution with Trust > 55 and Authority > 50 — you accept and move forward. If scores
-   are lower, you push back more: "I hear you, but I'm still not sure..."
+   **For money objections:**
+   - Agent isolates: "Is it just the budget, or is there something else?"
+   - If truly just money and trust > 50, confirm: "Yeah, it's just the money."
+   - Agent solves with value reframe: "For $47/month — less than your cable bill —
+     your wife never loses the house." If trust > 55, accept it.
+   - LOCKED. Don't bring up money again.
 
-6. **Banking/SSN Objections:** You ONLY object to banking or SSN if the agent DID NOT
-   preframe them earlier. If they did preframe, you give the info without issue.
+   **For time objections:**
+   - Agent redirects to consequence: "I understand. But remember you said if something
+     happened and nothing was in place, [their consequence]. Can you control when
+     something happens?"
+   - If consequence was properly established, this lands. Accept and move forward.
 
-7. **"Think about it" / "Talk to spouse":** You ONLY use these if the agent failed to
-   establish the consequence of inaction. If they established it well, these objections
-   don't fire — you feel the urgency."""
+4. **Locked Objections:** Once resolved and locked, you CANNOT re-raise it. Period.
+   The agent earned it. It's done.
+
+5. **Banking/SSN:** You ONLY object if NOT preframed. If preframed, give it freely.
+
+6. **90% of objections are about money.** "Think about it" = thinking about the money.
+   "Talk to someone" = talking about the money. The agent needs to solve the value
+   equation, not just overcome the words."""
 
 
 def _phase_specific_rules(state_vars: dict) -> str:
@@ -431,22 +457,52 @@ def _absolute_rules() -> str:
     in your response — weave it into conversation, don't just blurt it out."""
 
 
-def build_objection_injection(objection_text: str, objection_type: str) -> str:
+def build_objection_injection(
+    objection_text: str, objection_type: str, root_cause: str = "money"
+) -> str:
     """
     Injected into the system prompt when the ObjectionEngine triggers.
     Tells the AI client EXACTLY what objection to raise and how.
     """
     if objection_type == "smokescreen":
+        cause_note = ""
+        if root_cause == "decision_maker":
+            cause_note = """
+**SPOUSE/THIRD PARTY OBJECTION BEHAVIOR:**
+You're deferring to your spouse/kids because you're not comfortable deciding alone.
+But here's the truth: if the agent tests you with hypotheticals ("What would she like
+about this?" ... "What if she said no?") and pushes you to answer honestly, you'd
+admit you'd do it anyway. Because YOU filled out the form. YOU want the coverage.
+You're using your spouse as a shield.
+
+- If agent asks "What do you think she'd like?" → answer positively (because you DO
+  see the value, you're just scared to decide)
+- If agent hypotheticals "What if she said no?" → resist at first, dodge the question
+- If agent pushes harder with a vivid scenario → eventually admit "I'd probably do
+  it anyway" IF trust > 50
+- The MOMENT you say "I'd do it anyway" — this objection is VOID. You can NEVER
+  bring up needing to talk to your spouse again. Lock it."""
+        elif root_cause == "money":
+            cause_note = """
+**MONEY ROOT CAUSE:** You're really thinking about spending the money. "Think about it"
+means "think about whether I want to spend this." If the agent redirects you to the
+consequence ("Remember, you said if something happened your wife would lose the house"),
+that reframes the value equation. Accept it if trust > 55."""
+        elif root_cause == "time":
+            cause_note = """
+**TIME ROOT CAUSE:** No urgency. You don't feel like NOW matters because the agent
+never made you feel what happens if you wait. If they redirect to the consequence
+you stated earlier, accept the urgency. If they just pressure you ("do it now!"),
+resist harder."""
+
         return f"""
 ## ⚡ OBJECTION TRIGGER — RAISE THIS NOW
 
 You must naturally work the following objection into your next response:
 "{objection_text}"
 
-This is a SMOKESCREEN. You don't fully realize it, but the real issue is that
-the agent hasn't established enough consequence or urgency. If the agent isolates
-this and digs deeper, you'll eventually reveal the real concern — but only if they
-ask the right follow-up questions.
+This is a SMOKESCREEN. The surface words aren't the real issue. The root cause is: {root_cause.upper()}.
+{cause_note}
 
 Deliver this naturally. Don't just blurt it out. Work it into the conversation flow.
 """
@@ -457,10 +513,16 @@ Deliver this naturally. Don't just blurt it out. Work it into the conversation f
 You must naturally work the following objection into your next response:
 "{objection_text}"
 
-This is a TRUE OBJECTION. You genuinely feel this way. If the agent isolates it
-("Is it just this, or something else?") — answer honestly based on your trust score.
-If they provide a logical resolution and you trust them, accept it and move forward.
-If not, push back with "I hear you, but..."
+This is a TRUE OBJECTION (root cause: {root_cause}). You genuinely feel this way.
+
+**Isolation response rules:**
+- If the agent asks "Is it just this, or something else?" and trust > 50 → confirm honestly.
+  If trust < 50 → hedge: "Well, that's part of it..."
+- If the agent tests with a hypothetical ("If we solved this, would you move forward?")
+  and trust > 55 → confirm: "Yeah, if we can work that out, I'm good."
+- If the agent solves it logically and trust + authority are above 50 → accept and move on.
+  Say something like "Okay, that makes sense" or "Alright, I can work with that."
+- Once you accept, this objection is LOCKED. Never bring it up again.
 
 Deliver this naturally. Don't just blurt it out.
 """
