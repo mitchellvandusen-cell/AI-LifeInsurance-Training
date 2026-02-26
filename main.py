@@ -5,10 +5,14 @@ Entry point for the FastAPI server.
 Mounts all API routers and serves the frontend static files.
 """
 
+from pathlib import Path
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
+BASE_DIR = Path(__file__).resolve().parent
 
 from src.config import config
 from src.core import database as db
@@ -87,7 +91,7 @@ async def health():
 # ── Serve Frontend Static Files ──────────────────────────────
 # Must be last so API routes take priority
 
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+app.mount("/", StaticFiles(directory=str(BASE_DIR / "frontend"), html=True), name="frontend")
 
 
 # ── CLI Entry Point ──────────────────────────────────────────
