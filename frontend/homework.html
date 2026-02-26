@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homework — InsuranceGrokBot Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        .hw-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem; }
+        .hw-assessment {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        .hw-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .hw-assignment {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .hw-assignment h3 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+        .hw-assignment .desc { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.5; }
+        .hw-priority {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-left: 0.5rem;
+        }
+        .priority-1 { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+        .priority-2 { background: rgba(234,179,8,0.15); color: var(--accent-amber); }
+        .priority-3 { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+        .hw-drill {
+            font-size: 0.85rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .hw-drill:last-child { border-bottom: none; }
+        .hw-criteria {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 0.3rem 0;
+        }
+        .hw-module-link {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent-blue);
+            color: white;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .strength-weakness-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; }
+        @media (max-width: 768px) { .strength-weakness-grid { grid-template-columns:1fr; } }
+        .sw-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+        }
+        .sw-card h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+        .sw-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sw-item:last-child { border-bottom: none; }
+        .empty-hw {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+        .empty-hw h3 { margin-bottom: 0.5rem; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><a href="/dashboard" class="nav-logo" style="font-size:1.1rem;"><span class="logo-accent">GrokBot</span> Training</a></div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="/training" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>Start Training</a>
+            <a href="/analytics" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Analytics</a>
+            <a href="/report-cards" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Report Cards</a>
+            <a href="/homework" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Homework</a>
+            <a href="/recordings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Recordings</a>
+            <a href="/billing" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
+            <a href="/settings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="hw-header">
+            <div>
+                <h1>Homework</h1>
+                <p style="color:var(--text-muted);font-size:0.9rem;">AI-analyzed skill gaps with targeted practice assignments</p>
+            </div>
+            <button class="btn btn-primary" id="generateBtn" onclick="generateHomework()">
+                Generate New Analysis
+            </button>
+        </div>
+
+        <div id="homeworkContent">
+            <div class="empty-hw">
+                <h3>Loading...</h3>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        if (!requireAuth()) {}
+
+        async function loadHomework() {
+            try {
+                const data = await API.getLatestHomework();
+                renderHomework(data);
+            } catch (err) {
+                document.getElementById('homeworkContent').innerHTML = `
+                    <div class="empty-hw">
+                        <h3>No homework yet</h3>
+                        <p>Complete at least 5 training sessions, then click "Generate New Analysis" to get your personalized homework.</p>
+                        <a href="/training" class="btn btn-primary" style="margin-top:1rem;">Start Training</a>
+                    </div>
+                `;
+            }
+        }
+
+        async function generateHomework() {
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+
+            try {
+                const data = await API.generateHomework();
+                renderHomework(data);
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate New Analysis';
+            }
+        }
+
+        function renderHomework(data) {
+            const container = document.getElementById('homeworkContent');
+
+            if (data.status === 'none' || data.status === 'insufficient_data') {
+                container.innerHTML = `
+                    <div class="empty-hw">
+                        <h3>${data.status === 'insufficient_data' ? 'Need More Data' : 'No Homework Yet'}</h3>
+                        <p>${data.message}</p>
+                        ${data.sessions_completed !== undefined ? `<p style="margin-top:0.5rem;">Sessions completed: ${data.sessions_completed} / ${data.sessions_needed} needed</p>` : ''}
+                        <a href="/training" class="btn btn-primary" style="margin-top:1rem;">Start Training</a>
+                    </div>
+                `;
+                return;
+            }
+
+            // Overall assessment
+            let html = `
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">
+                    Based on ${data.sessions_analyzed} sessions${data.created_at ? ' | Generated ' + formatDate(data.created_at) : ''}
+                </div>
+                <div class="hw-assessment">${data.overall_assessment}</div>
+            `;
+
+            // Strengths & Weaknesses
+            const strengths = typeof data.strengths === 'string' ? JSON.parse(data.strengths) : (data.strengths || []);
+            const weaknesses = typeof data.weaknesses === 'string' ? JSON.parse(data.weaknesses) : (data.weaknesses || []);
+
+            if (strengths.length || weaknesses.length) {
+                html += '<div class="strength-weakness-grid">';
+                if (strengths.length) {
+                    html += `<div class="sw-card"><h4>Consistent Strengths</h4>`;
+                    html += strengths.map(s => `
+                        <div class="sw-item">
+                            <span>${s.category.replace(/_/g, ' ')}</span>
+                            <span style="color:var(--accent-green);font-weight:700;">${s.avg_score}</span>
+                        </div>
+                    `).join('');
+                    html += '</div>';
+                }
+                if (weaknesses.length) {
+                    html += `<div class="sw-card"><h4>Areas Needing Work</h4>`;
+                    html += weaknesses.map(w => `
+                        <div class="sw-item">
+                            <span>${w.category.replace(/_/g, ' ')}</span>
+                            <span style="color:var(--accent-red);font-weight:700;">${w.avg_score}</span>
+                        </div>
+                    `).join('');
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+
+            // Assignments
+            const assignments = typeof data.assignments === 'string' ? JSON.parse(data.assignments) : (data.assignments || []);
+
+            if (assignments.length) {
+                html += '<div class="hw-section-title">Your Assignments</div>';
+                html += assignments.map((a, i) => {
+                    const priorityClass = a.priority <= 1 ? 'priority-1' : a.priority <= 2 ? 'priority-2' : 'priority-3';
+                    const priorityLabel = a.priority <= 1 ? 'Critical' : a.priority <= 2 ? 'Important' : 'Recommended';
+
+                    return `
+                        <div class="hw-assignment">
+                            <h3>${a.title} <span class="hw-priority ${priorityClass}">${priorityLabel}</span></h3>
+                            <div class="desc">${a.description}</div>
+
+                            <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;">DRILLS</div>
+                            ${(a.drills || []).map(d => `<div class="hw-drill">${d}</div>`).join('')}
+
+                            <div style="font-size:0.8rem;font-weight:700;color:var(--text-muted);margin:1rem 0 0.5rem;">SUCCESS CRITERIA</div>
+                            ${(a.success_criteria || []).map(c => `<div class="hw-criteria">${c}</div>`).join('')}
+
+                            <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-muted);">
+                                Recommended: ${a.sessions_to_complete} practice sessions
+                            </div>
+                            <a href="/training" class="hw-module-link">Start ${a.module_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} Module</a>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            container.innerHTML = html;
+        }
+
+        loadHomework();
+    </script>
+</body>
+</html>

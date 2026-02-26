@@ -74,6 +74,7 @@ from src.api.billing import router as billing_router      # noqa: E402
 from src.api.analytics import router as analytics_router  # noqa: E402
 from src.api.recordings import router as recordings_router  # noqa: E402
 from src.api.settings import router as settings_router    # noqa: E402
+from src.api.modules import router as modules_router      # noqa: E402
 
 app.include_router(auth_router)
 app.include_router(sessions_router)
@@ -81,6 +82,7 @@ app.include_router(billing_router)
 app.include_router(analytics_router)
 app.include_router(recordings_router)
 app.include_router(settings_router)
+app.include_router(modules_router)
 
 
 # ── Legacy API Routes (original text-based training) ─────────

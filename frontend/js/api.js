@@ -156,6 +156,39 @@ const API = {
     async updateSettings(settings) {
         return this.put('/api/settings', settings);
     },
+
+    // ── Training Modules ────────────────────────────────────
+    async getModules() {
+        return this.get('/api/modules/');
+    },
+
+    async startModuleSession(moduleKey, voice = null) {
+        const body = { module_key: moduleKey };
+        if (voice) body.voice = voice;
+        return this.post('/api/modules/start', body);
+    },
+
+    async endModuleSession(sessionId) {
+        return this.post(`/api/modules/${sessionId}/end`);
+    },
+
+    async getModuleHistory(moduleKey = null) {
+        const q = moduleKey ? `?module_key=${moduleKey}` : '';
+        return this.get(`/api/modules/history${q}`);
+    },
+
+    // ── Homework ────────────────────────────────────────────
+    async generateHomework() {
+        return this.post('/api/modules/homework/generate');
+    },
+
+    async getLatestHomework() {
+        return this.get('/api/modules/homework/latest');
+    },
+
+    async getHomeworkHistory() {
+        return this.get('/api/modules/homework/history');
+    },
 };
 
 // ── Toast notifications ────────────────────────────────────

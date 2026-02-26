@@ -242,6 +242,40 @@ async def init_schema():
             updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
+        -- MODULE TRAINING SESSIONS
+        CREATE TABLE IF NOT EXISTS module_sessions (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            module_key      TEXT NOT NULL,
+            status          TEXT NOT NULL DEFAULT 'active'
+                            CHECK (status IN ('active','completed','cancelled')),
+            started_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            ended_at        TIMESTAMPTZ,
+            duration_seconds INTEGER DEFAULT 0,
+            billed_minutes  INTEGER DEFAULT 0,
+            cost_cents      INTEGER DEFAULT 0,
+            billed_from     TEXT DEFAULT 'subscription',
+            session_state   JSONB DEFAULT '{}'::jsonb,
+            voice_name      TEXT DEFAULT 'Sal',
+            feedback_summary TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_mod_sessions_user   ON module_sessions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_mod_sessions_module ON module_sessions(module_key);
+
+        -- HOMEWORK REPORTS
+        CREATE TABLE IF NOT EXISTS homework_reports (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            sessions_analyzed INTEGER NOT NULL,
+            overall_assessment TEXT NOT NULL,
+            strengths       JSONB NOT NULL DEFAULT '[]'::jsonb,
+            weaknesses      JSONB NOT NULL DEFAULT '[]'::jsonb,
+            assignments     JSONB NOT NULL DEFAULT '[]'::jsonb,
+            focus_order     JSONB NOT NULL DEFAULT '[]'::jsonb,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_homework_user ON homework_reports(user_id);
+
         -- UPDATED_AT TRIGGER FUNCTION
         CREATE OR REPLACE FUNCTION update_updated_at()
         RETURNS TRIGGER AS $$
@@ -795,3 +829,100 @@ async def update_settings(user_id: str, settings: dict):
         f"UPDATE training_settings SET {set_clauses} WHERE user_id = $1",
         *values,
     )
+
+
+# ══════════════════════════════════════════════════════════════
+# MODULE SESSION OPERATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def create_module_session(
+    user_id: str, module_key: str, voice_name: str = "Sal"
+) -> dict:
+    pool = await get_pool()
+    session_id = uuid.uuid4()
+    await pool.execute(
+        """INSERT INTO module_sessions (id, user_id, module_key, voice_name)
+           VALUES ($1, $2, $3, $4)""",
+        session_id, uuid.UUID(user_id), module_key, voice_name,
+    )
+    return {"id": str(session_id), "module_key": module_key, "status": "active"}
+
+
+async def end_module_session(
+    session_id: str, duration_seconds: int, session_state: dict,
+    feedback_summary: str, billed_minutes: int = 0, cost_cents: int = 0,
+    billed_from: str = "subscription",
+) -> dict:
+    pool = await get_pool()
+    await pool.execute(
+        """UPDATE module_sessions
+           SET status = 'completed', ended_at = NOW(),
+               duration_seconds = $1, session_state = $2,
+               feedback_summary = $3, billed_minutes = $4,
+               cost_cents = $5, billed_from = $6
+           WHERE id = $7""",
+        duration_seconds, json.dumps(session_state), feedback_summary,
+        billed_minutes, cost_cents, billed_from, uuid.UUID(session_id),
+    )
+    return {"id": session_id, "status": "completed"}
+
+
+async def get_module_sessions(user_id: str, module_key: str = None, limit: int = 50) -> list[dict]:
+    pool = await get_pool()
+    if module_key:
+        rows = await pool.fetch(
+            """SELECT * FROM module_sessions
+               WHERE user_id = $1 AND module_key = $2
+               ORDER BY started_at DESC LIMIT $3""",
+            uuid.UUID(user_id), module_key, limit,
+        )
+    else:
+        rows = await pool.fetch(
+            """SELECT * FROM module_sessions
+               WHERE user_id = $1
+               ORDER BY started_at DESC LIMIT $2""",
+            uuid.UUID(user_id), limit,
+        )
+    return [_row_to_dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════
+# HOMEWORK OPERATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def save_homework_report(user_id: str, report: dict) -> str:
+    pool = await get_pool()
+    report_id = uuid.uuid4()
+    await pool.execute(
+        """INSERT INTO homework_reports
+           (id, user_id, sessions_analyzed, overall_assessment,
+            strengths, weaknesses, assignments, focus_order)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)""",
+        report_id, uuid.UUID(user_id),
+        report["sessions_analyzed"], report["overall_assessment"],
+        json.dumps(report["strengths"]), json.dumps(report["weaknesses"]),
+        json.dumps(report["assignments"]), json.dumps(report["focus_order"]),
+    )
+    return str(report_id)
+
+
+async def get_latest_homework(user_id: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """SELECT * FROM homework_reports
+           WHERE user_id = $1
+           ORDER BY created_at DESC LIMIT 1""",
+        uuid.UUID(user_id),
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def get_homework_history(user_id: str, limit: int = 10) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT * FROM homework_reports
+           WHERE user_id = $1
+           ORDER BY created_at DESC LIMIT $2""",
+        uuid.UUID(user_id), limit,
+    )
+    return [_row_to_dict(r) for r in rows]

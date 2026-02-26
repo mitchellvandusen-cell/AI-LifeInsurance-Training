@@ -294,8 +294,30 @@
     </style>
 </head>
 <body>
-    <!-- ═══ Screen 1: Pre-Session (client card) ═══ -->
-    <div class="screen screen-pre active" id="screenPre">
+    <!-- ═══ Screen 0: Training Mode Selection ═══ -->
+    <div class="screen screen-pre active" id="screenSelect">
+        <div class="client-card" style="width:560px;">
+            <div class="card-header">
+                <h2>Choose Training Mode</h2>
+                <p>Full call simulation or focused skill modules</p>
+            </div>
+
+            <div onclick="selectMode('full')" style="cursor:pointer;padding:1.25rem;margin-bottom:1rem;border:2px solid var(--accent-blue);border-radius:var(--radius-md);transition:all .2s;background:rgba(79,70,229,0.05);">
+                <h3 style="font-size:1.1rem;margin-bottom:0.25rem;">Full Call Simulation</h3>
+                <p style="font-size:0.85rem;color:var(--text-muted);">Complete end-to-end call with an AI prospect. All skills graded.</p>
+            </div>
+
+            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin:1.25rem 0 0.75rem;">Focused Skill Modules</div>
+            <div id="moduleList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+
+            <div style="margin-top:1.5rem;text-align:center;">
+                <a href="/homework" style="font-size:0.85rem;color:var(--accent-cyan);">View Homework Assignments</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Screen 1: Pre-Session (client card — Full Sim) ═══ -->
+    <div class="screen screen-pre" id="screenPre">
         <div class="client-card" id="clientCard">
             <div class="card-header">
                 <h2>Your Lead</h2>
@@ -305,6 +327,22 @@
             <div class="start-btn-container">
                 <button class="btn btn-primary btn-lg" id="startBtn" onclick="startTraining()">
                     Start Training
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Screen 1b: Module Pre-Session ═══ -->
+    <div class="screen screen-pre" id="screenModulePre">
+        <div class="client-card" style="width:480px;">
+            <div class="card-header">
+                <h2 id="moduleTitle">Module Training</h2>
+                <p id="moduleDesc">Focused skill practice with your AI coach</p>
+            </div>
+            <div id="moduleSkills" style="margin-bottom:1rem;"></div>
+            <div class="start-btn-container">
+                <button class="btn btn-primary btn-lg" id="moduleStartBtn" onclick="startModuleTraining()">
+                    Start Module
                 </button>
             </div>
         </div>
@@ -367,6 +405,8 @@
         let mediaStream = null;
         let timerInterval = null;
         let startTime = null;
+        let trainingMode = null;  // 'full' or module key
+        let selectedModule = null;
 
         // ── Screen switching ─────────────────────────────────
         function showScreen(id) {
@@ -374,8 +414,49 @@
             document.getElementById(id).classList.add('active');
         }
 
-        // ── Initialize: fetch session & render client card ───
-        async function init() {
+        // ── Load available modules ───────────────────────────
+        async function loadModules() {
+            try {
+                const data = await API.getModules();
+                const list = document.getElementById('moduleList');
+                list.innerHTML = (data.modules || []).map(m => `
+                    <div onclick="selectMode('${m.key}')" style="cursor:pointer;padding:1rem;border:1px solid var(--border-color);border-radius:var(--radius-sm);transition:all .2s;">
+                        <h4 style="font-size:0.95rem;margin-bottom:0.15rem;">${m.name}</h4>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">${m.description}</p>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load modules:', err);
+            }
+        }
+
+        // ── Mode selection ───────────────────────────────────
+        async function selectMode(mode) {
+            trainingMode = mode;
+            if (mode === 'full') {
+                showScreen('screenPre');
+                initFullSim();
+            } else {
+                selectedModule = mode;
+                try {
+                    const data = await API.getModules();
+                    const mod = (data.modules || []).find(m => m.key === mode);
+                    if (mod) {
+                        document.getElementById('moduleTitle').textContent = mod.name;
+                        document.getElementById('moduleDesc').textContent = mod.description;
+                        document.getElementById('moduleSkills').innerHTML = (mod.skills_taught || []).map(s =>
+                            `<div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">${s}</div>`
+                        ).join('');
+                    }
+                    showScreen('screenModulePre');
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            }
+        }
+
+        // ── Initialize Full Sim ──────────────────────────────
+        async function initFullSim() {
             try {
                 const data = await API.startSession(null);
                 sessionId = data.session_id;
@@ -387,6 +468,64 @@
                     setTimeout(() => window.location.href = '/billing', 2000);
                 }
             }
+        }
+
+        // ── Start Module Training ────────────────────────────
+        async function startModuleTraining() {
+            const btn = document.getElementById('moduleStartBtn');
+            btn.disabled = true;
+            btn.textContent = 'Starting...';
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const data = await API.startModuleSession(selectedModule);
+                sessionId = data.session_id;
+
+                // Reuse session screen but without sidebar client card
+                document.getElementById('sidebarFields').innerHTML = `
+                    <div style="padding:1rem;text-align:center;">
+                        <h3 style="font-size:1rem;margin-bottom:0.5rem;">${data.module.name}</h3>
+                        <p style="font-size:0.8rem;color:var(--text-muted);">${data.module.description}</p>
+                    </div>
+                `;
+                document.getElementById('sessionClientName').textContent = data.module.name;
+                document.getElementById('stateBar').style.display = 'none'; // No state bar for modules
+
+                showScreen('screenSession');
+                connectModuleVoice();
+
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+                initVisualizer();
+            } catch (err) {
+                showToast(err.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Start Module';
+            }
+        }
+
+        // ── Connect Module Voice WS ──────────────────────────
+        function connectModuleVoice() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${location.host}/api/modules/ws/${sessionId}`;
+
+            ws = new WebSocket(wsUrl);
+            ws.onopen = () => {
+                ws.send(JSON.stringify({ type: 'auth', token: API.token }));
+            };
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                handleVoiceEvent(data);
+            };
+            ws.onclose = () => {
+                document.getElementById('voiceStatus').textContent = 'Disconnected';
+            };
+            ws.onerror = () => showToast('Voice connection error', 'error');
+        }
+
+        // ── Initialize: load mode selection ──────────────────
+        async function init() {
+            loadModules();
         }
 
         function renderClientCard(info) {
@@ -722,12 +861,37 @@
             // Get report
             document.getElementById('voiceStatus').textContent = 'Generating report...';
             try {
-                const result = await API.endSession(sessionId);
-                showReport(result);
+                if (trainingMode === 'full') {
+                    const result = await API.endSession(sessionId);
+                    showReport(result);
+                } else {
+                    // Module session — no graded report, just end
+                    const result = await API.endModuleSession(sessionId);
+                    showModuleComplete(result);
+                }
             } catch (err) {
-                showToast('Error generating report: ' + err.message, 'error');
+                showToast('Error ending session: ' + err.message, 'error');
                 setTimeout(() => window.location.href = '/dashboard', 2000);
             }
+        }
+
+        function showModuleComplete(result) {
+            const overlay = document.getElementById('reportOverlay');
+            const content = document.getElementById('reportContent');
+            content.innerHTML = `
+                <div class="report-header" style="text-align:center;">
+                    <h2>Module Complete</h2>
+                    <p style="font-size:1.25rem;color:var(--text-secondary);margin:1rem 0;">
+                        ${selectedModule ? selectedModule.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Training'} Session
+                    </p>
+                    <p style="color:var(--text-muted);">Duration: ${formatDuration(result.duration_seconds || 0)}</p>
+                    <div style="margin-top:2rem; display:flex; gap:1rem; justify-content:center;">
+                        <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                        <button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>
+                    </div>
+                </div>
+            `;
+            overlay.classList.add('visible');
         }
 
         // ── Report ───────────────────────────────────────────
