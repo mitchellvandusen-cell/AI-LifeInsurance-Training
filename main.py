@@ -105,9 +105,10 @@ async def health():
 
 FRONTEND_DIR = BASE_DIR / "frontend"
 
-app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
-app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
-app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="assets")
+for _name in ("css", "js", "assets", "images", "fonts"):
+    _subdir = FRONTEND_DIR / _name
+    if _subdir.is_dir():
+        app.mount(f"/{_name}", StaticFiles(directory=str(_subdir)), name=_name)
 
 
 @app.get("/{path:path}")
