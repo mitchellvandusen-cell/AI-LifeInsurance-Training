@@ -191,9 +191,10 @@ async def training_websocket(websocket: WebSocket, session_id: str):
         objection_context=objection_context,
     )
 
-    # Callback: when agent transcript is received
+    # Callback: when agent transcript is received (user spoke)
     async def on_agent_transcript(text: str, turn: int):
         session["turn_count"] = turn
+        print(f"[WS][{session_id}] Processing agent turn {turn}: {text[:60]}...")
         # Run through training engine
         result = orch.process_agent_turn(text)
         # Save transcript
@@ -202,19 +203,23 @@ async def training_websocket(websocket: WebSocket, session_id: str):
         if voice_session and voice_session.connected:
             await voice_session.update_instructions(result["system_prompt"])
         # Send state update to browser
-        await websocket.send_json({
-            "type": "state_update",
-            "data": {
-                "phase": result["state_summary"]["current_phase"],
-                "trust": result["state_summary"]["trust_score"],
-                "authority": result["state_summary"]["authority_score"],
-                "engagement": result["state_summary"]["engagement_level"],
-                "objection": result.get("objection_triggered"),
-            },
-        })
+        try:
+            await websocket.send_json({
+                "type": "state_update",
+                "data": {
+                    "phase": result["state_summary"]["current_phase"],
+                    "trust": result["state_summary"]["trust_score"],
+                    "authority": result["state_summary"]["authority_score"],
+                    "engagement": result["state_summary"]["engagement_level"],
+                    "objection": result.get("objection_triggered"),
+                },
+            })
+        except Exception as e:
+            print(f"[WS][{session_id}] Failed to send state update: {e}")
 
-    # Callback: when client transcript is received
+    # Callback: when client transcript is received (AI spoke)
     async def on_client_transcript(text: str, turn: int):
+        print(f"[WS][{session_id}] Processing client response turn {turn}: {text[:60]}...")
         orch.process_client_response(text)
         await db.save_transcript(session_id, turn, "client", text)
 
@@ -247,19 +252,28 @@ async def training_websocket(websocket: WebSocket, session_id: str):
     async def browser_to_xai():
         try:
             while True:
-                data = await websocket.receive_json()
+                raw = await websocket.receive_text()
+                try:
+                    data = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
                 msg_type = data.get("type")
 
                 if msg_type == "audio":
-                    await voice_session.send_audio(data.get("data", ""))
+                    audio_data = data.get("data", "")
+                    if audio_data:
+                        await voice_session.send_audio(audio_data)
 
                 elif msg_type == "end":
+                    print(f"[WS][{session_id}] Client sent 'end' — closing bridge")
                     break
 
         except WebSocketDisconnect:
-            pass
+            print(f"[WS][{session_id}] Browser disconnected")
         except Exception as e:
-            logger.error(f"[{session_id}] Browser→xAI error: {e}")
+            print(f"[WS][{session_id}] Browser→xAI error: {e}")
+            import traceback
+            traceback.print_exc()
 
     # Bridge: xAI → browser (audio + events forwarding)
     async def xai_to_browser():
@@ -270,19 +284,34 @@ async def training_websocket(websocket: WebSocket, session_id: str):
                 pass
         await voice_session.receive_events(send_to_browser)
 
-    # Run both bridges concurrently
+    # Run both bridges concurrently — FIRST_COMPLETED is correct here:
+    # when either side disconnects, we tear down the other side
     try:
+        browser_task = asyncio.create_task(browser_to_xai(), name="browser_to_xai")
+        xai_task = asyncio.create_task(xai_to_browser(), name="xai_to_browser")
+
         done, pending = await asyncio.wait(
-            [
-                asyncio.create_task(browser_to_xai()),
-                asyncio.create_task(xai_to_browser()),
-            ],
+            [browser_task, xai_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
+
+        # Log which task finished first
+        for task in done:
+            exc = task.exception() if not task.cancelled() else None
+            if exc:
+                print(f"[WS][{session_id}] Task {task.get_name()} failed: {exc}")
+            else:
+                print(f"[WS][{session_id}] Task {task.get_name()} completed")
+
         for task in pending:
+            print(f"[WS][{session_id}] Cancelling {task.get_name()}")
             task.cancel()
+
+    except Exception as e:
+        print(f"[WS][{session_id}] Bridge error: {e}")
     finally:
         await voice_session.disconnect()
+        print(f"[WS][{session_id}] Session cleanup complete")
 
 
 @router.post("/{session_id}/end")

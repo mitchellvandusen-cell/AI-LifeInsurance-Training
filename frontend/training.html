@@ -504,6 +504,9 @@
                         resetAudioQueue();
                     } else if (data.status === 'connecting_voice') {
                         status.textContent = 'Connecting to voice service...';
+                    } else if (data.status === 'responding') {
+                        circle.className = 'voice-circle responding';
+                        status.textContent = 'Client is thinking...';
                     } else if (data.status === 'connected' || data.status === 'ready') {
                         circle.className = 'voice-circle';
                         status.textContent = 'Connected — speak to begin';
