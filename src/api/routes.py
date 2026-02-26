@@ -12,8 +12,8 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-import anthropic
 import httpx
+import openai
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -68,40 +68,15 @@ class ArchetypeListResponse(BaseModel):
 # ── LLM Client ─────────────────────────────────────────────────
 
 def _get_llm_response(system_prompt: str, conversation_history: list[dict]) -> str:
-    """Call the LLM to generate the AI client response."""
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    """Call xAI Grok to generate the AI client response."""
+    api_key = os.getenv("XAI_API_KEY")
     if not api_key:
-        # Fallback: check for OpenAI
-        openai_key = os.getenv("OPENAI_API_KEY")
-        if openai_key:
-            return _get_openai_response(system_prompt, conversation_history)
         raise HTTPException(
             status_code=500,
-            detail="No LLM API key configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.",
+            detail="No LLM API key configured. Set XAI_API_KEY.",
         )
 
-    client = anthropic.Anthropic(api_key=api_key)
-
-    messages = []
-    for msg in conversation_history:
-        role = "user" if msg["role"] == "agent" else "assistant"
-        messages.append({"role": role, "content": msg["content"]})
-
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=500,
-        system=system_prompt,
-        messages=messages,
-    )
-
-    return response.content[0].text
-
-
-def _get_openai_response(system_prompt: str, conversation_history: list[dict]) -> str:
-    """Fallback: Use OpenAI API."""
-    import openai
-
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = openai.OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
 
     messages = [{"role": "system", "content": system_prompt}]
     for msg in conversation_history:
@@ -109,7 +84,7 @@ def _get_openai_response(system_prompt: str, conversation_history: list[dict]) -
         messages.append({"role": role, "content": msg["content"]})
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model=os.getenv("LLM_MODEL", "grok4-1-fast-reasoning"),
         max_tokens=500,
         messages=messages,
     )

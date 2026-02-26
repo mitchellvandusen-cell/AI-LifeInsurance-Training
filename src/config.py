@@ -18,9 +18,8 @@ class Config:
     """Application configuration."""
 
     # LLM Settings
-    anthropic_api_key: str = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))
-    openai_api_key: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
-    llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "claude-sonnet-4-20250514"))
+    xai_api_key: str = field(default_factory=lambda: os.getenv("XAI_API_KEY", ""))
+    llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "grok4-1-fast-reasoning"))
     llm_max_tokens: int = 500
 
     # Server Settings
@@ -51,8 +50,8 @@ class Config:
     def validate(self) -> list[str]:
         """Return list of configuration warnings."""
         warnings = []
-        if not self.anthropic_api_key and not self.openai_api_key:
-            warnings.append("No LLM API key configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.")
+        if not self.xai_api_key:
+            warnings.append("No LLM API key configured. Set XAI_API_KEY.")
         return warnings
 
 
