@@ -20,7 +20,7 @@ const API = {
         if (res.status === 401) {
             this.token = null;
             localStorage.removeItem('auth_token');
-            window.location.href = '/login.html';
+            window.location.href = '/login';
             return;
         }
 
@@ -66,7 +66,7 @@ const API = {
     async logout() {
         await this.post('/api/auth/logout');
         this.clearToken();
-        window.location.href = '/login.html';
+        window.location.href = '/login';
     },
 
     async getMe() {
@@ -170,7 +170,7 @@ function showToast(message, type = 'info') {
 // ── Auth guard for protected pages ─────────────────────────
 function requireAuth() {
     if (!API.isAuthenticated()) {
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return false;
     }
     return true;

@@ -377,7 +377,7 @@
             } catch (err) {
                 showToast(err.message, 'error');
                 if (err.message.includes('No training time')) {
-                    setTimeout(() => window.location.href = '/billing.html', 2000);
+                    setTimeout(() => window.location.href = '/billing', 2000);
                 }
             }
         }
@@ -660,7 +660,7 @@
                 showReport(result);
             } catch (err) {
                 showToast('Error generating report: ' + err.message, 'error');
-                window.location.href = '/dashboard.html';
+                window.location.href = '/dashboard';
             }
         }
 
@@ -695,8 +695,8 @@
                         Close Probability: ${(report.close_probability || 0).toFixed(0)}%
                     </p>
                     <div style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:center;">
-                        <a href="/dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
-                        <button class="btn btn-primary" onclick="window.location.href='/training.html'">Train Again</button>
+                        <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                        <button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>
                     </div>
                 </div>
                 <div class="report-categories">${categories}</div>

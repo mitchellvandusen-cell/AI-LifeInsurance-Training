@@ -79,8 +79,8 @@ async def create_checkout(req: CreateCheckoutRequest, request: Request):
         payment_method_types=["card"],
         mode=mode,
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=os.getenv("APP_URL", "http://localhost:8000") + "/dashboard.html?billing=success",
-        cancel_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing.html?billing=cancelled",
+        success_url=os.getenv("APP_URL", "http://localhost:8000") + "/dashboard?billing=success",
+        cancel_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing?billing=cancelled",
         metadata={
             "user_id": user["user_id"],
             "plan": req.plan,
@@ -123,8 +123,8 @@ async def wallet_topup(req: WalletTopUpRequest, request: Request):
             },
             "quantity": 1,
         }],
-        success_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing.html?topup=success",
-        cancel_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing.html?topup=cancelled",
+        success_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing?topup=success",
+        cancel_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing?topup=cancelled",
         metadata={
             "user_id": user["user_id"],
             "type": "wallet_topup",
@@ -232,7 +232,7 @@ async def create_portal_session(request: Request):
 
     session = stripe.billing_portal.Session.create(
         customer=sub["stripe_customer_id"],
-        return_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing.html",
+        return_url=os.getenv("APP_URL", "http://localhost:8000") + "/billing",
     )
 
     return {"portal_url": session.url}
