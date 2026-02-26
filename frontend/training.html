@@ -612,6 +612,8 @@
             ws = new WebSocket(wsUrl);
             ws.onopen = () => {
                 ws.send(JSON.stringify({ type: 'auth', token: API.token }));
+                // Start mic capture immediately so student can respond after coach greeting
+                startAudioCapture();
             };
             ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
@@ -763,17 +765,22 @@
                         status.textContent = 'Connecting to voice service...';
                     } else if (data.status === 'responding') {
                         circle.className = 'voice-circle responding';
-                        status.textContent = 'Client is thinking...';
+                        status.textContent = (trainingMode && trainingMode !== 'full') ? 'Coach is thinking...' : 'Client is thinking...';
                     } else if (data.status === 'connected' || data.status === 'ready') {
                         circle.className = 'voice-circle';
-                        status.textContent = 'Connected — speak to begin';
+                        // For modules, coach speaks first; for full sim, agent speaks first
+                        if (trainingMode && trainingMode !== 'full') {
+                            status.textContent = 'Connected — coach is starting the lesson...';
+                        } else {
+                            status.textContent = 'Connected — speak to begin';
+                        }
                     }
                     break;
 
                 case 'audio':
                     playAudio(data.data);
                     circle.className = 'voice-circle responding';
-                    status.textContent = 'Client speaking...';
+                    status.textContent = (trainingMode && trainingMode !== 'full') ? 'Coach speaking...' : 'Client speaking...';
                     break;
 
                 case 'transcript':

@@ -194,6 +194,11 @@ async def module_websocket(websocket: WebSocket, session_id: str):
 
     await websocket.send_json({"type": "status", "status": "ready"})
 
+    # Trigger AI coach to speak first — greet the student and begin the lesson
+    # This sends response.create to xAI, causing the model to generate its
+    # opening greeting based on the system prompt (which says "YOU SPEAK FIRST")
+    await voice_session.trigger_greeting()
+
     # Bridge: browser ↔ xAI
     async def browser_to_xai():
         try:

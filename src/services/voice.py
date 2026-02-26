@@ -129,6 +129,22 @@ class VoiceSession:
         await self.xai_ws.send(json.dumps(config))
         print(f"[VOICE][{self.session_id}] Session configured: voice={self.voice}, rate={SAMPLE_RATE}")
 
+    async def trigger_greeting(self):
+        """Trigger the AI to speak first without waiting for user input.
+
+        Sends a response.create event to the xAI Realtime API, which causes the
+        model to generate a response based on its system instructions immediately.
+        This is used for training modules where the AI coach should greet the
+        student and begin the guided lesson before the student speaks.
+        """
+        if not self.connected or not self.xai_ws:
+            return
+        try:
+            await self.xai_ws.send(json.dumps({"type": "response.create"}))
+            print(f"[VOICE][{self.session_id}] Triggered AI greeting (response.create)")
+        except Exception as e:
+            print(f"[VOICE][{self.session_id}] ERROR triggering greeting: {e}")
+
     async def update_instructions(self, new_prompt: str):
         """Update the system prompt mid-session (after state changes)."""
         if not self.connected or not self.xai_ws:
