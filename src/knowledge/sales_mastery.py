@@ -1008,6 +1008,25 @@ TRAINING_MODULES = {
         ],
     },
 
+    "script_practice": {
+        "name": "Script Practice",
+        "description": "Repetition mastery — practice your script with an easy-going AI client until it sounds natural, not rehearsed.",
+        "skills_taught": [
+            "Natural delivery — saying the words without sounding scripted",
+            "Conversational flow — script as a guide, not a prison",
+            "Adaptive responses — handling off-script moments naturally",
+            "Tonality variety — same words, different emotional delivery",
+            "Confidence through repetition — muscle memory for your pitch",
+        ],
+        "measurement": [
+            "Does the agent sound like they're reading or conversing?",
+            "Can the agent recover when the client goes slightly off-script?",
+            "Does the delivery sound confident and natural?",
+            "Is there tonal variety or monotone recitation?",
+            "Would a real client feel engaged or lectured?",
+        ],
+    },
+
     "full_call_simulation": {
         "name": "Full Call Simulation",
         "description": "Complete end-to-end call with a realistic AI prospect. All skills combined.",
@@ -1103,6 +1122,9 @@ def get_knowledge_for_module(module_key: str) -> dict:
             "frame_control": FRAME_CONTROL,
             "compliance_ladder": COMPLIANCE_LADDER,
             "module": TRAINING_MODULES["preframing_control"],
+        },
+        "script_practice": {
+            "module": TRAINING_MODULES["script_practice"],
         },
         "full_call_simulation": {
             "tonality": TONALITY,

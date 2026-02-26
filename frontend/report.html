@@ -44,6 +44,45 @@
             color: var(--text-muted);
             flex-wrap: wrap;
         }
+        /* Call context banner */
+        .call-context {
+            background: rgba(79,70,229,0.08);
+            border: 1px solid rgba(79,70,229,0.2);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        .call-context .context-title {
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+        }
+        .phases-reached {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+        .phase-chip {
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--radius-full);
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .phase-chip.reached {
+            background: rgba(16,185,129,0.15);
+            color: var(--accent-green);
+        }
+        .phase-chip.not-reached {
+            background: var(--bg-input);
+            color: var(--text-muted);
+        }
         .category-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -55,6 +94,10 @@
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             padding: 1.25rem;
+        }
+        .cat-card.not-reached {
+            opacity: 0.55;
+            border-style: dashed;
         }
         .cat-card h4 {
             font-size: 0.95rem;
@@ -80,6 +123,17 @@
             transition: width 0.6s ease;
         }
         .cat-card .feedback { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
+        .nr-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            background: var(--bg-input);
+            color: var(--text-muted);
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
         .deal-killers-section {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -100,6 +154,7 @@
         }
         .dk-item h5 { font-size: 0.9rem; margin-bottom: 0.25rem; }
         .dk-item p { font-size: 0.8rem; color: var(--text-muted); }
+        .dk-item.na { opacity: 0.5; border: 1px dashed var(--border-color); }
         .style-section {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -132,27 +187,6 @@
         }
         .pros li::before { content: '+ '; color: var(--accent-green); font-weight: 700; }
         .cons li::before { content: '- '; color: var(--accent-red); font-weight: 700; }
-        .transcript-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-        }
-        .transcript-section h3 { margin-bottom: 1rem; }
-        .transcript-line {
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 0.85rem;
-        }
-        .transcript-line:last-child { border-bottom: none; }
-        .transcript-line .role {
-            font-weight: 700;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            margin-bottom: 0.15rem;
-        }
-        .transcript-line .role.agent { color: var(--accent-blue); }
-        .transcript-line .role.client { color: var(--accent-cyan); }
     </style>
 </head>
 <body>
@@ -164,6 +198,7 @@
             <a href="/analytics" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Analytics</a>
             <a href="/report-cards" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Report Cards</a>
             <a href="/homework" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Homework</a>
+            <a href="/scripts" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>Script Practice</a>
             <a href="/recordings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Recordings</a>
             <a href="/billing" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
             <a href="/settings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
@@ -217,22 +252,34 @@
             return 'var(--accent-red)';
         }
 
+        const ALL_PHASES = [
+            { key: 'intro', label: 'Introduction' },
+            { key: 'rapport_discovery', label: 'Rapport & Discovery' },
+            { key: 'medical_underwriting', label: 'Underwriting' },
+            { key: 'preframing', label: 'Preframing' },
+            { key: 'presentation', label: 'Presentation' },
+            { key: 'objection_handling', label: 'Objections' },
+            { key: 'close', label: 'Close' },
+        ];
+
         function renderReport(data) {
             const report = typeof data.full_report === 'string' ? JSON.parse(data.full_report) : (data.full_report || data);
             const rawCategories = typeof data.categories === 'string' ? JSON.parse(data.categories) : (data.categories || report.categories || {});
             const dealKillers = typeof data.deal_killers === 'string' ? JSON.parse(data.deal_killers) : (data.deal_killers || report.deal_killers || {});
             const clientInfo = typeof data.client_info === 'string' ? JSON.parse(data.client_info) : (data.client_info || report.persona || {});
+            const callContext = report.call_context || {};
 
-            // Normalize categories: engine produces a dict {"tonality": {"metric": "Tonality", "score": 80, ...}}
-            // Convert to array for rendering
+            // Normalize categories
             let categories = [];
             if (Array.isArray(rawCategories)) {
                 categories = rawCategories;
             } else if (typeof rawCategories === 'object' && rawCategories !== null) {
                 categories = Object.entries(rawCategories).map(([key, val]) => ({
+                    key: key,
                     name: (val && val.metric) || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-                    score: (val && val.score) || 0,
+                    score: val ? val.score : 0,
                     grade: (val && val.grade) || '',
+                    status: (val && val.status) || 'scored',
                     feedback: (val && val.feedback) || '',
                     coaching: (val && val.coaching) || '',
                     pros: (val && val.pros) || [],
@@ -240,14 +287,12 @@
                 }));
             }
 
-            // Grade: grading engine uses "overall_grade", DB stores as "letter_grade"
             const grade = data.letter_grade || report.overall_grade || report.letter_grade || 'N/A';
             const score = data.overall_score || report.overall_score || 0;
-            // Style: grading engine uses sales_style.detected / sales_style.name
             const salesStyle = report.sales_style || {};
             const style = data.detected_style || salesStyle.name || salesStyle.detected || report.detected_sales_style || 'Unknown';
             const closeProb = data.close_probability || report.close_probability || 0;
-            const duration = data.duration_seconds || 0;
+            const duration = data.duration_seconds || callContext.duration_seconds || 0;
 
             const gradeClass = grade.startsWith('A') ? 'grade-A' :
                                grade.startsWith('B') ? 'grade-B' :
@@ -273,7 +318,24 @@
                 </div>
             `;
 
-            // Style section — grading engine uses "sales_style" with pros/consequences/coaching
+            // Call Context Banner (adaptive report card)
+            if (callContext.adaptive_note || callContext.call_ended_early) {
+                const phasesReached = callContext.phases_reached || [];
+                html += `
+                    <div class="call-context">
+                        <div class="context-title">Call Context</div>
+                        ${callContext.adaptive_note ? `<p>${callContext.adaptive_note}</p>` : ''}
+                        <div class="phases-reached">
+                            ${ALL_PHASES.map(p => {
+                                const reached = phasesReached.includes(p.key);
+                                return `<span class="phase-chip ${reached ? 'reached' : 'not-reached'}">${p.label}</span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Style section
             html += `
                 <div class="style-section">
                     <h3>Detected Sales Style</h3>
@@ -297,28 +359,54 @@
                 </div>
             `;
 
-            // Category grid
-            html += '<h3 style="margin-bottom:1rem;">Performance by Category</h3><div class="category-grid">';
-            for (const cat of categories) {
-                const catScore = cat.score || 0;
-                const color = barColor(catScore);
-                html += `
-                    <div class="cat-card">
-                        <h4>
-                            ${cat.name || 'Unknown'}
-                            <span class="cat-score" style="color:${color}">${Math.round(catScore)}</span>
-                        </h4>
-                        <div class="bar-track">
-                            <div class="bar-fill" style="width:${catScore}%;background:${color};"></div>
-                        </div>
-                        <div class="feedback">${cat.feedback || ''}</div>
-                    </div>
-                `;
-            }
-            html += '</div>';
+            // Category grid — with adaptive not-reached handling
+            const scoredCats = categories.filter(c => c.status === 'scored');
+            const notReachedCats = categories.filter(c => c.status === 'not_reached');
 
-            // Deal killers — grading engine returns {money: {...}, time: {...}, decision_maker: {...}}
-            // Each has sub-fields like raised, resolved, coaching, etc.
+            html += '<h3 style="margin-bottom:1rem;">Performance by Category</h3>';
+
+            if (scoredCats.length > 0) {
+                html += '<div class="category-grid">';
+                for (const cat of scoredCats) {
+                    const catScore = cat.score || 0;
+                    const color = barColor(catScore);
+                    html += `
+                        <div class="cat-card">
+                            <h4>
+                                ${cat.name || 'Unknown'}
+                                <span class="cat-score" style="color:${color}">${Math.round(catScore)}</span>
+                            </h4>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width:${catScore}%;background:${color};"></div>
+                            </div>
+                            <div class="feedback">${cat.feedback || ''}</div>
+                            ${cat.coaching ? `<div style="font-size:0.78rem;color:var(--accent-blue);margin-top:0.5rem;font-style:italic;">${cat.coaching}</div>` : ''}
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+
+            // Not-reached categories (dimmed, dashed border)
+            if (notReachedCats.length > 0) {
+                html += '<h4 style="margin-bottom:0.75rem;color:var(--text-muted);font-size:0.85rem;">Not Reached (not counted in your score)</h4>';
+                html += '<div class="category-grid">';
+                for (const cat of notReachedCats) {
+                    html += `
+                        <div class="cat-card not-reached">
+                            <h4>
+                                ${cat.name || 'Unknown'}
+                                <span class="nr-badge">Not Reached</span>
+                            </h4>
+                            <div class="feedback">${cat.feedback || ''}</div>
+                            ${cat.coaching ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;font-style:italic;">${cat.coaching}</div>` : ''}
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            }
+
+            // Deal killers — with adaptive not_applicable handling
             const dkKeys = Object.keys(dealKillers).filter(k =>
                 typeof dealKillers[k] === 'object' && dealKillers[k] !== null
             );
@@ -330,17 +418,32 @@
                             ${dkKeys.map(key => {
                                 const dk = dealKillers[key];
                                 const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                                const raised = dk.raised || dk.objection_raised;
-                                const resolved = dk.resolved || dk.objection_resolved;
-                                const status = raised
-                                    ? (resolved ? 'Raised & Resolved' : 'Raised — NOT Resolved')
-                                    : 'Not raised';
-                                const statusColor = !raised ? 'var(--text-muted)' :
-                                    resolved ? 'var(--accent-green)' : 'var(--accent-red)';
+                                const status = dk.status || 'unknown';
+                                const isNA = status === 'not_applicable';
+                                const isEarly = status === 'early_objection';
+
+                                let statusText, statusColor;
+                                if (isNA) {
+                                    statusText = 'Not Applicable';
+                                    statusColor = 'var(--text-muted)';
+                                } else if (isEarly) {
+                                    statusText = 'Early Smokescreen';
+                                    statusColor = 'var(--accent-amber)';
+                                } else if (status === 'resolved' || status === 'confirmed') {
+                                    statusText = status === 'confirmed' ? 'Confirmed' : 'Resolved';
+                                    statusColor = 'var(--accent-green)';
+                                } else if (status === 'unresolved' || status === 'challenged') {
+                                    statusText = status === 'challenged' ? 'Challenged' : 'Unresolved';
+                                    statusColor = 'var(--accent-red)';
+                                } else {
+                                    statusText = status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                    statusColor = 'var(--text-muted)';
+                                }
+
                                 return `
-                                    <div class="dk-item">
+                                    <div class="dk-item ${isNA ? 'na' : ''}">
                                         <h5>${label}</h5>
-                                        <p style="color:${statusColor};font-weight:600;">${status}</p>
+                                        <p style="color:${statusColor};font-weight:600;">${statusText}</p>
                                         ${dk.coaching ? `<p style="font-size:0.78rem;margin-top:0.5rem;">${dk.coaching}</p>` : ''}
                                     </div>
                                 `;
@@ -350,7 +453,7 @@
                 `;
             }
 
-            // Strengths & Areas for Improvement from grading engine
+            // Strengths & Areas for Improvement
             const strengths = report.top_strengths || [];
             const improvements = report.areas_for_improvement || [];
             if (strengths.length > 0 || improvements.length > 0) {

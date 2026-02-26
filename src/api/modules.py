@@ -54,6 +54,7 @@ async def list_modules(request: Request):
 class StartModuleRequest(BaseModel):
     module_key: str
     voice: str | None = None
+    script_id: str | None = None  # For script_practice module
 
 
 @router.post("/start")
@@ -80,6 +81,16 @@ async def start_module_session(req: StartModuleRequest, request: Request):
 
     voice = req.voice or "Sal"
 
+    # For script_practice, load the script content into session state
+    session_state = {}
+    if req.module_key == "script_practice" and req.script_id:
+        script = await db.get_user_script(user_id, req.script_id)
+        if not script:
+            raise HTTPException(status_code=404, detail="Script not found")
+        session_state["script_content"] = script["content"]
+        session_state["script_name"] = script["name"]
+        session_state["script_id"] = req.script_id
+
     # Save to database
     session_record = await db.create_module_session(
         user_id=user_id,
@@ -94,7 +105,7 @@ async def start_module_session(req: StartModuleRequest, request: Request):
         "voice": voice,
         "voice_session": None,
         "start_time": time.time(),
-        "session_state": {},
+        "session_state": session_state,
     }
 
     module_info = AVAILABLE_MODULES[req.module_key]
@@ -352,3 +363,174 @@ async def get_homework_history(request: Request, limit: int = 10):
     """Get homework report history."""
     user = get_current_user(request)
     return await db.get_homework_history(user["user_id"], limit)
+
+
+# ═══════════════════════════════════════════════════════════════
+# SCRIPT MANAGEMENT ENDPOINTS
+# ═══════════════════════════════════════════════════════════════
+
+MAX_SCRIPT_CHARS = 100_000
+
+
+class SaveScriptRequest(BaseModel):
+    name: str
+    content: str
+
+
+class UpdateScriptRequest(BaseModel):
+    name: str | None = None
+    content: str | None = None
+
+
+@router.post("/scripts")
+async def save_script(req: SaveScriptRequest, request: Request):
+    """Save a new script (paste). Max 100,000 characters."""
+    user = get_current_user(request)
+    if len(req.content) > MAX_SCRIPT_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Script too long. Max {MAX_SCRIPT_CHARS:,} characters.",
+        )
+    if not req.content.strip():
+        raise HTTPException(status_code=400, detail="Script content is empty.")
+    result = await db.save_user_script(
+        user["user_id"], req.name.strip(), req.content, source="paste"
+    )
+    return result
+
+
+@router.post("/scripts/upload")
+async def upload_script(request: Request):
+    """Upload a script file (txt, pdf, docx). Max 100,000 characters after extraction."""
+    user = get_current_user(request)
+
+    # Read multipart form data
+    form = await request.form()
+    file = form.get("file")
+    name = form.get("name", "")
+
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided.")
+
+    filename = getattr(file, "filename", "script.txt") or "script.txt"
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "txt"
+    raw_bytes = await file.read()
+
+    # Extract text based on file type
+    if ext == "txt":
+        content = raw_bytes.decode("utf-8", errors="replace")
+    elif ext == "pdf":
+        content = _extract_pdf_text(raw_bytes)
+    elif ext in ("docx", "doc"):
+        content = _extract_docx_text(raw_bytes)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: .{ext}. Use .txt, .pdf, or .docx.",
+        )
+
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Could not extract text from file.")
+
+    if len(content) > MAX_SCRIPT_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Extracted text too long ({len(content):,} chars). Max {MAX_SCRIPT_CHARS:,}.",
+        )
+
+    script_name = name.strip() or filename.rsplit(".", 1)[0]
+    result = await db.save_user_script(
+        user["user_id"], script_name, content, source=f"upload:{ext}"
+    )
+    return result
+
+
+@router.get("/scripts")
+async def list_scripts(request: Request):
+    """List all scripts for the current user."""
+    user = get_current_user(request)
+    scripts = await db.get_user_scripts(user["user_id"])
+    return {"scripts": scripts}
+
+
+@router.get("/scripts/{script_id}")
+async def get_script(script_id: str, request: Request):
+    """Get a specific script with content."""
+    user = get_current_user(request)
+    script = await db.get_user_script(user["user_id"], script_id)
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found.")
+    return script
+
+
+@router.put("/scripts/{script_id}")
+async def update_script(script_id: str, req: UpdateScriptRequest, request: Request):
+    """Update script name or content."""
+    user = get_current_user(request)
+    if req.content and len(req.content) > MAX_SCRIPT_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Script too long. Max {MAX_SCRIPT_CHARS:,} characters.",
+        )
+    result = await db.update_user_script(
+        user["user_id"], script_id,
+        name=req.name.strip() if req.name else None,
+        content=req.content,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Script not found.")
+    return result
+
+
+@router.delete("/scripts/{script_id}")
+async def delete_script(script_id: str, request: Request):
+    """Delete a script."""
+    user = get_current_user(request)
+    deleted = await db.delete_user_script(user["user_id"], script_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Script not found.")
+    return {"deleted": True}
+
+
+# ── File text extraction helpers ─────────────────────────────
+
+def _extract_pdf_text(raw_bytes: bytes) -> str:
+    """Extract text from PDF bytes. Uses pypdf if available, falls back to basic."""
+    try:
+        import io
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(raw_bytes))
+        pages = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages.append(text)
+        return "\n\n".join(pages)
+    except ImportError:
+        logger.warning("[SCRIPT] pypdf not installed — cannot extract PDF text")
+        raise HTTPException(
+            status_code=400,
+            detail="PDF extraction not available. Please paste your script as text or upload a .txt file.",
+        )
+    except Exception as e:
+        logger.error(f"[SCRIPT] PDF extraction error: {e}")
+        raise HTTPException(status_code=400, detail="Failed to extract text from PDF.")
+
+
+def _extract_docx_text(raw_bytes: bytes) -> str:
+    """Extract text from DOCX bytes. Uses python-docx if available."""
+    try:
+        import io
+        from docx import Document
+        doc = Document(io.BytesIO(raw_bytes))
+        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+        return "\n\n".join(paragraphs)
+    except ImportError:
+        logger.warning("[SCRIPT] python-docx not installed — cannot extract DOCX text")
+        raise HTTPException(
+            status_code=400,
+            detail="DOCX extraction not available. Please paste your script as text or upload a .txt file.",
+        )
+    except Exception as e:
+        logger.error(f"[SCRIPT] DOCX extraction error: {e}")
+        raise HTTPException(status_code=400, detail="Failed to extract text from DOCX.")

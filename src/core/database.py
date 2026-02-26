@@ -276,6 +276,19 @@ async def init_schema():
         );
         CREATE INDEX IF NOT EXISTS idx_homework_user ON homework_reports(user_id);
 
+        -- USER SCRIPTS (for script practice module)
+        CREATE TABLE IF NOT EXISTS user_scripts (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            name            TEXT NOT NULL,
+            content         TEXT NOT NULL,
+            char_count      INTEGER NOT NULL DEFAULT 0,
+            source          TEXT NOT NULL DEFAULT 'paste',
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_user_scripts_user ON user_scripts(user_id);
+
         -- UPDATED_AT TRIGGER FUNCTION
         CREATE OR REPLACE FUNCTION update_updated_at()
         RETURNS TRIGGER AS $$
@@ -290,6 +303,7 @@ async def init_schema():
     triggers = [
         ("trg_training_subs_updated", "training_subscriptions"),
         ("trg_training_settings_updated", "training_settings"),
+        ("trg_user_scripts_updated", "user_scripts"),
     ]
     for trig_name, table_name in triggers:
         exists = await pool.fetchval(
@@ -926,3 +940,85 @@ async def get_homework_history(user_id: str, limit: int = 10) -> list[dict]:
         uuid.UUID(user_id), limit,
     )
     return [_row_to_dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════
+# USER SCRIPTS
+# ══════════════════════════════════════════════════════════════
+
+async def save_user_script(
+    user_id: str, name: str, content: str, source: str = "paste"
+) -> dict:
+    pool = await get_pool()
+    script_id = uuid.uuid4()
+    char_count = len(content)
+    await pool.execute(
+        """INSERT INTO user_scripts (id, user_id, name, content, char_count, source)
+           VALUES ($1, $2, $3, $4, $5, $6)""",
+        script_id, uuid.UUID(user_id), name, content, char_count, source,
+    )
+    return {"id": str(script_id), "name": name, "char_count": char_count}
+
+
+async def get_user_scripts(user_id: str, limit: int = 50) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT id, name, char_count, source, created_at, updated_at
+           FROM user_scripts
+           WHERE user_id = $1
+           ORDER BY updated_at DESC LIMIT $2""",
+        uuid.UUID(user_id), limit,
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+async def get_user_script(user_id: str, script_id: str) -> dict | None:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """SELECT * FROM user_scripts
+           WHERE id = $1 AND user_id = $2""",
+        uuid.UUID(script_id), uuid.UUID(user_id),
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def update_user_script(
+    user_id: str, script_id: str, name: str = None, content: str = None
+) -> dict | None:
+    pool = await get_pool()
+    parts = []
+    args = []
+    idx = 1
+
+    if name is not None:
+        parts.append(f"name = ${idx}")
+        args.append(name)
+        idx += 1
+    if content is not None:
+        parts.append(f"content = ${idx}")
+        args.append(content)
+        idx += 1
+        parts.append(f"char_count = ${idx}")
+        args.append(len(content))
+        idx += 1
+
+    if not parts:
+        return await get_user_script(user_id, script_id)
+
+    args.append(uuid.UUID(script_id))
+    args.append(uuid.UUID(user_id))
+    query = f"""UPDATE user_scripts SET {', '.join(parts)}
+                WHERE id = ${idx} AND user_id = ${idx + 1}
+                RETURNING id, name, char_count, source, created_at, updated_at"""
+    row = await pool.fetchrow(query, *args)
+    return _row_to_dict(row) if row else None
+
+
+async def delete_user_script(user_id: str, script_id: str) -> bool:
+    pool = await get_pool()
+    result = await pool.execute(
+        """DELETE FROM user_scripts
+           WHERE id = $1 AND user_id = $2""",
+        uuid.UUID(script_id), uuid.UUID(user_id),
+    )
+    return result.endswith("1")

@@ -162,9 +162,10 @@ const API = {
         return this.get('/api/modules/');
     },
 
-    async startModuleSession(moduleKey, voice = null) {
+    async startModuleSession(moduleKey, voice = null, scriptId = null) {
         const body = { module_key: moduleKey };
         if (voice) body.voice = voice;
+        if (scriptId) body.script_id = scriptId;
         return this.post('/api/modules/start', body);
     },
 
@@ -188,6 +189,44 @@ const API = {
 
     async getHomeworkHistory() {
         return this.get('/api/modules/homework/history');
+    },
+
+    // ── Scripts ─────────────────────────────────────────
+    async getScripts() {
+        return this.get('/api/modules/scripts');
+    },
+    async getScript(scriptId) {
+        return this.get(`/api/modules/scripts/${scriptId}`);
+    },
+    async saveScript(name, content) {
+        return this.post('/api/modules/scripts', { name, content });
+    },
+    async updateScript(scriptId, data) {
+        return this.request('PUT', `/api/modules/scripts/${scriptId}`, data);
+    },
+    async deleteScript(scriptId) {
+        return this.request('DELETE', `/api/modules/scripts/${scriptId}`);
+    },
+    async uploadScriptFile(file, name = '') {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (name) formData.append('name', name);
+
+        const headers = {};
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        const res = await fetch(`${this.baseUrl}/api/modules/scripts/upload`, {
+            method: 'POST',
+            headers,
+            body: formData,
+            credentials: 'include',
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `Upload failed (${res.status})`);
+        }
+        return res.json();
     },
 };
 

@@ -407,6 +407,7 @@
         let startTime = null;
         let trainingMode = null;  // 'full' or module key
         let selectedModule = null;
+        let scriptId = null;  // For script_practice mode
 
         // ── Screen switching ─────────────────────────────────
         function showScreen(id) {
@@ -478,7 +479,7 @@
 
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const data = await API.startModuleSession(selectedModule);
+                const data = await API.startModuleSession(selectedModule, null, scriptId);
                 sessionId = data.session_id;
 
                 // Reuse session screen but without sidebar client card
@@ -525,6 +526,24 @@
 
         // ── Initialize: load mode selection ──────────────────
         async function init() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode');
+            const sid = params.get('script_id');
+
+            if (mode === 'script_practice' && sid) {
+                // Auto-start script practice from Scripts page
+                scriptId = sid;
+                selectedModule = 'script_practice';
+                trainingMode = 'script_practice';
+                showScreen('screenModulePre');
+                document.getElementById('moduleTitle').textContent = 'Script Practice';
+                document.getElementById('moduleDesc').textContent = 'Practice your script with a cooperative AI client. Focus on natural delivery.';
+                document.getElementById('moduleSkills').innerHTML = [
+                    'Natural delivery', 'Conversational flow', 'Confidence through repetition'
+                ].map(s => `<div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">${s}</div>`).join('');
+                return;
+            }
+
             loadModules();
         }
 
