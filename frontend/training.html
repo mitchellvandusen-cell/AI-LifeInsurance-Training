@@ -476,6 +476,8 @@
                     } else if (data.status === 'listening') {
                         circle.className = 'voice-circle';
                         status.textContent = 'Your turn — speak now';
+                    } else if (data.status === 'connecting_voice') {
+                        status.textContent = 'Connecting to voice service...';
                     } else if (data.status === 'connected' || data.status === 'ready') {
                         status.textContent = 'Connected — speak to begin';
                     }

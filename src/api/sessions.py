@@ -141,15 +141,18 @@ async def training_websocket(websocket: WebSocket, session_id: str):
     Bridges browser ↔ xAI Voice Agent API with training engine in the middle.
     """
     await websocket.accept()
+    print(f"[WS][{session_id}] WebSocket accepted, authenticating...")
 
     # Authenticate
     ws_user = await get_ws_user(websocket)
     if not ws_user:
+        print(f"[WS][{session_id}] Auth failed — closing")
         return
 
     # Get active session
     session = _active_sessions.get(session_id)
     if not session:
+        print(f"[WS][{session_id}] Session not found in active sessions")
         await websocket.send_json({"type": "error", "message": "Session not found"})
         await websocket.close()
         return
@@ -208,15 +211,18 @@ async def training_websocket(websocket: WebSocket, session_id: str):
     session["voice_session"] = voice_session
 
     # Connect to xAI
+    await websocket.send_json({"type": "status", "status": "connecting_voice"})
     connected = await voice_session.connect()
     if not connected:
+        print(f"[WS][{session_id}] Voice connection failed — closing WebSocket")
         await websocket.send_json({
             "type": "error",
-            "message": "Failed to connect to voice service",
+            "message": "Failed to connect to voice service. Check XAI_API_KEY.",
         })
         await websocket.close()
         return
 
+    print(f"[WS][{session_id}] Voice ready — starting audio bridge")
     await websocket.send_json({"type": "status", "status": "ready"})
 
     # Bridge: browser → xAI (audio forwarding)

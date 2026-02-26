@@ -66,20 +66,32 @@ class VoiceSession:
 
     async def connect(self) -> bool:
         """Establish WebSocket connection to xAI Voice Agent API."""
+        if not XAI_API_KEY:
+            print(f"[VOICE][{self.session_id}] ERROR: XAI_API_KEY not set")
+            return False
+
+        print(f"[VOICE][{self.session_id}] Connecting to xAI Voice API...")
         try:
-            self.xai_ws = await websockets.connect(
-                uri=XAI_WS_URL,
-                additional_headers={"Authorization": f"Bearer {XAI_API_KEY}"},
+            self.xai_ws = await asyncio.wait_for(
+                websockets.connect(
+                    uri=XAI_WS_URL,
+                    additional_headers={"Authorization": f"Bearer {XAI_API_KEY}"},
+                ),
+                timeout=10,
             )
             self.connected = True
-            logger.info(f"[{self.session_id}] Connected to xAI Voice API")
+            print(f"[VOICE][{self.session_id}] Connected to xAI Voice API")
 
             # Configure session
             await self._configure_session()
             return True
 
+        except asyncio.TimeoutError:
+            print(f"[VOICE][{self.session_id}] ERROR: xAI connection timed out (10s)")
+            self.connected = False
+            return False
         except Exception as e:
-            logger.error(f"[{self.session_id}] Failed to connect to xAI: {e}")
+            print(f"[VOICE][{self.session_id}] ERROR: Failed to connect to xAI: {e}")
             self.connected = False
             return False
 
@@ -225,9 +237,9 @@ class VoiceSession:
                     })
 
         except websockets.exceptions.ConnectionClosed:
-            logger.info(f"[{self.session_id}] xAI connection closed")
+            print(f"[VOICE][{self.session_id}] xAI connection closed")
         except Exception as e:
-            logger.error(f"[{self.session_id}] Error in receive loop: {e}")
+            print(f"[VOICE][{self.session_id}] Error in receive loop: {e}")
         finally:
             self.connected = False
 
@@ -239,7 +251,7 @@ class VoiceSession:
                 await self.xai_ws.close()
             except Exception:
                 pass
-        logger.info(f"[{self.session_id}] Disconnected from xAI Voice API")
+        print(f"[VOICE][{self.session_id}] Disconnected from xAI Voice API")
 
     def get_duration_seconds(self) -> int:
         return int(time.time() - self.start_time)
