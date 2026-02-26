@@ -37,6 +37,13 @@ app.add_middleware(
 async def startup():
     await db.get_pool()
 
+    # Seed beta test user on first boot
+    from database.seed import seed_beta_user
+    try:
+        await seed_beta_user()
+    except Exception as e:
+        print(f"[SEED] Skipped: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown():

@@ -35,7 +35,6 @@
             background-clip: text;
         }
         .topup-options { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
-        .addon-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
     </style>
 </head>
 <body>
@@ -85,23 +84,6 @@
                     <button class="btn btn-secondary btn-sm" onclick="topUp(2500)">+ $25</button>
                     <button class="btn btn-secondary btn-sm" onclick="topUp(5000)">+ $50</button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Add-ons -->
-        <h3 style="margin-bottom:1rem;">Hour Add-Ons</h3>
-        <div class="addon-grid">
-            <div class="card" style="text-align:center;">
-                <h4>Extra 2 Hours</h4>
-                <p style="font-size:1.75rem;font-weight:800;color:var(--accent-cyan);margin:0.5rem 0;">$12</p>
-                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">120 additional minutes</p>
-                <button class="btn btn-secondary" onclick="buyAddon('addon_2hr')">Purchase</button>
-            </div>
-            <div class="card" style="text-align:center;">
-                <h4>Extra 4 Hours</h4>
-                <p style="font-size:1.75rem;font-weight:800;color:var(--accent-cyan);margin:0.5rem 0;">$24</p>
-                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">240 additional minutes</p>
-                <button class="btn btn-secondary" onclick="buyAddon('addon_4hr')">Purchase</button>
             </div>
         </div>
 
@@ -163,13 +145,6 @@
         async function subscribe() {
             try {
                 const data = await API.createCheckout('monthly');
-                window.location.href = data.checkout_url;
-            } catch (err) { showToast(err.message, 'error'); }
-        }
-
-        async function buyAddon(plan) {
-            try {
-                const data = await API.createCheckout(plan);
                 window.location.href = data.checkout_url;
             } catch (err) { showToast(err.message, 'error'); }
         }
