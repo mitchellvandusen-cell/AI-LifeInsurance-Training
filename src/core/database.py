@@ -469,11 +469,14 @@ async def get_session(session_id: str) -> Optional[dict]:
 async def get_user_sessions(user_id: str, limit: int = 50, offset: int = 0) -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
-        """SELECT id, status, started_at, ended_at, duration_seconds,
-                  client_info, billed_minutes, cost_cents
-           FROM training_sessions
-           WHERE user_id = $1
-           ORDER BY started_at DESC
+        """SELECT ts.id, ts.status, ts.started_at, ts.ended_at, ts.duration_seconds,
+                  ts.client_info, ts.billed_minutes, ts.cost_cents,
+                  rc.id AS report_card_id,
+                  rc.overall_score, rc.letter_grade
+           FROM training_sessions ts
+           LEFT JOIN report_cards rc ON rc.session_id = ts.id
+           WHERE ts.user_id = $1
+           ORDER BY ts.started_at DESC
            LIMIT $2 OFFSET $3""",
         uuid.UUID(user_id), limit, offset,
     )
@@ -509,15 +512,23 @@ async def get_session_transcript(session_id: str) -> list[dict]:
 async def save_report_card(session_id: str, user_id: str, report: dict) -> str:
     pool = await get_pool()
     report_id = uuid.uuid4()
+    # Grading engine uses "overall_grade" not "letter_grade",
+    # and "sales_style.detected" not "detected_sales_style"
+    letter_grade = report.get("letter_grade") or report.get("overall_grade", "F")
+    detected_style = (
+        report.get("detected_sales_style")
+        or (report.get("sales_style", {}).get("detected"))
+        or "Unknown"
+    )
     await pool.execute(
         """INSERT INTO report_cards
            (id, session_id, user_id, overall_score, letter_grade,
             close_probability, detected_style, categories, deal_killers, full_report)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
         report_id, uuid.UUID(session_id), uuid.UUID(user_id),
-        report.get("overall_score", 0), report.get("letter_grade", "F"),
-        report.get("close_probability", 0), report.get("detected_sales_style"),
-        json.dumps(report.get("categories", [])),
+        report.get("overall_score", 0), letter_grade,
+        report.get("close_probability", 0), detected_style,
+        json.dumps(report.get("categories", {})),
         json.dumps(report.get("deal_killers", {})),
         json.dumps(report),
     )
@@ -527,7 +538,23 @@ async def save_report_card(session_id: str, user_id: str, report: dict) -> str:
 async def get_report_card(report_id: str) -> Optional[dict]:
     pool = await get_pool()
     row = await pool.fetchrow(
-        "SELECT * FROM report_cards WHERE id = $1", uuid.UUID(report_id)
+        """SELECT rc.*, ts.client_info, ts.duration_seconds
+           FROM report_cards rc
+           LEFT JOIN training_sessions ts ON rc.session_id = ts.id
+           WHERE rc.id = $1""",
+        uuid.UUID(report_id),
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def get_report_card_by_session(session_id: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """SELECT rc.*, ts.client_info, ts.duration_seconds
+           FROM report_cards rc
+           LEFT JOIN training_sessions ts ON rc.session_id = ts.id
+           WHERE rc.session_id = $1""",
+        uuid.UUID(session_id),
     )
     return _row_to_dict(row) if row else None
 

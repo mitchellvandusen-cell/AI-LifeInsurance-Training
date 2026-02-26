@@ -113,6 +113,10 @@ const API = {
         return this.get(`/api/analytics/report-cards/${reportId}`);
     },
 
+    async getReportCardBySession(sessionId) {
+        return this.get(`/api/analytics/report-cards/by-session/${sessionId}`);
+    },
+
     // ── Billing ───────────────────────────────────────────
     async getSubscription() {
         return this.get('/api/billing/subscription');

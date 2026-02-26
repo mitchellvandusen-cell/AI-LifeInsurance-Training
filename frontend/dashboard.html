@@ -261,11 +261,15 @@
                     container.innerHTML = sessions.map(s => {
                         const info = typeof s.client_info === 'string' ? JSON.parse(s.client_info) : s.client_info;
                         const name = info ? info.first_name : 'Unknown';
-                        const report = typeof s.report_card === 'string' ? JSON.parse(s.report_card || '{}') : (s.report_card || {});
-                        const score = report.overall_score ? report.overall_score.toFixed(0) : '--';
-                        const grade = report.letter_grade || '--';
+                        // Score and grade come from the LEFT JOIN to report_cards
+                        const score = s.overall_score ? s.overall_score.toFixed(0) : '--';
+                        const grade = s.letter_grade || (s.status === 'completed' ? 'F' : '--');
+                        // Link to report detail if we have a report_card_id
+                        const href = s.report_card_id
+                            ? `/report?id=${s.report_card_id}`
+                            : `/report-cards`;
                         return `
-                            <div class="session-row" onclick="window.location.href='/report?session=${s.id}'">
+                            <div class="session-row" onclick="window.location.href='${href}'">
                                 <div class="session-score grade ${gradeClass(grade)}">${grade}</div>
                                 <div class="session-info">
                                     <h4>Session with ${name}</h4>

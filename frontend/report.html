@@ -186,16 +186,22 @@
 
         const params = new URLSearchParams(window.location.search);
         const reportId = params.get('id');
+        const sessionId = params.get('session');
 
         async function loadReport() {
-            if (!reportId) {
+            if (!reportId && !sessionId) {
                 document.getElementById('reportContent').innerHTML =
                     '<p style="color:var(--accent-red);">No report ID specified.</p>';
                 return;
             }
 
             try {
-                const report = await API.getReportCard(reportId);
+                let report;
+                if (reportId) {
+                    report = await API.getReportCard(reportId);
+                } else {
+                    report = await API.getReportCardBySession(sessionId);
+                }
                 renderReport(report);
             } catch (err) {
                 document.getElementById('reportContent').innerHTML =
@@ -212,13 +218,33 @@
 
         function renderReport(data) {
             const report = typeof data.full_report === 'string' ? JSON.parse(data.full_report) : (data.full_report || data);
-            const categories = typeof data.categories === 'string' ? JSON.parse(data.categories) : (data.categories || report.categories || []);
+            const rawCategories = typeof data.categories === 'string' ? JSON.parse(data.categories) : (data.categories || report.categories || {});
             const dealKillers = typeof data.deal_killers === 'string' ? JSON.parse(data.deal_killers) : (data.deal_killers || report.deal_killers || {});
-            const clientInfo = typeof data.client_info === 'string' ? JSON.parse(data.client_info) : (data.client_info || {});
+            const clientInfo = typeof data.client_info === 'string' ? JSON.parse(data.client_info) : (data.client_info || report.persona || {});
 
-            const grade = data.letter_grade || report.letter_grade || 'N/A';
+            // Normalize categories: engine produces a dict {"tonality": {"metric": "Tonality", "score": 80, ...}}
+            // Convert to array for rendering
+            let categories = [];
+            if (Array.isArray(rawCategories)) {
+                categories = rawCategories;
+            } else if (typeof rawCategories === 'object' && rawCategories !== null) {
+                categories = Object.entries(rawCategories).map(([key, val]) => ({
+                    name: (val && val.metric) || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                    score: (val && val.score) || 0,
+                    grade: (val && val.grade) || '',
+                    feedback: (val && val.feedback) || '',
+                    coaching: (val && val.coaching) || '',
+                    pros: (val && val.pros) || [],
+                    consequences: (val && val.consequences) || [],
+                }));
+            }
+
+            // Grade: grading engine uses "overall_grade", DB stores as "letter_grade"
+            const grade = data.letter_grade || report.overall_grade || report.letter_grade || 'N/A';
             const score = data.overall_score || report.overall_score || 0;
-            const style = data.detected_style || report.detected_sales_style || 'Unknown';
+            // Style: grading engine uses sales_style.detected / sales_style.name
+            const salesStyle = report.sales_style || {};
+            const style = data.detected_style || salesStyle.name || salesStyle.detected || report.detected_sales_style || 'Unknown';
             const closeProb = data.close_probability || report.close_probability || 0;
             const duration = data.duration_seconds || 0;
 
@@ -236,7 +262,7 @@
                     <div class="report-meta">
                         <h1>Training Report Card</h1>
                         <div class="meta-row">
-                            <span>Client: ${clientInfo.first_name || 'Unknown'}, ${clientInfo.age || '?'}yo</span>
+                            <span>Client: ${clientInfo.first_name || clientInfo.name || 'Unknown'}${clientInfo.age ? ', ' + clientInfo.age + 'yo' : ''}</span>
                             <span>State: ${clientInfo.state || 'N/A'}</span>
                             <span>Duration: ${formatDuration(duration)}</span>
                             <span>Close Probability: ${Math.round(closeProb)}%</span>
@@ -246,26 +272,27 @@
                 </div>
             `;
 
-            // Style section
-            const styleInfo = report.style_analysis || {};
+            // Style section — grading engine uses "sales_style" with pros/consequences/coaching
             html += `
                 <div class="style-section">
                     <h3>Detected Sales Style</h3>
                     <div class="style-badge">${style}</div>
+                    ${salesStyle.description ? `<p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1rem;">${salesStyle.description}</p>` : ''}
                     <div class="pros-cons">
                         <div class="pros">
                             <h5>Strengths</h5>
                             <ul>
-                                ${(styleInfo.pros || []).map(p => `<li>${p}</li>`).join('') || '<li>No data</li>'}
+                                ${(salesStyle.pros || []).map(p => `<li>${p}</li>`).join('') || '<li>No data</li>'}
                             </ul>
                         </div>
                         <div class="cons">
                             <h5>Consequences</h5>
                             <ul>
-                                ${(styleInfo.consequences || styleInfo.cons || []).map(c => `<li>${c}</li>`).join('') || '<li>No data</li>'}
+                                ${(salesStyle.consequences || []).map(c => `<li>${c}</li>`).join('') || '<li>No data</li>'}
                             </ul>
                         </div>
                     </div>
+                    ${salesStyle.coaching ? `<p style="font-size:0.85rem;color:var(--text-muted);margin-top:1rem;font-style:italic;">${salesStyle.coaching}</p>` : ''}
                 </div>
             `;
 
@@ -277,51 +304,67 @@
                 html += `
                     <div class="cat-card">
                         <h4>
-                            ${cat.name || cat.category || 'Unknown'}
+                            ${cat.name || 'Unknown'}
                             <span class="cat-score" style="color:${color}">${Math.round(catScore)}</span>
                         </h4>
                         <div class="bar-track">
                             <div class="bar-fill" style="width:${catScore}%;background:${color};"></div>
                         </div>
-                        <div class="feedback">${cat.feedback || cat.notes || ''}</div>
+                        <div class="feedback">${cat.feedback || ''}</div>
                     </div>
                 `;
             }
             html += '</div>';
 
-            // Deal killers
-            const dkEntries = dealKillers.killers || dealKillers.entries || [];
-            if (dkEntries.length > 0 || dealKillers.total_objections) {
+            // Deal killers — grading engine returns {money: {...}, time: {...}, decision_maker: {...}}
+            // Each has sub-fields like raised, resolved, coaching, etc.
+            const dkKeys = Object.keys(dealKillers).filter(k =>
+                typeof dealKillers[k] === 'object' && dealKillers[k] !== null
+            );
+            if (dkKeys.length > 0) {
                 html += `
                     <div class="deal-killers-section">
                         <h3>Deal Killers &amp; Objections</h3>
-                        <div class="meta-row" style="margin-bottom:1rem;font-size:0.9rem;color:var(--text-muted);">
-                            <span>Total Objections: ${dealKillers.total_objections || 0}</span>
-                            <span>Resolved: ${dealKillers.resolved_objections || 0}</span>
-                        </div>
                         <div class="dk-grid">
-                            ${dkEntries.map(dk => `
-                                <div class="dk-item">
-                                    <h5>${dk.name || dk.type || 'Objection'}</h5>
-                                    <p>${dk.status || ''}</p>
-                                </div>
-                            `).join('')}
+                            ${dkKeys.map(key => {
+                                const dk = dealKillers[key];
+                                const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                const raised = dk.raised || dk.objection_raised;
+                                const resolved = dk.resolved || dk.objection_resolved;
+                                const status = raised
+                                    ? (resolved ? 'Raised & Resolved' : 'Raised — NOT Resolved')
+                                    : 'Not raised';
+                                const statusColor = !raised ? 'var(--text-muted)' :
+                                    resolved ? 'var(--accent-green)' : 'var(--accent-red)';
+                                return `
+                                    <div class="dk-item">
+                                        <h5>${label}</h5>
+                                        <p style="color:${statusColor};font-weight:600;">${status}</p>
+                                        ${dk.coaching ? `<p style="font-size:0.78rem;margin-top:0.5rem;">${dk.coaching}</p>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
             }
 
-            // Suggestions
-            const suggestions = report.suggestions || report.coaching_notes || [];
-            if (suggestions.length > 0) {
-                html += `
-                    <div class="style-section">
-                        <h3>Coaching Notes</h3>
-                        <ul style="padding-left:1.25rem;">
-                            ${suggestions.map(s => `<li style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:0.5rem;">${s}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
+            // Strengths & Areas for Improvement from grading engine
+            const strengths = report.top_strengths || [];
+            const improvements = report.areas_for_improvement || [];
+            if (strengths.length > 0 || improvements.length > 0) {
+                html += `<div class="style-section"><h3>Coaching Summary</h3><div class="pros-cons">`;
+                if (strengths.length > 0) {
+                    html += `<div class="pros"><h5>Top Strengths</h5><ul>
+                        ${strengths.map(s => `<li>${s.category.replace(/_/g, ' ')} (${Math.round(s.score)})</li>`).join('')}
+                    </ul></div>`;
+                }
+                if (improvements.length > 0) {
+                    html += `<div class="cons"><h5>Areas for Improvement</h5><ul>
+                        ${improvements.map(s => `<li>${s.category.replace(/_/g, ' ')} (${Math.round(s.score)})${s.coaching ? ' — ' + s.coaching : ''}</li>`).join('')}
+                    </ul></div>`;
+                }
+                html += `</div></div>`;
             }
 
             document.getElementById('reportContent').innerHTML = html;

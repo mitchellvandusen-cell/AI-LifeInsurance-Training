@@ -736,26 +736,40 @@
             const overlay = document.getElementById('reportOverlay');
             const content = document.getElementById('reportContent');
 
-            const grade = report.letter_grade || 'F';
+            // Grading engine uses overall_grade, not letter_grade
+            const grade = report.overall_grade || report.letter_grade || 'F';
             const score = (report.overall_score || 0).toFixed(1);
-            const style = report.detected_sales_style || 'Unknown';
+            // Style is in sales_style.name, not detected_sales_style
+            const salesStyle = report.sales_style || {};
+            const style = salesStyle.name || salesStyle.detected || report.detected_sales_style || 'Unknown';
             const closeProb = (report.close_probability || 0).toFixed(0);
 
-            const categories = (report.categories || []).map(cat => {
-                const color = cat.score >= 70 ? 'var(--accent-green)' : cat.score >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)';
-                const barClass = cat.score >= 70 ? 'green' : cat.score >= 50 ? 'blue' : 'amber';
+            // Categories is a dict: {"tonality": {"metric": "Tonality", "score": 80, ...}}
+            const rawCats = report.categories || {};
+            const catEntries = typeof rawCats === 'object' && !Array.isArray(rawCats)
+                ? Object.entries(rawCats)
+                : (Array.isArray(rawCats) ? rawCats.map(c => [c.name || 'Unknown', c]) : []);
+
+            const categories = catEntries.map(([key, cat]) => {
+                const catScore = cat.score || 0;
+                const color = catScore >= 70 ? 'var(--accent-green)' : catScore >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)';
+                const barClass = catScore >= 70 ? 'green' : catScore >= 50 ? 'blue' : 'amber';
+                const name = cat.metric || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                 return `
                     <div class="report-cat">
                         <div class="report-cat-header">
-                            <h4>${escapeHTML(cat.name)}</h4>
-                            <span class="score" style="color:${color}">${cat.score.toFixed(0)}</span>
+                            <h4>${escapeHTML(name)}</h4>
+                            <span class="score" style="color:${color}">${catScore.toFixed(0)}</span>
                         </div>
-                        <div class="score-bar"><div class="score-bar-fill ${barClass}" style="width:${cat.score}%"></div></div>
+                        <div class="score-bar"><div class="score-bar-fill ${barClass}" style="width:${catScore}%"></div></div>
                         ${cat.pros && cat.pros.length ? `<div class="pros">+ ${cat.pros.join(' | ')}</div>` : ''}
                         ${cat.consequences && cat.consequences.length ? `<div class="cons">&rarr; ${cat.consequences.join(' | ')}</div>` : ''}
                     </div>
                 `;
             }).join('');
+
+            // Link to full report detail page
+            const reportLink = result.report_id ? `/report?id=${result.report_id}` : '/report-cards';
 
             content.innerHTML = `
                 <div class="report-header">
@@ -765,6 +779,7 @@
                     <p style="color:var(--text-muted);">Duration: ${formatDuration(result.duration_seconds)} | Style: ${style} | Close Probability: ${closeProb}%</p>
                     <div style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:center;">
                         <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                        <a href="${reportLink}" class="btn btn-secondary">View Full Report</a>
                         <button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>
                     </div>
                 </div>

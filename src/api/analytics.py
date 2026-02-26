@@ -133,14 +133,26 @@ async def list_report_cards(request: Request, limit: int = 50, offset: int = 0):
     return await db.get_user_report_cards(user["user_id"], limit, offset)
 
 
+@router.get("/report-cards/by-session/{session_id}")
+async def get_report_by_session(session_id: str, request: Request):
+    """Look up a report card by its training session ID."""
+    from fastapi import HTTPException
+    user = get_current_user(request)
+    report = await db.get_report_card_by_session(session_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found for this session")
+    if str(report["user_id"]) != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return report
+
+
 @router.get("/report-cards/{report_id}")
 async def get_report_card(report_id: str, request: Request):
+    from fastapi import HTTPException
     user = get_current_user(request)
     report = await db.get_report_card(report_id)
     if not report:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Report not found")
     if str(report["user_id"]) != user["user_id"]:
-        from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Unauthorized")
     return report
