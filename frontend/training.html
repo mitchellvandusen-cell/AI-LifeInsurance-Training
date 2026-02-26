@@ -7,34 +7,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/main.css">
     <style>
-        body { overflow: hidden; }
+        body { overflow: hidden; height: 100vh; }
 
-        /* ── Pre-Session: Client Card (centered) ───────── */
-        .pre-session {
-            min-height: 100vh;
-            display: flex;
+        /* ── Screens: only one visible at a time ─────────── */
+        .screen { display: none; height: 100vh; }
+        .screen.active { display: flex; }
+
+        /* ── Pre-Session: centered client card ────────────── */
+        .screen-pre {
             align-items: center;
             justify-content: center;
             position: relative;
         }
-        .pre-session::before {
+        .screen-pre::before {
             content: '';
             position: absolute;
             inset: 0;
             background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(79,70,229,0.1) 0%, transparent 60%);
-        }
-
-        .client-card-wrapper {
-            position: relative;
-            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .client-card-wrapper.slide-left {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 320px;
-            height: 100vh;
-            z-index: 10;
+            pointer-events: none;
         }
 
         .client-card {
@@ -45,20 +35,10 @@
             width: 420px;
             max-width: 90vw;
             box-shadow: var(--shadow-lg);
-            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .client-card-wrapper.slide-left .client-card {
-            border-radius: 0;
-            width: 100%;
-            height: 100%;
-            padding: 1.5rem;
-            overflow-y: auto;
+            position: relative;
         }
 
-        .card-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
+        .card-header { text-align: center; margin-bottom: 2rem; }
         .card-header h2 { font-size: 1.5rem; margin-bottom: 0.25rem; }
         .card-header p { font-size: 0.85rem; color: var(--text-muted); }
 
@@ -74,19 +54,48 @@
         .field-value.yes { color: var(--accent-red); }
         .field-value.no { color: var(--accent-green); }
 
-        .start-btn-container {
-            margin-top: 2rem;
-            text-align: center;
-        }
+        .start-btn-container { margin-top: 2rem; text-align: center; }
 
-        /* ── Active Session Layout ──────────────────────── */
-        .session-active {
-            display: none;
+        /* ── Active Session: sidebar + main ───────────────── */
+        .screen-session { flex-direction: row; }
+
+        .session-sidebar {
+            width: 300px;
+            min-width: 300px;
             height: 100vh;
-            margin-left: 320px;
-            flex-direction: column;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
         }
-        .session-active.visible { display: flex; }
+        .sidebar-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+        .sidebar-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+        .sidebar-field:last-child { border-bottom: none; }
+        .sidebar-label { color: var(--text-muted); }
+        .sidebar-value { font-weight: 600; }
+        .sidebar-value.yes { color: var(--accent-red); }
+        .sidebar-value.no { color: var(--accent-green); }
+
+        .session-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
 
         .session-header {
             display: flex;
@@ -112,13 +121,17 @@
             border-radius: 50%;
             animation: pulse 1.5s infinite;
         }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
         .session-timer {
             font-family: var(--font-mono);
             font-size: 0.9rem;
             color: var(--text-muted);
         }
 
-        /* ── Voice Area ─────────────────────────────────── */
+        /* ── Voice Area ──────────────────────────────────── */
         .voice-area {
             flex: 1;
             display: flex;
@@ -126,7 +139,6 @@
             align-items: center;
             justify-content: center;
             padding: 2rem;
-            position: relative;
         }
 
         .voice-status {
@@ -147,7 +159,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
             transition: all 0.3s;
         }
         .voice-circle.recording {
@@ -167,12 +178,9 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
+        .voice-circle-inner { font-size: 2.5rem; }
 
-        .voice-circle-inner {
-            font-size: 2.5rem;
-        }
-
-        /* ── Audio Visualizer Bars ──────────────────────── */
+        /* ── Visualizer Bars ─────────────────────────────── */
         .visualizer {
             display: flex;
             gap: 3px;
@@ -187,9 +195,9 @@
             transition: height 0.1s;
             height: 4px;
         }
-        .voice-circle.recording .viz-bar { background: var(--accent-red); }
+        .voice-circle.recording ~ .visualizer .viz-bar { background: var(--accent-red); }
 
-        /* ── State Indicators ───────────────────────────── */
+        /* ── State Bar ───────────────────────────────────── */
         .state-bar {
             display: flex;
             gap: 1.5rem;
@@ -202,7 +210,7 @@
         .state-item .label { color: var(--text-muted); }
         .state-item .value { font-weight: 700; }
 
-        /* ── Transcript Area ────────────────────────────── */
+        /* ── Transcript Area ─────────────────────────────── */
         .transcript-area {
             height: 35vh;
             overflow-y: auto;
@@ -218,10 +226,7 @@
             letter-spacing: 0.1em;
             margin-bottom: 0.75rem;
         }
-        .transcript-msg {
-            margin-bottom: 0.75rem;
-            padding: 0.5rem 0;
-        }
+        .transcript-msg { margin-bottom: 0.75rem; padding: 0.5rem 0; }
         .transcript-msg .role {
             font-size: 0.75rem;
             font-weight: 700;
@@ -237,7 +242,7 @@
             line-height: 1.5;
         }
 
-        /* ── Report Overlay ─────────────────────────────── */
+        /* ── Report Overlay ──────────────────────────────── */
         .report-overlay {
             display: none;
             position: fixed;
@@ -248,14 +253,8 @@
             padding: 2rem;
         }
         .report-overlay.visible { display: block; }
-        .report-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .report-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
+        .report-content { max-width: 800px; margin: 0 auto; }
+        .report-header { text-align: center; margin-bottom: 3rem; }
         .report-header .grade-big {
             font-size: 5rem;
             font-weight: 900;
@@ -288,71 +287,73 @@
         }
         .report-cat .pros { color: var(--accent-green); }
         .report-cat .cons { color: var(--accent-amber); }
+
+        @media (max-width: 768px) {
+            .session-sidebar { width: 220px; min-width: 220px; padding: 1rem; }
+        }
     </style>
 </head>
 <body>
-    <!-- ═══ Pre-Session: Client Card ═══ -->
-    <div class="pre-session" id="preSession">
-        <div class="client-card-wrapper" id="clientCardWrapper">
-            <div class="client-card" id="clientCard">
-                <div class="card-header">
-                    <h2>Your Lead</h2>
-                    <p>This is all you know. The rest is up to you.</p>
-                </div>
-                <div id="clientFields">
-                    <!-- Populated by JS -->
-                </div>
-                <div class="start-btn-container">
-                    <button class="btn btn-primary btn-lg" id="startBtn" onclick="startTraining()">
-                        Start Training
-                    </button>
-                </div>
+    <!-- ═══ Screen 1: Pre-Session (client card) ═══ -->
+    <div class="screen screen-pre active" id="screenPre">
+        <div class="client-card" id="clientCard">
+            <div class="card-header">
+                <h2>Your Lead</h2>
+                <p>This is all you know. The rest is up to you.</p>
+            </div>
+            <div id="clientFields"></div>
+            <div class="start-btn-container">
+                <button class="btn btn-primary btn-lg" id="startBtn" onclick="startTraining()">
+                    Start Training
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- ═══ Active Session ═══ -->
-    <div class="session-active" id="sessionActive">
-        <div class="session-header">
-            <div class="recording-indicator">
-                <div class="recording-dot"></div>
-                <span>LIVE</span>
-            </div>
-            <h3 id="sessionClientName">Training Session</h3>
-            <div style="display:flex; align-items:center; gap:1rem;">
-                <div class="session-timer" id="timer">00:00</div>
-                <button class="btn btn-danger btn-sm" onclick="endTraining()">End Training</button>
-            </div>
+    <!-- ═══ Screen 2: Active Session ═══ -->
+    <div class="screen screen-session" id="screenSession">
+        <div class="session-sidebar" id="sessionSidebar">
+            <div class="sidebar-title">Your Lead</div>
+            <div id="sidebarFields"></div>
         </div>
-
-        <div class="voice-area">
-            <div class="voice-status" id="voiceStatus">Connecting...</div>
-            <div class="voice-circle" id="voiceCircle">
-                <div class="voice-circle-inner">🎙</div>
+        <div class="session-main">
+            <div class="session-header">
+                <div class="recording-indicator">
+                    <div class="recording-dot"></div>
+                    <span>LIVE</span>
+                </div>
+                <h3 id="sessionClientName">Training Session</h3>
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <div class="session-timer" id="timer">00:00</div>
+                    <button class="btn btn-danger btn-sm" onclick="endTraining()">End Session</button>
+                </div>
             </div>
-            <div class="visualizer" id="visualizer">
-                <!-- Bars generated by JS -->
+
+            <div class="voice-area">
+                <div class="voice-status" id="voiceStatus">Connecting...</div>
+                <div class="voice-circle" id="voiceCircle">
+                    <div class="voice-circle-inner">🎙</div>
+                </div>
+                <div class="visualizer" id="visualizer"></div>
             </div>
-        </div>
 
-        <div class="state-bar" id="stateBar">
-            <div class="state-item"><span class="label">Phase:</span><span class="value" id="statePhase">Intro</span></div>
-            <div class="state-item"><span class="label">Trust:</span><span class="value" id="stateTrust">50</span></div>
-            <div class="state-item"><span class="label">Authority:</span><span class="value" id="stateAuth">50</span></div>
-            <div class="state-item"><span class="label">Engagement:</span><span class="value" id="stateEng">70</span></div>
-        </div>
+            <div class="state-bar" id="stateBar">
+                <div class="state-item"><span class="label">Phase:</span><span class="value" id="statePhase">Intro</span></div>
+                <div class="state-item"><span class="label">Trust:</span><span class="value" id="stateTrust">50</span></div>
+                <div class="state-item"><span class="label">Authority:</span><span class="value" id="stateAuth">50</span></div>
+                <div class="state-item"><span class="label">Engagement:</span><span class="value" id="stateEng">70</span></div>
+            </div>
 
-        <div class="transcript-area" id="transcriptArea">
-            <div class="transcript-header">Live Transcription</div>
-            <div id="transcriptContent"></div>
+            <div class="transcript-area" id="transcriptArea">
+                <div class="transcript-header">Live Transcription</div>
+                <div id="transcriptContent"></div>
+            </div>
         </div>
     </div>
 
     <!-- ═══ Report Overlay ═══ -->
     <div class="report-overlay" id="reportOverlay">
-        <div class="report-content" id="reportContent">
-            <!-- Populated by JS -->
-        </div>
+        <div class="report-content" id="reportContent"></div>
     </div>
 
     <script src="/js/api.js"></script>
@@ -367,7 +368,13 @@
         let timerInterval = null;
         let startTime = null;
 
-        // ── Initialize: Generate client card ─────────────────
+        // ── Screen switching ─────────────────────────────────
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // ── Initialize: fetch session & render client card ───
         async function init() {
             try {
                 const data = await API.startSession(null, 'Sal');
@@ -383,16 +390,34 @@
         }
 
         function renderClientCard(info) {
-            const fields = document.getElementById('clientFields');
-            fields.innerHTML = `
+            const html = buildFieldsHTML(info);
+            document.getElementById('clientFields').innerHTML = html;
+        }
+
+        function buildFieldsHTML(info) {
+            return `
                 <div class="client-field"><span class="field-label">First Name</span><span class="field-value">${info.first_name}</span></div>
                 <div class="client-field"><span class="field-label">Age</span><span class="field-value">${info.age}</span></div>
                 <div class="client-field"><span class="field-label">Email</span><span class="field-value">${info.email}</span></div>
                 <div class="client-field"><span class="field-label">State</span><span class="field-value">${info.state}</span></div>
                 <div class="client-field"><span class="field-label">Address</span><span class="field-value">${info.address}</span></div>
-                <div class="client-field"><span class="field-label">Heart Attack History</span><span class="field-value ${info.heart_attack_history ? 'yes' : 'no'}">${info.heart_attack_history ? 'Yes' : 'No'}</span></div>
-                <div class="client-field"><span class="field-label">Cancer History</span><span class="field-value ${info.cancer_history ? 'yes' : 'no'}">${info.cancer_history ? 'Yes' : 'No'}</span></div>
-                <div class="client-field"><span class="field-label">Stroke History</span><span class="field-value ${info.stroke_history ? 'yes' : 'no'}">${info.stroke_history ? 'Yes' : 'No'}</span></div>
+                <div class="client-field"><span class="field-label">Heart Attack</span><span class="field-value ${info.heart_attack_history ? 'yes' : 'no'}">${info.heart_attack_history ? 'Yes' : 'No'}</span></div>
+                <div class="client-field"><span class="field-label">Cancer</span><span class="field-value ${info.cancer_history ? 'yes' : 'no'}">${info.cancer_history ? 'Yes' : 'No'}</span></div>
+                <div class="client-field"><span class="field-label">Stroke</span><span class="field-value ${info.stroke_history ? 'yes' : 'no'}">${info.stroke_history ? 'Yes' : 'No'}</span></div>
+            `;
+        }
+
+        function renderSidebar(info) {
+            const container = document.getElementById('sidebarFields');
+            container.innerHTML = `
+                <div class="sidebar-field"><span class="sidebar-label">Name</span><span class="sidebar-value">${info.first_name}</span></div>
+                <div class="sidebar-field"><span class="sidebar-label">Age</span><span class="sidebar-value">${info.age}</span></div>
+                <div class="sidebar-field"><span class="sidebar-label">Email</span><span class="sidebar-value">${info.email}</span></div>
+                <div class="sidebar-field"><span class="sidebar-label">State</span><span class="sidebar-value">${info.state}</span></div>
+                <div class="sidebar-field"><span class="sidebar-label">Address</span><span class="sidebar-value">${info.address}</span></div>
+                <div class="sidebar-field"><span class="sidebar-label">Heart Attack</span><span class="sidebar-value ${info.heart_attack_history ? 'yes' : 'no'}">${info.heart_attack_history ? 'Yes' : 'No'}</span></div>
+                <div class="sidebar-field"><span class="sidebar-label">Cancer</span><span class="sidebar-value ${info.cancer_history ? 'yes' : 'no'}">${info.cancer_history ? 'Yes' : 'No'}</span></div>
+                <div class="sidebar-field"><span class="sidebar-label">Stroke</span><span class="sidebar-value ${info.stroke_history ? 'yes' : 'no'}">${info.stroke_history ? 'Yes' : 'No'}</span></div>
             `;
         }
 
@@ -402,58 +427,58 @@
 
             const btn = document.getElementById('startBtn');
             btn.disabled = true;
-            btn.textContent = 'Connecting...';
+            btn.textContent = 'Starting...';
 
             try {
-                // Request mic access
+                // Request mic access first
                 mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-                // Animate client card to sidebar
-                const wrapper = document.getElementById('clientCardWrapper');
-                wrapper.classList.add('slide-left');
+                // Populate sidebar with client info
+                renderSidebar(clientInfo);
+                document.getElementById('sessionClientName').textContent = `Session with ${clientInfo.first_name}`;
 
-                // Show session UI
-                setTimeout(() => {
-                    document.getElementById('preSession').style.background = 'transparent';
-                    document.getElementById('preSession').style.pointerEvents = 'none';
-                    document.getElementById('sessionActive').classList.add('visible');
-                    document.getElementById('sessionClientName').textContent = `Session with ${clientInfo.first_name}`;
-                    connectVoice();
-                }, 400);
+                // Switch screens instantly
+                showScreen('screenSession');
+
+                // Connect voice WebSocket
+                connectVoice();
 
                 // Start timer
                 startTime = Date.now();
                 timerInterval = setInterval(updateTimer, 1000);
 
-                // Init visualizer
+                // Init visualizer bars
                 initVisualizer();
 
             } catch (err) {
-                showToast('Microphone access required for training', 'error');
+                showToast('Microphone access is required for voice training.', 'error');
                 btn.disabled = false;
                 btn.textContent = 'Start Training';
             }
         }
 
-        // ── Voice WebSocket Connection ───────────────────────
+        // ── Voice WebSocket ──────────────────────────────────
         function connectVoice() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const token = API.token;
             ws = new WebSocket(`${protocol}//${window.location.host}/api/sessions/ws/${sessionId}?token=${token}`);
 
             ws.onopen = () => {
-                document.getElementById('voiceStatus').textContent = 'Speak to begin';
+                document.getElementById('voiceStatus').textContent = 'Connected — waiting for voice...';
                 startAudioCapture();
             };
 
             ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                handleVoiceEvent(data);
+                try {
+                    const data = JSON.parse(event.data);
+                    handleVoiceEvent(data);
+                } catch (e) {
+                    console.error('Bad WS message:', e);
+                }
             };
 
-            ws.onerror = (err) => {
-                console.error('WebSocket error:', err);
-                document.getElementById('voiceStatus').textContent = 'Connection error';
+            ws.onerror = () => {
+                document.getElementById('voiceStatus').textContent = 'Connection error — retrying...';
             };
 
             ws.onclose = () => {
@@ -479,6 +504,7 @@
                     } else if (data.status === 'connecting_voice') {
                         status.textContent = 'Connecting to voice service...';
                     } else if (data.status === 'connected' || data.status === 'ready') {
+                        circle.className = 'voice-circle';
                         status.textContent = 'Connected — speak to begin';
                     }
                     break;
@@ -503,11 +529,12 @@
 
                 case 'error':
                     showToast(data.message, 'error');
+                    status.textContent = 'Error — check connection';
                     break;
             }
         }
 
-        // ── Audio Capture ────────────────────────────────────
+        // ── Audio Capture (mic → server) ─────────────────────
         function startAudioCapture() {
             if (!mediaStream) return;
 
@@ -539,10 +566,7 @@
             return btoa(binary);
         }
 
-        // ── Audio Playback ───────────────────────────────────
-        let audioQueue = [];
-        let isPlaying = false;
-
+        // ── Audio Playback (server → speaker) ────────────────
         function playAudio(base64Data) {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -575,11 +599,10 @@
             msg.className = 'transcript-msg';
             msg.innerHTML = `
                 <div class="role ${role}">${role === 'agent' ? 'You (Agent)' : 'AI Client'}</div>
-                <div class="text">${text}</div>
+                <div class="text">${escapeHTML(text)}</div>
             `;
             container.appendChild(msg);
-            const area = document.getElementById('transcriptArea');
-            area.scrollTop = area.scrollHeight;
+            document.getElementById('transcriptArea').scrollTop = document.getElementById('transcriptArea').scrollHeight;
         }
 
         function updateStreamingTranscript(role, delta) {
@@ -595,8 +618,13 @@
             }
             const textDiv = streamingDiv.querySelector('.streaming-text');
             textDiv.textContent += delta;
-            const area = document.getElementById('transcriptArea');
-            area.scrollTop = area.scrollHeight;
+            document.getElementById('transcriptArea').scrollTop = document.getElementById('transcriptArea').scrollHeight;
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
         }
 
         // ── State Bar ────────────────────────────────────────
@@ -630,8 +658,7 @@
         function animateVisualizer() {
             const bars = document.querySelectorAll('.viz-bar');
             bars.forEach(bar => {
-                const h = Math.random() * 30 + 4;
-                bar.style.height = h + 'px';
+                bar.style.height = (Math.random() * 30 + 4) + 'px';
             });
             requestAnimationFrame(() => setTimeout(animateVisualizer, 100));
         }
@@ -644,58 +671,65 @@
 
             // Close WebSocket
             if (ws) {
-                ws.send(JSON.stringify({ type: 'end' }));
+                try { ws.send(JSON.stringify({ type: 'end' })); } catch (e) {}
                 ws.close();
+                ws = null;
             }
 
             // Stop mic
             if (mediaStream) {
                 mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
             }
             if (audioContext) {
                 audioContext.close();
+                audioContext = null;
             }
 
             // Get report
+            document.getElementById('voiceStatus').textContent = 'Generating report...';
             try {
                 const result = await API.endSession(sessionId);
                 showReport(result);
             } catch (err) {
                 showToast('Error generating report: ' + err.message, 'error');
-                window.location.href = '/dashboard';
+                setTimeout(() => window.location.href = '/dashboard', 2000);
             }
         }
 
-        // ── Show Report ──────────────────────────────────────
+        // ── Report ───────────────────────────────────────────
         function showReport(result) {
             const report = result.report;
             const overlay = document.getElementById('reportOverlay');
             const content = document.getElementById('reportContent');
 
-            const categories = (report.categories || []).map(cat => `
-                <div class="report-cat">
-                    <div class="report-cat-header">
-                        <h4>${cat.name}</h4>
-                        <span class="score" style="color: ${cat.score >= 70 ? 'var(--accent-green)' : cat.score >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)'}">${cat.score.toFixed(0)}</span>
+            const grade = report.letter_grade || 'F';
+            const score = (report.overall_score || 0).toFixed(1);
+            const style = report.detected_sales_style || 'Unknown';
+            const closeProb = (report.close_probability || 0).toFixed(0);
+
+            const categories = (report.categories || []).map(cat => {
+                const color = cat.score >= 70 ? 'var(--accent-green)' : cat.score >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)';
+                const barClass = cat.score >= 70 ? 'green' : cat.score >= 50 ? 'blue' : 'amber';
+                return `
+                    <div class="report-cat">
+                        <div class="report-cat-header">
+                            <h4>${escapeHTML(cat.name)}</h4>
+                            <span class="score" style="color:${color}">${cat.score.toFixed(0)}</span>
+                        </div>
+                        <div class="score-bar"><div class="score-bar-fill ${barClass}" style="width:${cat.score}%"></div></div>
+                        ${cat.pros && cat.pros.length ? `<div class="pros">+ ${cat.pros.join(' | ')}</div>` : ''}
+                        ${cat.consequences && cat.consequences.length ? `<div class="cons">&rarr; ${cat.consequences.join(' | ')}</div>` : ''}
                     </div>
-                    <div class="score-bar">
-                        <div class="score-bar-fill ${cat.score >= 70 ? 'green' : cat.score >= 50 ? 'blue' : 'amber'}" style="width:${cat.score}%"></div>
-                    </div>
-                    ${cat.pros && cat.pros.length ? `<div class="pros">+ ${cat.pros.join(' | ')}</div>` : ''}
-                    ${cat.consequences && cat.consequences.length ? `<div class="cons">→ ${cat.consequences.join(' | ')}</div>` : ''}
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             content.innerHTML = `
                 <div class="report-header">
                     <h2>Session Report Card</h2>
-                    <div class="report-header .grade-big grade ${gradeClass(report.letter_grade || 'F')}" style="font-size:5rem;font-weight:900;margin:1rem 0;">${report.letter_grade || 'F'}</div>
-                    <p style="font-size:1.25rem;color:var(--text-secondary);">Overall Score: <strong>${(report.overall_score || 0).toFixed(1)}/100</strong></p>
-                    <p style="color:var(--text-muted);">
-                        Duration: ${formatDuration(result.duration_seconds)} |
-                        Style: ${report.detected_sales_style || 'Unknown'} |
-                        Close Probability: ${(report.close_probability || 0).toFixed(0)}%
-                    </p>
+                    <div class="grade-big ${gradeClass(grade)}" style="font-size:5rem;font-weight:900;margin:1rem 0;">${grade}</div>
+                    <p style="font-size:1.25rem;color:var(--text-secondary);">Overall Score: <strong>${score}/100</strong></p>
+                    <p style="color:var(--text-muted);">Duration: ${formatDuration(result.duration_seconds)} | Style: ${style} | Close Probability: ${closeProb}%</p>
                     <div style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:center;">
                         <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
                         <button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>
