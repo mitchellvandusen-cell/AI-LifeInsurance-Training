@@ -8,8 +8,9 @@ Mounts all API routers and serves the frontend static files.
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -100,9 +101,38 @@ async def health():
 
 
 # ── Serve Frontend Static Files ──────────────────────────────
-# Must be last so API routes take priority
+# Mount CSS/JS/assets as static directories, then catch-all for HTML pages.
 
-app.mount("/", StaticFiles(directory=str(BASE_DIR / "frontend"), html=True), name="frontend")
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
+app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
+app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="assets")
+
+
+@app.get("/{path:path}")
+async def serve_frontend(path: str):
+    """Catch-all: serve HTML pages from the frontend directory."""
+    # Direct file match (e.g. favicon.ico, robots.txt)
+    file_path = FRONTEND_DIR / path
+    if file_path.is_file():
+        return FileResponse(file_path)
+
+    # Append .html (e.g. /login → login.html)
+    html_path = FRONTEND_DIR / f"{path}.html"
+    if html_path.is_file():
+        return FileResponse(html_path, media_type="text/html")
+
+    # Directory index (e.g. / → index.html)
+    index_path = FRONTEND_DIR / path / "index.html"
+    if index_path.is_file():
+        return FileResponse(index_path, media_type="text/html")
+
+    # Root fallback
+    if not path or path == "/":
+        return FileResponse(FRONTEND_DIR / "index.html", media_type="text/html")
+
+    raise HTTPException(status_code=404, detail="Page not found")
 
 
 # ── CLI Entry Point ──────────────────────────────────────────
