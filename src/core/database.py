@@ -581,21 +581,40 @@ async def compute_analytics_for_date(user_id: str, date: datetime) -> dict:
     total_minutes = sum(r["duration_seconds"] or 0 for r in reports) / 60.0
 
     # Aggregate scores from report cards
-    score_keys = [
-        "tonality", "rapport", "questions", "compliance", "flow",
-        "trust", "objection_handling", "preframing", "presentation",
-        "close", "underwriting"
-    ]
+    # Map analytics DB column names → grading engine category keys
+    score_key_map = {
+        "tonality": "tonality",
+        "rapport": "rapport_discovery",
+        "questions": "question_quality",
+        "compliance": "compliance_authority",
+        "flow": "flow",
+        "trust": "trust_building",
+        "objection_handling": "objection_handling",
+        "preframing": "preframing",
+        "presentation": "presentation",
+        "close": "resistance_management",
+        "underwriting": "medical_underwriting",
+    }
     avgs = {}
-    for key in score_keys:
+    for analytics_key, engine_key in score_key_map.items():
         scores = []
         for r in reports:
             report = json.loads(r["full_report"]) if isinstance(r["full_report"], str) else r["full_report"]
-            for cat in report.get("categories", []):
-                if cat.get("name", "").lower().replace(" ", "_").replace("&", "").replace("/", "_") == key:
+            categories = report.get("categories", {})
+            # categories is a dict: {"tonality": {"score": 80, ...}, ...}
+            if isinstance(categories, dict):
+                cat = categories.get(engine_key)
+                if cat and isinstance(cat, dict):
                     scores.append(cat.get("score", 0))
-                    break
-        avgs[f"avg_{key}"] = sum(scores) / len(scores) if scores else 0
+            elif isinstance(categories, list):
+                # Legacy format: [{"name": "Tonality", "score": 80}, ...]
+                for cat in categories:
+                    if isinstance(cat, dict):
+                        name = cat.get("name", "").lower().replace(" ", "_").replace("&", "").replace("/", "_")
+                        if name == analytics_key or name == engine_key:
+                            scores.append(cat.get("score", 0))
+                            break
+        avgs[f"avg_{analytics_key}"] = sum(scores) / len(scores) if scores else 0
 
     overall_scores = []
     close_probs = []
