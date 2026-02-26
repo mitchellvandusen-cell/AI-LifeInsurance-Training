@@ -179,6 +179,7 @@ class FACEProfile(BaseModel):
 class ClientPersona(BaseModel):
     """Generated AI client with behavioral profile."""
     persona_id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
+    gender: str = "male"
     name: str = "John"
     age: int = 55
     occupation: str = "Retired teacher"

@@ -309,6 +309,7 @@ class PersonaGenerator:
         personality_notes = self._build_personality_notes(archetype, six_axis, age)
 
         return ClientPersona(
+            gender=gender,
             name=f"{first_name} {last_name}",
             age=age,
             occupation=occupation,

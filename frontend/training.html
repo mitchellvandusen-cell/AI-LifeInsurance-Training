@@ -377,7 +377,7 @@
         // ── Initialize: fetch session & render client card ───
         async function init() {
             try {
-                const data = await API.startSession(null, 'Sal');
+                const data = await API.startSession(null);
                 sessionId = data.session_id;
                 clientInfo = data.client_info;
                 renderClientCard(clientInfo);
@@ -501,6 +501,7 @@
                     } else if (data.status === 'listening') {
                         circle.className = 'voice-circle';
                         status.textContent = 'Your turn — speak now';
+                        resetAudioQueue();
                     } else if (data.status === 'connecting_voice') {
                         status.textContent = 'Connecting to voice service...';
                     } else if (data.status === 'connected' || data.status === 'ready') {
@@ -535,10 +536,19 @@
         }
 
         // ── Audio Capture (mic → server) ─────────────────────
+        let playbackContext = null;  // Separate context for playback
+
         function startAudioCapture() {
             if (!mediaStream) return;
 
             audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            // Ensure context is running (browser autoplay policy)
+            if (audioContext.state === 'suspended') audioContext.resume();
+
+            // Create a separate playback context so capture and playback don't interfere
+            playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            if (playbackContext.state === 'suspended') playbackContext.resume();
+
             const source = audioContext.createMediaStreamSource(mediaStream);
             const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
@@ -566,11 +576,15 @@
             return btoa(binary);
         }
 
-        // ── Audio Playback (server → speaker) ────────────────
+        // ── Audio Playback (server → speaker) with queue ─────
+        // Chunks must play sequentially, not overlapping.
+        let nextPlayTime = 0;
+
         function playAudio(base64Data) {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-            }
+            const ctx = playbackContext || audioContext;
+            if (!ctx) return;
+            if (ctx.state === 'suspended') ctx.resume();
+
             const binaryString = atob(base64Data);
             const bytes = new Uint8Array(binaryString.length);
             for (let i = 0; i < binaryString.length; i++) {
@@ -581,12 +595,23 @@
             for (let i = 0; i < int16.length; i++) {
                 float32[i] = int16[i] / 0x7FFF;
             }
-            const buffer = audioContext.createBuffer(1, float32.length, 24000);
+
+            const buffer = ctx.createBuffer(1, float32.length, 24000);
             buffer.getChannelData(0).set(float32);
-            const source = audioContext.createBufferSource();
+
+            const source = ctx.createBufferSource();
             source.buffer = buffer;
-            source.connect(audioContext.destination);
-            source.start();
+            source.connect(ctx.destination);
+
+            // Schedule chunks back-to-back instead of overlapping
+            const now = ctx.currentTime;
+            if (nextPlayTime < now) nextPlayTime = now;
+            source.start(nextPlayTime);
+            nextPlayTime += buffer.duration;
+        }
+
+        function resetAudioQueue() {
+            nextPlayTime = 0;
         }
 
         // ── Transcript Display ───────────────────────────────
@@ -685,6 +710,11 @@
                 audioContext.close();
                 audioContext = null;
             }
+            if (playbackContext) {
+                playbackContext.close();
+                playbackContext = null;
+            }
+            resetAudioQueue();
 
             // Get report
             document.getElementById('voiceStatus').textContent = 'Generating report...';

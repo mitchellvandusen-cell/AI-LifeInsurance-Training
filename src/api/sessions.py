@@ -78,7 +78,19 @@ def _generate_client_info(persona) -> dict:
 
 class StartSessionRequest(BaseModel):
     archetype: str | None = None
-    voice: str = "Sal"
+    voice: str | None = None  # Auto-select based on persona gender if not specified
+
+
+# xAI voices: Ara (F), Eve (F), Rex (M), Leo (M), Sal (neutral)
+VOICE_MAP = {"male": ["Rex", "Leo"], "female": ["Ara", "Eve"]}
+
+
+def _pick_voice(gender: str, requested: str | None) -> str:
+    """Pick a voice matching the persona's gender."""
+    if requested:
+        return requested
+    voices = VOICE_MAP.get(gender, ["Sal"])
+    return random.choice(voices)
 
 
 @router.post("/start")
@@ -104,6 +116,9 @@ async def start_session(req: StartSessionRequest, request: Request):
     gen = PersonaGenerator()
     persona = gen.generate(archetype_name=req.archetype)
 
+    # Auto-select voice based on persona gender
+    voice = _pick_voice(persona.gender, req.voice)
+
     # Create orchestrator
     orch = ConversationOrchestrator(persona=persona)
 
@@ -115,22 +130,25 @@ async def start_session(req: StartSessionRequest, request: Request):
         user_id=user_id,
         persona_data=persona.model_dump(),
         client_info=client_info,
-        voice_name=req.voice,
+        voice_name=voice,
     )
 
     # Store in memory
     _active_sessions[session_record["id"]] = {
         "orchestrator": orch,
         "user_id": user_id,
+        "voice": voice,
         "voice_session": None,
         "start_time": time.time(),
         "turn_count": 0,
     }
 
+    print(f"[SESSION] Started: {session_record['id']} | {persona.name} ({persona.gender}) | voice={voice}")
+
     return {
         "session_id": session_record["id"],
         "client_info": client_info,
-        "voice": req.voice,
+        "voice": voice,
     }
 
 

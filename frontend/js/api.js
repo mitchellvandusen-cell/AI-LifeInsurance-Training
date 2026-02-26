@@ -74,8 +74,10 @@ const API = {
     },
 
     // ── Sessions ──────────────────────────────────────────
-    async startSession(archetype = null, voice = 'Sal') {
-        return this.post('/api/sessions/start', { archetype, voice });
+    async startSession(archetype = null, voice = null) {
+        const body = { archetype };
+        if (voice) body.voice = voice;
+        return this.post('/api/sessions/start', body);
     },
 
     async endSession(sessionId) {
