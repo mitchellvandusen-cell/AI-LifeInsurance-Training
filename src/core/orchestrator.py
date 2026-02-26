@@ -275,8 +275,10 @@ class ConversationOrchestrator:
         elif not handle_analysis["attempted_isolation"] and not handle_analysis["hypothetical_test"]:
             result["handle_weak"] = True
             result["suggestion"] = (
-                "Isolate first: 'Is it just [X], or is there something else?' "
-                "For spouse objections: test with a hypothetical scenario."
+                "Isolate first: confirm this is the true and only barrier "
+                "before attempting to resolve. For third-party deferral "
+                "objections: test with hypothetical scenarios to determine "
+                "autonomous decision-making."
             )
             self.sm.adjust_authority(-5, "handled without isolating")
 

@@ -3,19 +3,23 @@ ObjectionEngine: Determines WHEN and WHAT objection the AI client should raise.
 Objections are NEVER random. They are strict conditional outputs of the state machine.
 
 Three types:
-- Smokescreen: Surface-level deflection. The real issue is something else.
+- Smokescreen: Surface-level deflection masking the true root cause.
   Almost always traces to MONEY, TIME, or DECISION_MAKER.
 - True Objection: Genuine concern that must be isolated and resolved.
-- Condition: Out of both parties' hands. Cannot be overcome. Never trained as objectable.
+- Condition: External circumstance outside both parties' control. Cannot be overcome.
 
-Isolation means: "If this ONE thing were solved, would you move forward?"
-For spouse/third-party: "If they said no, what would YOU do?"
-Once the client confirms they'd proceed regardless, the objection is VOID and locked.
+Isolation Protocol (putting the objection on an island):
+  1. TRUTH TEST — Is the stated objection the actual concern, or a smokescreen
+     masking something deeper? The spouse objection might really be about money.
+     A timing objection might really be about not trusting the agent.
+  2. SINGULARITY TEST — Is this the ONLY barrier? No other hidden concerns?
+  3. COMMITMENT TEST — If this single issue were resolved right now, would the
+     client move forward immediately? No hesitation, no new objections?
+  All three must be confirmed for true isolation. Only then can the agent work
+  on solving that one isolated objection. If solved properly, the deal closes.
 """
 
 from __future__ import annotations
-
-import hashlib
 
 from src.core.state_manager import StateManager
 from src.models.state import (
@@ -29,9 +33,9 @@ from src.models.state import (
 
 # ── Root cause mapping ──────────────────────────────────────────
 # Every objection category maps to its true root cause.
-# "I need to think about it" = thinking about SPENDING THE MONEY.
-# "Talk to spouse" = talking to spouse about SPENDING THE MONEY.
-# If the agent never established urgency (TIME), there's no reason to act now.
+# Delay tactics trace to MONEY — the client is hesitating about the financial commitment.
+# Deferral to others traces to DECISION_MAKER — the client lacks autonomous authority.
+# Lack of urgency traces to TIME — no consequence was established for inaction.
 
 ROOT_CAUSE_MAP: dict[ObjectionCategory, ObjectionRootCause] = {
     ObjectionCategory.BUDGET: ObjectionRootCause.MONEY,
@@ -48,7 +52,7 @@ ROOT_CAUSE_MAP: dict[ObjectionCategory, ObjectionRootCause] = {
 
 
 class ObjectionRule:
-    """A single conditional objection trigger."""
+    """A single conditional objection trigger with behavioral context."""
 
     def __init__(
         self,
@@ -56,22 +60,38 @@ class ObjectionRule:
         objection_type: ObjectionType,
         root_cause: ObjectionRootCause,
         condition_fn,
-        text_options: list[str],
+        behavioral_intent: str,
+        emotional_context: str,
         priority: int = 50,
     ):
         self.category = category
         self.objection_type = objection_type
         self.root_cause = root_cause
         self.condition_fn = condition_fn
-        self.text_options = text_options
+        self.behavioral_intent = behavioral_intent
+        self.emotional_context = emotional_context
         self.priority = priority
 
     def evaluate(self, sm: StateManager) -> bool:
         return self.condition_fn(sm)
 
 
+# ── Condition categories (never trainable) ─────────────────────
+# Conditions are external circumstances that neither party controls.
+# They are NOT objections and CANNOT be overcome through sales technique.
+# The system never triggers these as training scenarios.
+
+CONDITION_CATEGORIES = {
+    "terminal_illness": "Client has a terminal medical diagnosis that disqualifies coverage.",
+    "bankruptcy": "Client is in active bankruptcy proceedings with no disposable income.",
+    "no_income": "Client has no income source and cannot sustain premium payments.",
+    "foreign_national": "Client does not meet citizenship or residency requirements.",
+    "age_limit": "Client exceeds the maximum insurable age for available products.",
+}
+
+
 def _build_rules() -> list[ObjectionRule]:
-    """Build the complete objection ruleset."""
+    """Build the complete objection ruleset with behavioral intents."""
     return [
         # ── Banking Objection ───────────────────────────────────
         ObjectionRule(
@@ -83,12 +103,14 @@ def _build_rules() -> list[ObjectionRule]:
                 and sm.state.current_phase
                 in (ConversationPhase.PRESENTATION, ConversationPhase.CLOSE)
             ),
-            text_options=[
-                "Whoa, I'm not giving you my banking info over the phone.",
-                "I don't feel comfortable sharing my bank details right now.",
-                "Why do you need my banking information?",
-                "I'd rather mail in a payment. I don't give that out over the phone.",
-            ],
+            behavioral_intent=(
+                "Resist sharing banking information. This request was not "
+                "contextualized in advance and feels sudden and invasive. "
+                "Express protective instinct over financial details when no "
+                "prior explanation was given for why this information is needed "
+                "at this stage of the conversation."
+            ),
+            emotional_context="guarded, caught off guard, protective of financial privacy",
             priority=90,
         ),
         # ── Social Security Objection ───────────────────────────
@@ -101,16 +123,18 @@ def _build_rules() -> list[ObjectionRule]:
                 and sm.state.current_phase
                 in (ConversationPhase.PRESENTATION, ConversationPhase.CLOSE)
             ),
-            text_options=[
-                "I'm not giving out my social security number.",
-                "Why would you need my social? That sounds like a scam.",
-                "I don't give that out to anyone.",
-            ],
+            behavioral_intent=(
+                "Refuse to provide social security number. This sensitive "
+                "identifier was requested without prior explanation. Express "
+                "concern about identity security and question why this level "
+                "of personal information is needed from someone on the phone."
+            ),
+            emotional_context="alarmed, suspicious, defensive about identity information",
             priority=90,
         ),
-        # ── "Think About It" (consequence not established) ──────
-        # ROOT CAUSE: They want to think about spending the MONEY.
-        # No urgency was created so there's no reason to act NOW.
+        # ── Delay / Think About It ──────────────────────────────
+        # ROOT CAUSE: The client wants to delay the financial commitment.
+        # No urgency was created, so there is no cost to waiting.
         ObjectionRule(
             category=ObjectionCategory.THINK_ABOUT_IT,
             objection_type=ObjectionType.SMOKESCREEN,
@@ -119,18 +143,19 @@ def _build_rules() -> list[ObjectionRule]:
                 not sm.check_flag("consequence_established")
                 and sm.state.current_phase == ConversationPhase.PRESENTATION
             ),
-            text_options=[
-                "This sounds good, but I need to think about it.",
-                "Let me sleep on it and get back to you.",
-                "I'm not ready to make a decision right now.",
-                "I want to do some more research first.",
-            ],
+            behavioral_intent=(
+                "Stall the decision by requesting time to consider. The surface "
+                "behavior is asking for delay, but the root cause is unresolved "
+                "financial discomfort. No consequence for inaction was established, "
+                "so there is no perceived cost to waiting. Express desire to pause "
+                "and reflect rather than commit now."
+            ),
+            emotional_context="hesitant, noncommittal, seeking an exit without confrontation",
             priority=80,
         ),
-        # ── Spouse/Third Party ──────────────────────────────────
-        # ROOT CAUSE: DECISION_MAKER. They're deferring authority.
-        # Real question: Are YOU the person making this decision?
-        # If the spouse said no — would you still do it?
+        # ── Spouse / Third Party Deferral ─────────────────────
+        # ROOT CAUSE: DECISION_MAKER. Deferring authority to another person.
+        # The real question is whether the client would act independently.
         ObjectionRule(
             category=ObjectionCategory.SPOUSE_APPROVAL,
             objection_type=ObjectionType.SMOKESCREEN,
@@ -141,15 +166,18 @@ def _build_rules() -> list[ObjectionRule]:
                 in (ConversationPhase.PRESENTATION, ConversationPhase.CLOSE)
                 and sm.state.persona.marital_status.lower() in ("married", "partnered")
             ),
-            text_options=[
-                "I need to talk to my wife about this first.",
-                "My husband handles the finances, I'd need to check with him.",
-                "Let me run this by my kids first, they help with these decisions.",
-                "I don't make these kinds of decisions without talking to my spouse.",
-            ],
+            behavioral_intent=(
+                "Defer the decision to a spouse or family member. Express that "
+                "this type of financial decision requires input from the other "
+                "person. The underlying dynamic is using the third party as a "
+                "shield against making an autonomous commitment. The client "
+                "filled out the form themselves and sees the value, but is "
+                "uncomfortable being the sole decision-maker."
+            ),
+            emotional_context="deflecting, seeking external validation, uncomfortable deciding alone",
             priority=75,
         ),
-        # ── Budget Objection ────────────────────────────────────
+        # ── Budget / Affordability ──────────────────────────────
         ObjectionRule(
             category=ObjectionCategory.BUDGET,
             objection_type=ObjectionType.TRUE_OBJECTION,
@@ -159,15 +187,17 @@ def _build_rules() -> list[ObjectionRule]:
                 and sm.state.persona.budget_sensitivity > 60
                 and sm.state.hidden.trust_score < 65
             ),
-            text_options=[
-                "That's more than I was hoping to spend.",
-                "I don't know if I can afford that right now.",
-                "That's a lot of money on a fixed income.",
-                "Can you find something cheaper?",
-            ],
+            behavioral_intent=(
+                "Express concern about the cost. The pricing feels higher than "
+                "expected or comfortable. This is a genuine financial concern, "
+                "not a smokescreen. The client needs the agent to reframe the "
+                "value relative to the consequence of not having coverage, or "
+                "to find a more affordable option."
+            ),
+            emotional_context="worried about money, calculating, weighing cost against need",
             priority=60,
         ),
-        # ── Trust / Credential Challenge ────────────────────────
+        # ── Trust / Credential Challenge ──────────────────────
         ObjectionRule(
             category=ObjectionCategory.TRUST,
             objection_type=ObjectionType.TRUE_OBJECTION,
@@ -176,12 +206,14 @@ def _build_rules() -> list[ObjectionRule]:
                 sm.state.hidden.trust_score < 35
                 and not sm.check_flag("credentials_shared")
             ),
-            text_options=[
-                "How do I know you're legitimate?",
-                "What company are you with exactly?",
-                "Are you even licensed in my state?",
-                "I've been burned before by people selling insurance over the phone.",
-            ],
+            behavioral_intent=(
+                "Question the agent's legitimacy and credentials. Trust has "
+                "not been established sufficiently to continue sharing information "
+                "or making commitments. Express skepticism about the caller's "
+                "identity, licensing, or company affiliation. Past negative "
+                "experiences with phone solicitations may surface."
+            ),
+            emotional_context="skeptical, wary, self-protective, questioning legitimacy",
             priority=70,
         ),
         # ── Timing / No Urgency ─────────────────────────────────
@@ -195,29 +227,33 @@ def _build_rules() -> list[ObjectionRule]:
                 in (ConversationPhase.PRESENTATION, ConversationPhase.CLOSE)
                 and sm.state.hidden.sales_resistance > 60
             ),
-            text_options=[
-                "I'm not in any rush on this. Can I call you back next month?",
-                "Now's not really the best time to be starting something new.",
-                "I want to wait until after the holidays to deal with this.",
-                "Let me get through this month first, then we can talk.",
-            ],
+            behavioral_intent=(
+                "Push the decision to a future date. Express that this is not "
+                "the right moment to start something new. Without an established "
+                "consequence for inaction, there is no perceived cost to delaying "
+                "indefinitely. The client feels no urgency because the agent "
+                "never connected inaction to a specific negative outcome."
+            ),
+            emotional_context="disengaged from urgency, comfortable postponing, no fear of delay",
             priority=65,
         ),
-        # ── Low Authority Frame Test ────────────────────────────
+        # ── Low Authority Frame Test ──────────────────────────
         ObjectionRule(
             category=ObjectionCategory.NEED,
             objection_type=ObjectionType.SMOKESCREEN,
             root_cause=ObjectionRootCause.TIME,
             condition_fn=lambda sm: sm.state.hidden.authority_score < 40,
-            text_options=[
-                "Actually, let me ask you something — how long have you been doing this?",
-                "Hold on, before we go further, can I ask you a question?",
-                "You know what, I was actually just thinking about something else entirely.",
-                "Hey, real quick, what do you think about the market right now?",
-            ],
+            behavioral_intent=(
+                "Attempt to seize conversational control from the agent. The "
+                "agent has not established enough authority, so the client feels "
+                "comfortable redirecting the conversation, asking personal or "
+                "off-topic questions, or testing whether the agent can maintain "
+                "their professional framework."
+            ),
+            emotional_context="assertive, testing boundaries, not taking the agent seriously",
             priority=55,
         ),
-        # ── Intro Objections (always possible) ──────────────────
+        # ── Intro Phase Resistance ────────────────────────────
         ObjectionRule(
             category=ObjectionCategory.NEED,
             objection_type=ObjectionType.SMOKESCREEN,
@@ -225,41 +261,34 @@ def _build_rules() -> list[ObjectionRule]:
             condition_fn=lambda sm: (
                 sm.state.current_phase == ConversationPhase.INTRO
             ),
-            text_options=[
-                "Look, I get about ten of these calls a day.",
-                "I already have life insurance, I'm all set.",
-                "I'm not interested, take me off your list.",
-                "How did you even get my number?",
-                "I'm really busy right now, this isn't a good time.",
-            ],
+            behavioral_intent=(
+                "Express initial resistance to the unsolicited call. The client "
+                "is in the middle of their day and was interrupted. They may "
+                "express fatigue with sales calls, claim existing coverage, "
+                "assert bad timing, or question how their contact information "
+                "was obtained. These are all surface-level deflections — the "
+                "client DID fill out a form and has underlying interest."
+            ),
+            emotional_context="mildly annoyed, preoccupied, reflexively dismissive",
             priority=40,
         ),
-        # ── Confused / Bad Flow ─────────────────────────────────
+        # ── Broken Flow Confusion ─────────────────────────────
         ObjectionRule(
             category=ObjectionCategory.THINK_ABOUT_IT,
             objection_type=ObjectionType.SMOKESCREEN,
             root_cause=ObjectionRootCause.MONEY,
             condition_fn=lambda sm: not sm.state.hidden.flow_integrity,
-            text_options=[
-                "I'm confused, what exactly are we doing here?",
-                "Wait, I thought we were talking about something else.",
-                "You know what, let me think about it and I'll call you back.",
-                "I'm going to need to think about this, you're losing me a bit.",
-            ],
+            behavioral_intent=(
+                "Express confusion about the direction of the conversation. "
+                "The call flow has been disrupted — topics jumped around or the "
+                "agent backtracked in a way that broke the logical progression. "
+                "The client has lost track of the purpose and structure of the "
+                "conversation and defaults to requesting time to process."
+            ),
+            emotional_context="confused, frustrated, mentally disengaged, wanting to regroup",
             priority=85,
         ),
     ]
-
-
-# ── Conditions (never trainable as objections) ─────────────────
-
-CONDITION_EXAMPLES = {
-    "terminal_illness": "I was just diagnosed with stage 4 cancer last week.",
-    "bankruptcy": "I just filed for bankruptcy, I have no money.",
-    "no_income": "I lost my job and I'm homeless.",
-    "foreign_national": "I'm not a US citizen or resident.",
-    "age_limit": "I'm 96 years old.",
-}
 
 
 class ObjectionEngine:
@@ -286,16 +315,17 @@ class ObjectionEngine:
         triggered.sort(key=lambda r: r.priority, reverse=True)
         best = triggered[0]
 
-        seed = hashlib.md5(
-            f"{sm.state.session_id}{sm.state.turn_number}".encode()
-        ).hexdigest()
-        idx = int(seed, 16) % len(best.text_options)
+        # Combine behavioral intent and emotional context for the LLM
+        objection_text = (
+            f"{best.behavioral_intent}\n"
+            f"Emotional state: {best.emotional_context}"
+        )
 
         return sm.raise_objection(
             category=best.category,
             objection_type=best.objection_type,
             root_cause=best.root_cause,
-            text=best.text_options[idx],
+            text=objection_text,
         )
 
     def analyze_agent_handle(self, sm: StateManager, agent_text: str) -> dict:
@@ -316,15 +346,19 @@ class ObjectionEngine:
             "asked_followup": False,
         }
 
+        # Isolation detection: agent probing for truth test + singularity test
         isolation_phrases = [
             "is it just", "is that the only", "besides that",
             "other than", "if we could", "is there anything else",
             "apart from", "or is there something else",
-            "what else", "is that the real",
+            "what else", "is that the real", "is there something deeper",
+            "is there another reason", "what's really", "what's the real",
+            "is there something behind", "anything else holding",
+            "only thing", "nothing else",
         ]
         result["attempted_isolation"] = any(p in text_lower for p in isolation_phrases)
 
-        # Hypothetical test: "If we solved X" / "If she said no, what would you do?"
+        # Hypothetical test: agent testing commitment through scenarios
         hypothetical_phrases = [
             "if we could", "if that weren't", "let's say",
             "hypothetically", "imagine", "what if",
@@ -338,6 +372,7 @@ class ObjectionEngine:
         ]
         result["hypothetical_test"] = any(p in text_lower for p in hypothetical_phrases)
 
+        # Decision-maker probe: testing autonomous authority
         dm_phrases = [
             "who makes", "decision maker", "your decision",
             "up to you", "you're the one", "this is your",
@@ -350,6 +385,7 @@ class ObjectionEngine:
         ]
         result["decision_maker_probe"] = any(p in text_lower for p in dm_phrases)
 
+        # Pressure detection: artificial urgency without substance
         pressure_phrases = [
             "today only", "right now", "can't wait",
             "don't miss", "lock in", "before it's too late",
@@ -358,6 +394,7 @@ class ObjectionEngine:
         ]
         result["pressure_detected"] = any(p in text_lower for p in pressure_phrases)
 
+        # Empathy detection: emotional acknowledgment
         empathy_phrases = [
             "i understand", "i hear you", "i get it",
             "that makes sense", "totally fair", "i appreciate",
@@ -365,6 +402,7 @@ class ObjectionEngine:
         ]
         result["empathy_shown"] = any(p in text_lower for p in empathy_phrases)
 
+        # Consequence redirect: reconnecting to established stakes
         consequence_phrases = [
             "what happens if", "god forbid", "if something happened",
             "without coverage", "left with nothing",
@@ -388,7 +426,7 @@ class ObjectionEngine:
         - MONEY: Is the budget genuinely workable? Did agent reframe value?
         - TIME: Did agent establish urgency through consequence?
         - DECISION_MAKER: Did agent confirm the client would act alone?
-          If the client says "I'd do it anyway" the objection is VOID.
+          If the client admits they would proceed regardless, the objection is void.
         """
         active = [o for o in sm.state.objections_raised if not o.locked]
         if not active:
@@ -407,9 +445,7 @@ class ObjectionEngine:
         if obj.root_cause == ObjectionRootCause.DECISION_MAKER:
             if handle_analysis.get("hypothetical_test") and handle_analysis.get("decision_maker_probe"):
                 # Agent tested the hypothetical AND probed decision-making.
-                # "What do you think she'd like about this?"
-                # "Say she had a bad day, said NO — what would you do?"
-                # Client says "I'd do it anyway" → LOCK IT. Never comes back.
+                # Client admits they would proceed independently → LOCK IT.
                 conviction = 80.0
                 if trust > 50:
                     conviction += 10
