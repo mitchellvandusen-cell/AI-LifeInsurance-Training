@@ -291,6 +291,95 @@
         @media (max-width: 768px) {
             .session-sidebar { width: 220px; min-width: 220px; padding: 1rem; }
         }
+
+        /* ── Tonality Guide Panel ─────────────────────────── */
+        .tone-guide { margin-top: 1rem; }
+        .tone-guide-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+        }
+        .pitch-canvas-wrap {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .pitch-canvas-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.35rem;
+        }
+        #pitchCanvas {
+            width: 100%;
+            height: 80px;
+            display: block;
+            border-radius: 4px;
+        }
+        .pitch-direction {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.35rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .pitch-arrow {
+            font-size: 1.2rem;
+            transition: transform 0.15s;
+        }
+        .pitch-arrow.down { color: var(--accent-green); transform: rotate(45deg); }
+        .pitch-arrow.up { color: var(--accent-amber); transform: rotate(-45deg); }
+        .pitch-arrow.flat { color: var(--accent-blue); transform: rotate(0deg); }
+
+        .tone-list { display: flex; flex-direction: column; gap: 0.35rem; }
+        .tone-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.6rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+        .tone-item:hover { border-color: var(--border-active); }
+        .tone-item.active {
+            border-color: var(--accent-blue);
+            background: rgba(79,70,229,0.08);
+        }
+        .tone-icon { font-size: 1rem; flex-shrink: 0; }
+        .tone-name { font-weight: 600; flex: 1; }
+        .tone-ref {
+            width: 50px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .tone-detail {
+            display: none;
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .tone-detail.visible { display: block; }
+        .tone-detail h4 {
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            margin-bottom: 0.35rem;
+        }
     </style>
 </head>
 <body>
@@ -492,12 +581,22 @@
                 document.getElementById('sessionClientName').textContent = data.module.name;
                 document.getElementById('stateBar').style.display = 'none'; // No state bar for modules
 
+                // Add tonality guide panel for tonality_mastery module
+                if (selectedModule === 'tonality_mastery') {
+                    document.getElementById('sidebarFields').innerHTML += buildTonalityGuide();
+                }
+
                 showScreen('screenSession');
                 connectModuleVoice();
 
                 startTime = Date.now();
                 timerInterval = setInterval(updateTimer, 1000);
                 initVisualizer();
+
+                // Start pitch detection for tonality module
+                if (selectedModule === 'tonality_mastery') {
+                    initPitchDetection();
+                }
             } catch (err) {
                 showToast(err.message, 'error');
                 btn.disabled = false;
@@ -877,6 +976,13 @@
             }
             resetAudioQueue();
 
+            // Stop pitch detection
+            if (pitchAnimId) {
+                cancelAnimationFrame(pitchAnimId);
+                pitchAnimId = null;
+            }
+            pitchAnalyser = null;
+
             // Get report
             document.getElementById('voiceStatus').textContent = 'Generating report...';
             try {
@@ -970,6 +1076,317 @@
             `;
 
             overlay.classList.add('visible');
+        }
+
+        // ── Tonality Guide ──────────────────────────────────
+        const TONE_DATA = [
+            { key: 'declarative', name: 'Declarative', icon: '⬇', desc: 'Voice drops on key words. Certainty. Facts, not questions.', contour: 'down', color: '#22c55e' },
+            { key: 'question', name: 'Question', icon: '⬆', desc: 'Voice rises at the end. Invites response. Use for real questions only.', contour: 'up', color: '#f59e0b' },
+            { key: 'scarcity', name: 'Scarcity Whisper', icon: '🤫', desc: 'Volume drops 60%. Slow, conspiratorial. Prospect leans in.', contour: 'low', color: '#a855f7' },
+            { key: 'reasonable', name: 'Reasonable Man', icon: '☕', desc: 'Even, calm, conversational. Just a human talking to a human.', contour: 'flat', color: '#3b82f6' },
+            { key: 'certainty', name: 'Certainty', icon: '💎', desc: 'Full conviction. Slightly louder. You KNOW this. Not hope — knowledge.', contour: 'strong', color: '#06b6d4' },
+            { key: 'pause', name: 'Strategic Pause', icon: '⏸', desc: '3-4 seconds of silence after a key statement. This is where the sale happens.', contour: 'pause', color: '#64748b' },
+            { key: 'fmdj', name: 'FM DJ Voice', icon: '🎙', desc: 'Chris Voss. Slow, calm, deep, soothing. Late-night radio host. Walls come down.', contour: 'fmdj', color: '#ec4899' },
+            { key: 'micro', name: 'Micro-shifts', icon: '🔀', desc: 'Advanced: combine tones within one sentence. Reasonable → pause → declarative.', contour: 'shift', color: '#f97316' },
+        ];
+
+        function drawToneContour(canvas, contour, color) {
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+
+            const mid = h / 2;
+            switch (contour) {
+                case 'down':
+                    ctx.moveTo(4, mid - 6);
+                    ctx.bezierCurveTo(w * 0.3, mid - 4, w * 0.6, mid, w - 4, mid + 7);
+                    break;
+                case 'up':
+                    ctx.moveTo(4, mid + 4);
+                    ctx.bezierCurveTo(w * 0.3, mid + 2, w * 0.6, mid - 2, w - 4, mid - 7);
+                    break;
+                case 'flat':
+                    ctx.moveTo(4, mid);
+                    ctx.lineTo(w - 4, mid);
+                    break;
+                case 'low':
+                    ctx.moveTo(4, mid - 4);
+                    ctx.bezierCurveTo(w * 0.25, mid - 2, w * 0.4, mid + 4, w - 4, mid + 5);
+                    ctx.globalAlpha = 0.4;
+                    break;
+                case 'strong':
+                    ctx.moveTo(4, mid + 2);
+                    ctx.bezierCurveTo(w * 0.2, mid, w * 0.5, mid - 5, w - 4, mid - 4);
+                    ctx.lineWidth = 3;
+                    break;
+                case 'pause':
+                    ctx.moveTo(4, mid - 3);
+                    ctx.lineTo(w * 0.35, mid - 1);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.setLineDash([3, 3]);
+                    ctx.moveTo(w * 0.35, mid);
+                    ctx.lineTo(w * 0.65, mid);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.beginPath();
+                    ctx.moveTo(w * 0.65, mid + 1);
+                    ctx.lineTo(w - 4, mid + 3);
+                    break;
+                case 'fmdj':
+                    ctx.moveTo(4, mid - 2);
+                    ctx.bezierCurveTo(w * 0.3, mid + 2, w * 0.6, mid + 4, w - 4, mid + 6);
+                    ctx.lineWidth = 2.5;
+                    break;
+                case 'shift':
+                    ctx.moveTo(4, mid);
+                    ctx.lineTo(w * 0.3, mid);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#64748b';
+                    ctx.setLineDash([2, 2]);
+                    ctx.moveTo(w * 0.32, mid);
+                    ctx.lineTo(w * 0.45, mid);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.moveTo(w * 0.47, mid);
+                    ctx.bezierCurveTo(w * 0.6, mid + 1, w * 0.75, mid + 4, w - 4, mid + 6);
+                    break;
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        let activeToneKey = null;
+
+        function buildTonalityGuide() {
+            const toneItems = TONE_DATA.map(t => `
+                <div class="tone-item" data-tone="${t.key}" onclick="selectTone('${t.key}')">
+                    <span class="tone-icon">${t.icon}</span>
+                    <span class="tone-name">${t.name}</span>
+                    <canvas class="tone-ref" data-contour="${t.contour}" data-color="${t.color}" width="100" height="40"></canvas>
+                </div>
+            `).join('');
+
+            return `
+                <div class="tone-guide">
+                    <div class="tone-guide-title">Your Pitch (Live)</div>
+                    <div class="pitch-canvas-wrap">
+                        <canvas id="pitchCanvas" width="260" height="80"></canvas>
+                        <div class="pitch-direction">
+                            <span class="pitch-arrow flat" id="pitchArrow">→</span>
+                            <span id="pitchLabel" style="color:var(--text-muted);">Waiting for voice...</span>
+                        </div>
+                    </div>
+
+                    <div class="tone-guide-title">Target Tonalities</div>
+                    <div class="tone-list">${toneItems}</div>
+                    <div class="tone-detail" id="toneDetail"></div>
+                </div>
+            `;
+        }
+
+        function selectTone(key) {
+            activeToneKey = key;
+            document.querySelectorAll('.tone-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.tone === key);
+            });
+            const tone = TONE_DATA.find(t => t.key === key);
+            if (tone) {
+                const detail = document.getElementById('toneDetail');
+                detail.innerHTML = `<h4>${tone.name}</h4>${tone.desc}`;
+                detail.classList.add('visible');
+            }
+        }
+
+        function initToneCanvases() {
+            document.querySelectorAll('.tone-ref').forEach(canvas => {
+                canvas.width = 100;
+                canvas.height = 40;
+                drawToneContour(canvas, canvas.dataset.contour, canvas.dataset.color);
+            });
+        }
+
+        // ── Pitch Detection (Autocorrelation) ──────────────
+        let pitchAnalyser = null;
+        let pitchBuffer = null;
+        let pitchHistory = [];
+        const PITCH_HISTORY_LEN = 60;
+        let pitchAnimId = null;
+
+        function initPitchDetection() {
+            if (!audioContext || !mediaStream) return;
+
+            pitchAnalyser = audioContext.createAnalyser();
+            pitchAnalyser.fftSize = 2048;
+            pitchBuffer = new Float32Array(pitchAnalyser.fftSize);
+
+            const source = audioContext.createMediaStreamSource(mediaStream);
+            source.connect(pitchAnalyser);
+
+            pitchHistory = [];
+            // Wait for DOM to render the canvases
+            setTimeout(() => {
+                initToneCanvases();
+                drawPitchLoop();
+            }, 100);
+        }
+
+        function autoCorrelate(buf, sampleRate) {
+            let SIZE = buf.length;
+            let rms = 0;
+            for (let i = 0; i < SIZE; i++) {
+                rms += buf[i] * buf[i];
+            }
+            rms = Math.sqrt(rms / SIZE);
+            if (rms < 0.01) return -1;
+
+            let r1 = 0, r2 = SIZE - 1;
+            const thres = 0.2;
+            for (let i = 0; i < SIZE / 2; i++) {
+                if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+            }
+            for (let i = 1; i < SIZE / 2; i++) {
+                if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+            }
+
+            buf = buf.slice(r1, r2);
+            SIZE = buf.length;
+
+            const c = new Array(SIZE).fill(0);
+            for (let i = 0; i < SIZE; i++) {
+                for (let j = 0; j < SIZE - i; j++) {
+                    c[i] += buf[j] * buf[j + i];
+                }
+            }
+
+            let d = 0;
+            while (d < SIZE - 1 && c[d] > c[d + 1]) d++;
+            let maxval = -1, maxpos = -1;
+            for (let i = d; i < SIZE; i++) {
+                if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+            }
+            if (maxpos < 1) return -1;
+            return sampleRate / maxpos;
+        }
+
+        function drawPitchLoop() {
+            if (!pitchAnalyser) return;
+            pitchAnalyser.getFloatTimeDomainData(pitchBuffer);
+            const hz = autoCorrelate(pitchBuffer, audioContext.sampleRate);
+
+            if (hz > 0 && hz < 800) {
+                pitchHistory.push(hz);
+            } else {
+                pitchHistory.push(null);
+            }
+            if (pitchHistory.length > PITCH_HISTORY_LEN) {
+                pitchHistory.shift();
+            }
+
+            drawPitchCanvas();
+            updatePitchDirection();
+
+            pitchAnimId = requestAnimationFrame(drawPitchLoop);
+        }
+
+        function drawPitchCanvas() {
+            const canvas = document.getElementById('pitchCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(100,116,139,0.15)';
+            ctx.lineWidth = 1;
+            for (let y = 0; y < h; y += h / 4) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // Hz range: 60 - 400
+            const minHz = 60, maxHz = 400;
+            const hzToY = (hz) => h - ((hz - minHz) / (maxHz - minHz)) * h;
+
+            // Draw pitch line
+            ctx.strokeStyle = '#4f46e5';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            let started = false;
+            const step = w / PITCH_HISTORY_LEN;
+
+            for (let i = 0; i < pitchHistory.length; i++) {
+                const val = pitchHistory[i];
+                if (val === null) {
+                    started = false;
+                    continue;
+                }
+                const x = i * step;
+                const y = Math.max(2, Math.min(h - 2, hzToY(val)));
+                if (!started) {
+                    ctx.moveTo(x, y);
+                    started = true;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Glow effect
+            ctx.strokeStyle = 'rgba(79,70,229,0.2)';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+        }
+
+        function updatePitchDirection() {
+            const arrow = document.getElementById('pitchArrow');
+            const label = document.getElementById('pitchLabel');
+            if (!arrow || !label) return;
+
+            const recent = pitchHistory.slice(-15).filter(v => v !== null);
+            if (recent.length < 5) {
+                arrow.className = 'pitch-arrow flat';
+                arrow.textContent = '→';
+                label.textContent = 'Waiting for voice...';
+                return;
+            }
+
+            const firstHalf = recent.slice(0, Math.floor(recent.length / 2));
+            const secondHalf = recent.slice(Math.floor(recent.length / 2));
+            const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
+            const avgSecond = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
+            const diff = avgSecond - avgFirst;
+
+            if (diff > 8) {
+                arrow.className = 'pitch-arrow up';
+                arrow.textContent = '↗';
+                label.textContent = 'Rising (Question)';
+                label.style.color = 'var(--accent-amber)';
+            } else if (diff < -8) {
+                arrow.className = 'pitch-arrow down';
+                arrow.textContent = '↘';
+                label.textContent = 'Falling (Declarative)';
+                label.style.color = 'var(--accent-green)';
+            } else {
+                arrow.className = 'pitch-arrow flat';
+                arrow.textContent = '→';
+                label.textContent = 'Level (Steady)';
+                label.style.color = 'var(--accent-blue)';
+            }
         }
 
         // ── Init ─────────────────────────────────────────────
