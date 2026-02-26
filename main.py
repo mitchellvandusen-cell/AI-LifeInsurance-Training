@@ -39,18 +39,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    pool = await db.get_pool()
+    await db.get_pool()
 
-    # Ensure users table exists (new databases won't have it yet)
-    await pool.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-            email           TEXT NOT NULL UNIQUE,
-            password_hash   TEXT NOT NULL,
-            name            TEXT NOT NULL DEFAULT '',
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """)
+    # Create every table on a fresh database (safe to re-run)
+    await db.init_schema()
 
     # Seed beta test user on first boot
     from database.seed import seed_beta_user

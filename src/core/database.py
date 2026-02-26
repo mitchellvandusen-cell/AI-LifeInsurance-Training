@@ -45,6 +45,233 @@ def _uuid() -> str:
 
 
 # ══════════════════════════════════════════════════════════════
+# SCHEMA INITIALIZATION — creates all tables on a fresh database
+# ══════════════════════════════════════════════════════════════
+
+async def init_schema():
+    """Create every table, index, function, and trigger needed by the platform.
+
+    Safe to call on every startup — uses IF NOT EXISTS / OR REPLACE throughout.
+    """
+    pool = await get_pool()
+
+    await pool.execute("""
+        CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+        -- USERS
+        CREATE TABLE IF NOT EXISTS users (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            email           TEXT NOT NULL UNIQUE,
+            password_hash   TEXT NOT NULL,
+            name            TEXT NOT NULL DEFAULT '',
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+        -- TRAINING SUBSCRIPTIONS
+        CREATE TABLE IF NOT EXISTS training_subscriptions (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL UNIQUE,
+            stripe_customer_id      TEXT,
+            stripe_subscription_id  TEXT,
+            plan_status     TEXT NOT NULL DEFAULT 'inactive'
+                            CHECK (plan_status IN ('active','inactive','cancelled','past_due','trialing')),
+            included_minutes_total  INTEGER NOT NULL DEFAULT 300,
+            included_minutes_used   INTEGER NOT NULL DEFAULT 0,
+            billing_period_start    TIMESTAMPTZ,
+            billing_period_end      TIMESTAMPTZ,
+            wallet_balance_cents    INTEGER NOT NULL DEFAULT 0,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_training_subs_user   ON training_subscriptions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_training_subs_stripe ON training_subscriptions(stripe_subscription_id);
+
+        -- TRAINING SESSIONS
+        CREATE TABLE IF NOT EXISTS training_sessions (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            subscription_id UUID REFERENCES training_subscriptions(id),
+            persona_data    JSONB NOT NULL,
+            client_info     JSONB NOT NULL,
+            status          TEXT NOT NULL DEFAULT 'active'
+                            CHECK (status IN ('active','completed','cancelled','error')),
+            started_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            ended_at        TIMESTAMPTZ,
+            duration_seconds INTEGER DEFAULT 0,
+            billed_minutes  INTEGER DEFAULT 0,
+            cost_cents      INTEGER DEFAULT 0,
+            billed_from     TEXT DEFAULT 'subscription'
+                            CHECK (billed_from IN ('subscription','wallet','add_on')),
+            report_card     JSONB,
+            final_state     JSONB,
+            voice_name      TEXT DEFAULT 'Sal',
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_sessions_user    ON training_sessions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_sessions_status  ON training_sessions(status);
+        CREATE INDEX IF NOT EXISTS idx_sessions_started ON training_sessions(started_at);
+
+        -- SESSION TRANSCRIPTS
+        CREATE TABLE IF NOT EXISTS session_transcripts (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            session_id      UUID NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE,
+            turn_number     INTEGER NOT NULL,
+            role            TEXT NOT NULL CHECK (role IN ('agent','client','system')),
+            content         TEXT NOT NULL,
+            timestamp       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            metadata        JSONB DEFAULT '{}'::jsonb
+        );
+        CREATE INDEX IF NOT EXISTS idx_transcripts_session ON session_transcripts(session_id);
+        CREATE INDEX IF NOT EXISTS idx_transcripts_turn    ON session_transcripts(session_id, turn_number);
+
+        -- REPORT CARDS
+        CREATE TABLE IF NOT EXISTS report_cards (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            session_id      UUID NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE,
+            user_id         UUID NOT NULL,
+            overall_score   REAL NOT NULL DEFAULT 0,
+            letter_grade    TEXT NOT NULL DEFAULT 'F',
+            close_probability REAL DEFAULT 0,
+            detected_style  TEXT,
+            categories      JSONB NOT NULL DEFAULT '[]'::jsonb,
+            deal_killers    JSONB DEFAULT '{}'::jsonb,
+            full_report     JSONB NOT NULL,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_reports_user         ON report_cards(user_id);
+        CREATE INDEX IF NOT EXISTS idx_reports_session      ON report_cards(session_id);
+        CREATE INDEX IF NOT EXISTS idx_reports_created      ON report_cards(created_at);
+        CREATE INDEX IF NOT EXISTS idx_reports_user_created ON report_cards(user_id, created_at);
+
+        -- WALLET TRANSACTIONS
+        CREATE TABLE IF NOT EXISTS wallet_transactions (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            subscription_id UUID REFERENCES training_subscriptions(id),
+            type            TEXT NOT NULL
+                            CHECK (type IN ('deposit','deduction','add_on','refund','subscription_reset')),
+            amount_cents    INTEGER NOT NULL,
+            balance_after   INTEGER NOT NULL,
+            description     TEXT,
+            session_id      UUID REFERENCES training_sessions(id),
+            stripe_payment_id TEXT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_wallet_user    ON wallet_transactions(user_id);
+        CREATE INDEX IF NOT EXISTS idx_wallet_created ON wallet_transactions(created_at);
+
+        -- ADD-ON PURCHASES
+        CREATE TABLE IF NOT EXISTS addon_purchases (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            subscription_id UUID REFERENCES training_subscriptions(id),
+            package_type    TEXT NOT NULL CHECK (package_type IN ('2hr','4hr')),
+            minutes_total   INTEGER NOT NULL,
+            minutes_used    INTEGER NOT NULL DEFAULT 0,
+            price_cents     INTEGER NOT NULL,
+            stripe_payment_id TEXT,
+            billing_period_start TIMESTAMPTZ,
+            billing_period_end   TIMESTAMPTZ,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_addons_user ON addon_purchases(user_id);
+
+        -- CALL RECORDINGS
+        CREATE TABLE IF NOT EXISTS call_recordings (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            twilio_recording_sid TEXT,
+            twilio_call_sid      TEXT,
+            recording_url        TEXT,
+            duration_seconds     INTEGER,
+            call_date            TIMESTAMPTZ,
+            status          TEXT NOT NULL DEFAULT 'pending'
+                            CHECK (status IN ('pending','processing','completed','failed')),
+            transcript      JSONB,
+            report_card     JSONB,
+            caller_number   TEXT,
+            agent_name      TEXT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            processed_at    TIMESTAMPTZ
+        );
+        CREATE INDEX IF NOT EXISTS idx_recordings_user   ON call_recordings(user_id);
+        CREATE INDEX IF NOT EXISTS idx_recordings_status ON call_recordings(status);
+        CREATE INDEX IF NOT EXISTS idx_recordings_date   ON call_recordings(call_date);
+
+        -- DAILY ANALYTICS
+        CREATE TABLE IF NOT EXISTS analytics_daily (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            date            DATE NOT NULL,
+            sessions_count  INTEGER DEFAULT 0,
+            total_minutes   REAL DEFAULT 0,
+            avg_overall     REAL DEFAULT 0,
+            avg_tonality    REAL DEFAULT 0,
+            avg_rapport     REAL DEFAULT 0,
+            avg_questions   REAL DEFAULT 0,
+            avg_compliance  REAL DEFAULT 0,
+            avg_flow        REAL DEFAULT 0,
+            avg_trust       REAL DEFAULT 0,
+            avg_objection_handling REAL DEFAULT 0,
+            avg_preframing  REAL DEFAULT 0,
+            avg_presentation REAL DEFAULT 0,
+            avg_close       REAL DEFAULT 0,
+            avg_underwriting REAL DEFAULT 0,
+            objections_faced    INTEGER DEFAULT 0,
+            objections_resolved INTEGER DEFAULT 0,
+            style_distribution  JSONB DEFAULT '{}'::jsonb,
+            avg_close_probability REAL DEFAULT 0,
+            UNIQUE(user_id, date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_analytics_user_date ON analytics_daily(user_id, date);
+
+        -- TRAINING SETTINGS
+        CREATE TABLE IF NOT EXISTS training_settings (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL UNIQUE,
+            preferred_voice TEXT DEFAULT 'Sal',
+            auto_import_recordings BOOLEAN DEFAULT FALSE,
+            grokbot_account_linked BOOLEAN DEFAULT FALSE,
+            grokbot_api_key        TEXT,
+            twilio_account_sid     TEXT,
+            twilio_auth_token      TEXT,
+            email_weekly_report    BOOLEAN DEFAULT TRUE,
+            email_session_summary  BOOLEAN DEFAULT TRUE,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        -- UPDATED_AT TRIGGER FUNCTION
+        CREATE OR REPLACE FUNCTION update_updated_at()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            NEW.updated_at = NOW();
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+
+    # Triggers can't use IF NOT EXISTS, so check before creating
+    triggers = [
+        ("trg_training_subs_updated", "training_subscriptions"),
+        ("trg_training_settings_updated", "training_settings"),
+    ]
+    for trig_name, table_name in triggers:
+        exists = await pool.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname = $1)", trig_name
+        )
+        if not exists:
+            await pool.execute(f"""
+                CREATE TRIGGER {trig_name}
+                    BEFORE UPDATE ON {table_name}
+                    FOR EACH ROW EXECUTE FUNCTION update_updated_at()
+            """)
+
+    print("[DB] Schema initialized — all tables ready")
+
+
+# ══════════════════════════════════════════════════════════════
 # USER / AUTH OPERATIONS
 # ══════════════════════════════════════════════════════════════
 
