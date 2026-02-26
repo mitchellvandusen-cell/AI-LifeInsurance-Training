@@ -251,7 +251,7 @@ async def enhance_report_with_ai(
         response = await client.chat.completions.create(
             model=os.getenv("LLM_MODEL", "grok-3-fast"),
             max_tokens=3000,
-            temperature=0.7,
+            temperature=0.4,
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": "Generate the coaching analysis JSON now."},

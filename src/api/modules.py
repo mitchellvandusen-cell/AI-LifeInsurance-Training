@@ -194,11 +194,6 @@ async def module_websocket(websocket: WebSocket, session_id: str):
 
     await websocket.send_json({"type": "status", "status": "ready"})
 
-    # Trigger AI coach to speak first — greet the student and begin the lesson
-    # This sends response.create to xAI, causing the model to generate its
-    # opening greeting based on the system prompt (which says "YOU SPEAK FIRST")
-    await voice_session.trigger_greeting()
-
     # Bridge: browser ↔ xAI
     async def browser_to_xai():
         try:
@@ -228,8 +223,20 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         await voice_session.receive_events(send_to_browser)
 
     try:
+        # Start both listener tasks FIRST so they are ready to receive events
         browser_task = asyncio.create_task(browser_to_xai())
         xai_task = asyncio.create_task(xai_to_browser())
+
+        # Small yield to let the xai_to_browser listener attach before triggering
+        await asyncio.sleep(0.05)
+
+        # NOW trigger AI coach to speak first — greet the student and begin the lesson.
+        # This sends response.create to xAI, causing the model to generate its
+        # opening greeting based on the system prompt (which says "YOU SPEAK FIRST").
+        # MUST happen AFTER receive_events() is listening, otherwise greeting audio
+        # could arrive before anyone is consuming events from the xAI WebSocket.
+        await voice_session.trigger_greeting()
+
         done, pending = await asyncio.wait(
             [browser_task, xai_task],
             return_when=asyncio.FIRST_COMPLETED,
