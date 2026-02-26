@@ -1,14 +1,26 @@
 -- InsuranceGrokBot Training Platform Schema
 -- Designed for Neon PostgreSQL
--- These tables extend the existing insurancegrokbot.click database
 
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ══════════════════════════════════════════════════════════════
+-- USERS
+-- Core user accounts with authentication credentials.
+-- ══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS users (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email           TEXT NOT NULL UNIQUE,
+    password_hash   TEXT NOT NULL,
+    name            TEXT NOT NULL DEFAULT '',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- ══════════════════════════════════════════════════════════════
 -- TRAINING SUBSCRIPTIONS
--- Links to existing users table. Tracks subscription status,
--- included minutes, and billing periods.
+-- Tracks subscription status, included minutes, and billing periods.
 -- ══════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS training_subscriptions (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

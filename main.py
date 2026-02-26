@@ -39,7 +39,18 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    await db.get_pool()
+    pool = await db.get_pool()
+
+    # Ensure users table exists (new databases won't have it yet)
+    await pool.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            email           TEXT NOT NULL UNIQUE,
+            password_hash   TEXT NOT NULL,
+            name            TEXT NOT NULL DEFAULT '',
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
 
     # Seed beta test user on first boot
     from database.seed import seed_beta_user
@@ -47,6 +58,14 @@ async def startup():
         await seed_beta_user()
     except Exception as e:
         print(f"[SEED] Skipped: {e}")
+
+    # Debug: verify frontend directory
+    frontend_dir = BASE_DIR / "frontend"
+    if frontend_dir.is_dir():
+        files = list(frontend_dir.glob("*.html"))
+        print(f"[STATIC] Frontend dir: {frontend_dir} ({len(files)} HTML files)")
+    else:
+        print(f"[STATIC] WARNING: Frontend dir not found at {frontend_dir}")
 
 
 @app.on_event("shutdown")
