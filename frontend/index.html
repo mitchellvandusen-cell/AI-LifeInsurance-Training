@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsuranceGrokBot Training — AI-Powered Sales Training for Insurance Agents</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        /* ── Landing Page Specific Styles ─────────────────────── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% 20%, rgba(79,70,229,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 70% 80%, rgba(6,182,212,0.1) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 30% at 20% 60%, rgba(139,92,246,0.08) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .hero-content {
+            position: relative;
+            max-width: 800px;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: rgba(79,70,229,0.1);
+            border: 1px solid rgba(79,70,229,0.3);
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 2rem;
+        }
+        .hero-badge .pulse {
+            width: 8px; height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.5); }
+        }
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.04em;
+        }
+        .hero h1 .gradient-text {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+            color: var(--text-secondary);
+        }
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+        .hero-stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Features Section ────────────────────────────────── */
+        .section {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+        }
+        .section-header .overline {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+        }
+        .section-header h2 {
+            margin-bottom: 1rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        @media (max-width: 768px) {
+            .feature-grid { grid-template-columns: 1fr; }
+            .hero-stats { flex-direction: column; gap: 1.5rem; }
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-primary);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-active);
+            box-shadow: var(--shadow-glow);
+        }
+        .feature-card:hover::before { opacity: 1; }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .feature-icon.blue { background: rgba(79,70,229,0.15); }
+        .feature-icon.cyan { background: rgba(6,182,212,0.15); }
+        .feature-icon.green { background: rgba(16,185,129,0.15); }
+        .feature-icon.purple { background: rgba(139,92,246,0.15); }
+        .feature-icon.amber { background: rgba(245,158,11,0.15); }
+        .feature-icon.red { background: rgba(239,68,68,0.15); }
+
+        .feature-card h3 {
+            font-size: 1.15rem;
+            margin-bottom: 0.75rem;
+        }
+        .feature-card p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* ── How It Works ────────────────────────────────────── */
+        .steps {
+            display: flex;
+            gap: 2rem;
+            counter-reset: step;
+        }
+        @media (max-width: 768px) {
+            .steps { flex-direction: column; }
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        .step-number {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: white;
+            margin: 0 auto 1.25rem;
+        }
+        .step h3 { margin-bottom: 0.5rem; }
+
+        /* ── KPI Showcase ────────────────────────────────────── */
+        .kpi-showcase {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        @media (max-width: 768px) {
+            .kpi-showcase { grid-template-columns: repeat(2, 1fr); }
+        }
+        .kpi-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            text-align: center;
+        }
+        .kpi-item h4 {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        .kpi-item .value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        /* ── Pricing ─────────────────────────────────────────── */
+        .pricing-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 3rem 2.5rem;
+            max-width: 480px;
+            margin: 0 auto;
+            text-align: center;
+            position: relative;
+        }
+        .pricing-card.featured {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 60px rgba(79,70,229,0.15);
+        }
+        .pricing-popular {
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.35rem 1.25rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .pricing-price {
+            font-size: 3.5rem;
+            font-weight: 900;
+            margin: 1rem 0;
+            letter-spacing: -0.03em;
+        }
+        .pricing-price span { font-size: 1.25rem; font-weight: 500; color: var(--text-muted); }
+        .pricing-features {
+            list-style: none;
+            text-align: left;
+            margin: 2rem 0;
+        }
+        .pricing-features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+        .pricing-features li::before {
+            content: '✓';
+            color: var(--accent-green);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .addons-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            max-width: 700px;
+            margin: 2rem auto 0;
+        }
+        @media (max-width: 768px) {
+            .addons-grid { grid-template-columns: 1fr; }
+        }
+        .addon-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            text-align: center;
+        }
+        .addon-card h4 { font-size: 0.95rem; margin-bottom: 0.25rem; }
+        .addon-card .price { font-size: 1.5rem; font-weight: 800; color: var(--accent-cyan); }
+
+        /* ── CTA Section ─────────────────────────────────────── */
+        .cta-section {
+            text-align: center;
+            padding: 6rem 2rem;
+            position: relative;
+        }
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(79,70,229,0.1) 0%, transparent 70%);
+        }
+        .cta-section > * { position: relative; }
+
+        /* ── Footer ──────────────────────────────────────────── */
+        .footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- ═══ Navbar ═══ -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <span class="logo-accent">InsuranceGrokBot</span> Training
+        </a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#kpis">KPIs</a>
+            <a href="#pricing">Pricing</a>
+            <a href="/login.html" class="btn btn-ghost btn-sm">Log In</a>
+            <a href="/register.html" class="btn btn-primary btn-sm">Start Training</a>
+        </div>
+    </nav>
+
+    <!-- ═══ Hero ═══ -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="pulse"></span>
+                AI-Powered Speech-to-Speech Training
+            </div>
+            <h1>
+                Close More Deals.<br>
+                <span class="gradient-text">Train Like a Closer.</span>
+            </h1>
+            <p>
+                Practice real sales conversations with an AI client that responds to your tonality,
+                handles objections conditionally, and grades every call. Built by closers, for closers.
+            </p>
+            <div class="hero-cta">
+                <a href="/register.html" class="btn btn-primary btn-lg">Start Training Today</a>
+                <a href="#features" class="btn btn-secondary btn-lg">See How It Works</a>
+            </div>
+            <div class="hero-stats">
+                <div>
+                    <div class="hero-stat-value">11+</div>
+                    <div class="hero-stat-label">KPIs Tracked</div>
+                </div>
+                <div>
+                    <div class="hero-stat-value">5</div>
+                    <div class="hero-stat-label">Conversation Phases</div>
+                </div>
+                <div>
+                    <div class="hero-stat-value">&lt;1s</div>
+                    <div class="hero-stat-label">Voice Response</div>
+                </div>
+                <div>
+                    <div class="hero-stat-value">100+</div>
+                    <div class="hero-stat-label">AI Client Personas</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ Features ═══ -->
+    <section class="section" id="features">
+        <div class="section-header">
+            <div class="overline">Features</div>
+            <h2>Everything You Need to Master the Close</h2>
+            <p>A complete training platform that analyzes every aspect of your sales conversation — from tonality to objection handling to close probability.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon blue">🎙</div>
+                <h3>Speech-to-Speech AI</h3>
+                <p>Real-time voice conversations with AI clients powered by Grok's native speech model. Sub-second response time. Natural, expressive voices that react to how you speak.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon cyan">🧠</div>
+                <h3>Behavioral State Machine</h3>
+                <p>The AI client isn't scripted. Hidden variables for trust, authority, resistance, and flow drive every response. Build rapport and the client opens up. Lose control and they shut down.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">📊</div>
+                <h3>Enterprise Report Cards</h3>
+                <p>Every session generates a detailed grading report across 11+ categories. Pros and consequences for your specific sales style. Not prescriptive — constructive.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon purple">🎯</div>
+                <h3>Conditional Objections</h3>
+                <p>Objections are never random. The AI raises them based on what you did or didn't do. Skip the preframe? Expect resistance on banking info. Miss the consequence? Get the stall.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon amber">📈</div>
+                <h3>Performance Analytics</h3>
+                <p>Track your improvement over 7, 14, 30, 60 days. See which KPIs are climbing, where you're stuck, and what's costing you closes. Every metric, every trend, every session.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon red">📞</div>
+                <h3>Real Call Analysis</h3>
+                <p>Connect your InsuranceGrokBot account and import real call recordings. Get the same enterprise report card on your actual client calls with constructive coaching.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ How It Works ═══ -->
+    <section class="section">
+        <div class="section-header">
+            <div class="overline">How It Works</div>
+            <h2>Three Steps to Better Closes</h2>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Start a Session</h3>
+                <p>Hit "Start Training" and receive a randomly generated client lead — name, age, location, and health history. That's all you get. Just like a real lead.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Run the Call</h3>
+                <p>Speak naturally into your mic. The AI client responds in real-time with voice. Build rapport, qualify, present, handle objections, and close — just like a real call.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Get Your Report Card</h3>
+                <p>End the session and receive a detailed breakdown of every KPI. See what worked, what didn't, and exactly how to improve. Track progress over time in your analytics dashboard.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ KPI Showcase ═══ -->
+    <section class="section" id="kpis">
+        <div class="section-header">
+            <div class="overline">Metrics That Matter</div>
+            <h2>Every KPI, Every Call</h2>
+            <p>We track the metrics that actually predict whether you'll close the deal. No vanity stats — only what matters.</p>
+        </div>
+
+        <div class="kpi-showcase">
+            <div class="kpi-item"><h4>Tonality</h4><div class="value">Inflection, Pace, Confidence</div></div>
+            <div class="kpi-item"><h4>Rapport</h4><div class="value">Connection, Humor, Depth</div></div>
+            <div class="kpi-item"><h4>Questions</h4><div class="value">Quality, Depth, Advancement</div></div>
+            <div class="kpi-item"><h4>Compliance</h4><div class="value">Micro-Agreements, Laddering</div></div>
+            <div class="kpi-item"><h4>Flow</h4><div class="value">Phase Progression, Structure</div></div>
+            <div class="kpi-item"><h4>Trust Building</h4><div class="value">Credentials, Preframing</div></div>
+            <div class="kpi-item"><h4>Objection Handling</h4><div class="value">Isolation, Root Cause, Lock</div></div>
+            <div class="kpi-item"><h4>Sales Resistance</h4><div class="value">Preframe Impact, Authority</div></div>
+            <div class="kpi-item"><h4>Medical Underwriting</h4><div class="value">Completeness, Authority</div></div>
+            <div class="kpi-item"><h4>Preframing</h4><div class="value">Banking, SSN, Next Steps</div></div>
+            <div class="kpi-item"><h4>Presentation</h4><div class="value">Personalization, Value, Urgency</div></div>
+            <div class="kpi-item"><h4>Close Probability</h4><div class="value">Overall Deal Likelihood</div></div>
+        </div>
+    </section>
+
+    <!-- ═══ Pricing ═══ -->
+    <section class="section" id="pricing">
+        <div class="section-header">
+            <div class="overline">Pricing</div>
+            <h2>One Plan. Everything Included.</h2>
+        </div>
+
+        <div class="pricing-card featured">
+            <div class="pricing-popular">Most Popular</div>
+            <h3>Training Add-On</h3>
+            <div class="pricing-price">$49<span>.99/mo</span></div>
+            <p style="color: var(--text-secondary);">Add to your InsuranceGrokBot subscription</p>
+            <ul class="pricing-features">
+                <li>5 hours of AI voice training per month</li>
+                <li>Unlimited AI client personas</li>
+                <li>Full report cards on every session</li>
+                <li>Performance analytics (7, 14, 30, 60 day views)</li>
+                <li>11+ KPI categories tracked</li>
+                <li>Sales style detection and coaching</li>
+                <li>Real call recording analysis</li>
+                <li>InsuranceGrokBot account integration</li>
+                <li>Objection handling training with isolation protocol</li>
+                <li>Chase Hughes 6-Axis behavioral model</li>
+            </ul>
+            <a href="/register.html" class="btn btn-primary btn-lg" style="width:100%;">Get Started</a>
+        </div>
+
+        <div class="addons-grid">
+            <div class="addon-card">
+                <h4>Extra 2 Hours</h4>
+                <div class="price">$12</div>
+                <p class="text-muted" style="font-size:0.85rem;">One-time purchase</p>
+            </div>
+            <div class="addon-card">
+                <h4>Extra 4 Hours</h4>
+                <div class="price">$24</div>
+                <p class="text-muted" style="font-size:0.85rem;">One-time purchase</p>
+            </div>
+            <div class="addon-card">
+                <h4>Pay As You Go</h4>
+                <div class="price">$0.10<span style="font-size:0.9rem;font-weight:400">/min</span></div>
+                <p class="text-muted" style="font-size:0.85rem;">Add to your wallet</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ CTA ═══ -->
+    <section class="cta-section">
+        <h2>Ready to Close More Deals?</h2>
+        <p style="color: var(--text-secondary); max-width: 500px; margin: 1rem auto 2rem; font-size: 1.1rem;">
+            Every session makes you sharper. Every report card makes you better. Start training now.
+        </p>
+        <a href="/register.html" class="btn btn-primary btn-lg">Start Your Training</a>
+    </section>
+
+    <!-- ═══ Footer ═══ -->
+    <footer class="footer">
+        <p>&copy; 2026 InsuranceGrokBot Training. All rights reserved.</p>
+    </footer>
+</body>
+</html>

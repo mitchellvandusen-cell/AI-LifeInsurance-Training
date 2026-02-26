@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Session — InsuranceGrokBot Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        body { overflow: hidden; }
+
+        /* ── Pre-Session: Client Card (centered) ───────── */
+        .pre-session {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .pre-session::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(79,70,229,0.1) 0%, transparent 60%);
+        }
+
+        .client-card-wrapper {
+            position: relative;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .client-card-wrapper.slide-left {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 320px;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .client-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 2.5rem;
+            width: 420px;
+            max-width: 90vw;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .client-card-wrapper.slide-left .client-card {
+            border-radius: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .card-header h2 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+        .card-header p { font-size: 0.85rem; color: var(--text-muted); }
+
+        .client-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .client-field:last-child { border-bottom: none; }
+        .field-label { color: var(--text-muted); font-size: 0.85rem; }
+        .field-value { font-weight: 600; font-size: 0.95rem; }
+        .field-value.yes { color: var(--accent-red); }
+        .field-value.no { color: var(--accent-green); }
+
+        .start-btn-container {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        /* ── Active Session Layout ──────────────────────── */
+        .session-active {
+            display: none;
+            height: 100vh;
+            margin-left: 320px;
+            flex-direction: column;
+        }
+        .session-active.visible { display: flex; }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .session-header h3 { font-size: 1rem; }
+        .recording-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+        .recording-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        .session-timer {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Voice Area ─────────────────────────────────── */
+        .voice-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .voice-status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .voice-circle {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 3px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .voice-circle.recording {
+            border-color: var(--accent-red);
+            box-shadow: 0 0 40px rgba(239, 68, 68, 0.2);
+        }
+        .voice-circle.processing {
+            border-color: var(--accent-amber);
+            box-shadow: 0 0 40px rgba(245, 158, 11, 0.2);
+        }
+        .voice-circle.responding {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 40px rgba(79, 70, 229, 0.2);
+            animation: breathe 2s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .voice-circle-inner {
+            font-size: 2.5rem;
+        }
+
+        /* ── Audio Visualizer Bars ──────────────────────── */
+        .visualizer {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            height: 40px;
+            margin-top: 1.5rem;
+        }
+        .viz-bar {
+            width: 4px;
+            background: var(--accent-blue);
+            border-radius: 2px;
+            transition: height 0.1s;
+            height: 4px;
+        }
+        .voice-circle.recording .viz-bar { background: var(--accent-red); }
+
+        /* ── State Indicators ───────────────────────────── */
+        .state-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.75rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+        }
+        .state-item { display: flex; align-items: center; gap: 0.5rem; }
+        .state-item .label { color: var(--text-muted); }
+        .state-item .value { font-weight: 700; }
+
+        /* ── Transcript Area ────────────────────────────── */
+        .transcript-area {
+            height: 35vh;
+            overflow-y: auto;
+            padding: 1rem 2rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-primary);
+        }
+        .transcript-header {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+        }
+        .transcript-msg {
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0;
+        }
+        .transcript-msg .role {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.15rem;
+        }
+        .transcript-msg .role.agent { color: var(--accent-cyan); }
+        .transcript-msg .role.client { color: var(--accent-purple); }
+        .transcript-msg .text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ── Report Overlay ─────────────────────────────── */
+        .report-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10,10,26,0.95);
+            z-index: 200;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+        .report-overlay.visible { display: block; }
+        .report-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .report-header .grade-big {
+            font-size: 5rem;
+            font-weight: 900;
+            margin: 1rem 0;
+        }
+        .report-categories {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        @media (max-width: 640px) { .report-categories { grid-template-columns: 1fr; } }
+        .report-cat {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+        }
+        .report-cat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .report-cat h4 { font-size: 0.95rem; }
+        .report-cat .score { font-size: 1.25rem; font-weight: 800; }
+        .report-cat .pros, .report-cat .cons {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin-top: 0.5rem;
+        }
+        .report-cat .pros { color: var(--accent-green); }
+        .report-cat .cons { color: var(--accent-amber); }
+    </style>
+</head>
+<body>
+    <!-- ═══ Pre-Session: Client Card ═══ -->
+    <div class="pre-session" id="preSession">
+        <div class="client-card-wrapper" id="clientCardWrapper">
+            <div class="client-card" id="clientCard">
+                <div class="card-header">
+                    <h2>Your Lead</h2>
+                    <p>This is all you know. The rest is up to you.</p>
+                </div>
+                <div id="clientFields">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="start-btn-container">
+                    <button class="btn btn-primary btn-lg" id="startBtn" onclick="startTraining()">
+                        Start Training
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Active Session ═══ -->
+    <div class="session-active" id="sessionActive">
+        <div class="session-header">
+            <div class="recording-indicator">
+                <div class="recording-dot"></div>
+                <span>LIVE</span>
+            </div>
+            <h3 id="sessionClientName">Training Session</h3>
+            <div style="display:flex; align-items:center; gap:1rem;">
+                <div class="session-timer" id="timer">00:00</div>
+                <button class="btn btn-danger btn-sm" onclick="endTraining()">End Training</button>
+            </div>
+        </div>
+
+        <div class="voice-area">
+            <div class="voice-status" id="voiceStatus">Connecting...</div>
+            <div class="voice-circle" id="voiceCircle">
+                <div class="voice-circle-inner">🎙</div>
+            </div>
+            <div class="visualizer" id="visualizer">
+                <!-- Bars generated by JS -->
+            </div>
+        </div>
+
+        <div class="state-bar" id="stateBar">
+            <div class="state-item"><span class="label">Phase:</span><span class="value" id="statePhase">Intro</span></div>
+            <div class="state-item"><span class="label">Trust:</span><span class="value" id="stateTrust">50</span></div>
+            <div class="state-item"><span class="label">Authority:</span><span class="value" id="stateAuth">50</span></div>
+            <div class="state-item"><span class="label">Engagement:</span><span class="value" id="stateEng">70</span></div>
+        </div>
+
+        <div class="transcript-area" id="transcriptArea">
+            <div class="transcript-header">Live Transcription</div>
+            <div id="transcriptContent"></div>
+        </div>
+    </div>
+
+    <!-- ═══ Report Overlay ═══ -->
+    <div class="report-overlay" id="reportOverlay">
+        <div class="report-content" id="reportContent">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        if (!requireAuth()) { /* redirects */ }
+
+        let sessionId = null;
+        let clientInfo = null;
+        let ws = null;
+        let audioContext = null;
+        let mediaStream = null;
+        let timerInterval = null;
+        let startTime = null;
+
+        // ── Initialize: Generate client card ─────────────────
+        async function init() {
+            try {
+                const data = await API.startSession(null, 'Sal');
+                sessionId = data.session_id;
+                clientInfo = data.client_info;
+                renderClientCard(clientInfo);
+            } catch (err) {
+                showToast(err.message, 'error');
+                if (err.message.includes('No training time')) {
+                    setTimeout(() => window.location.href = '/billing.html', 2000);
+                }
+            }
+        }
+
+        function renderClientCard(info) {
+            const fields = document.getElementById('clientFields');
+            fields.innerHTML = `
+                <div class="client-field"><span class="field-label">First Name</span><span class="field-value">${info.first_name}</span></div>
+                <div class="client-field"><span class="field-label">Age</span><span class="field-value">${info.age}</span></div>
+                <div class="client-field"><span class="field-label">Email</span><span class="field-value">${info.email}</span></div>
+                <div class="client-field"><span class="field-label">State</span><span class="field-value">${info.state}</span></div>
+                <div class="client-field"><span class="field-label">Address</span><span class="field-value">${info.address}</span></div>
+                <div class="client-field"><span class="field-label">Heart Attack History</span><span class="field-value ${info.heart_attack_history ? 'yes' : 'no'}">${info.heart_attack_history ? 'Yes' : 'No'}</span></div>
+                <div class="client-field"><span class="field-label">Cancer History</span><span class="field-value ${info.cancer_history ? 'yes' : 'no'}">${info.cancer_history ? 'Yes' : 'No'}</span></div>
+                <div class="client-field"><span class="field-label">Stroke History</span><span class="field-value ${info.stroke_history ? 'yes' : 'no'}">${info.stroke_history ? 'Yes' : 'No'}</span></div>
+            `;
+        }
+
+        // ── Start Training ───────────────────────────────────
+        async function startTraining() {
+            if (!sessionId) return;
+
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.textContent = 'Connecting...';
+
+            try {
+                // Request mic access
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Animate client card to sidebar
+                const wrapper = document.getElementById('clientCardWrapper');
+                wrapper.classList.add('slide-left');
+
+                // Show session UI
+                setTimeout(() => {
+                    document.getElementById('preSession').style.background = 'transparent';
+                    document.getElementById('preSession').style.pointerEvents = 'none';
+                    document.getElementById('sessionActive').classList.add('visible');
+                    document.getElementById('sessionClientName').textContent = `Session with ${clientInfo.first_name}`;
+                    connectVoice();
+                }, 400);
+
+                // Start timer
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+
+                // Init visualizer
+                initVisualizer();
+
+            } catch (err) {
+                showToast('Microphone access required for training', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Start Training';
+            }
+        }
+
+        // ── Voice WebSocket Connection ───────────────────────
+        function connectVoice() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const token = API.token;
+            ws = new WebSocket(`${protocol}//${window.location.host}/api/sessions/ws/${sessionId}?token=${token}`);
+
+            ws.onopen = () => {
+                document.getElementById('voiceStatus').textContent = 'Speak to begin';
+                startAudioCapture();
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleVoiceEvent(data);
+            };
+
+            ws.onerror = (err) => {
+                console.error('WebSocket error:', err);
+                document.getElementById('voiceStatus').textContent = 'Connection error';
+            };
+
+            ws.onclose = () => {
+                document.getElementById('voiceStatus').textContent = 'Disconnected';
+            };
+        }
+
+        function handleVoiceEvent(data) {
+            const circle = document.getElementById('voiceCircle');
+            const status = document.getElementById('voiceStatus');
+
+            switch (data.type) {
+                case 'status':
+                    if (data.status === 'recording') {
+                        circle.className = 'voice-circle recording';
+                        status.textContent = 'Listening...';
+                    } else if (data.status === 'processing') {
+                        circle.className = 'voice-circle processing';
+                        status.textContent = 'Processing...';
+                    } else if (data.status === 'listening') {
+                        circle.className = 'voice-circle';
+                        status.textContent = 'Your turn — speak now';
+                    } else if (data.status === 'connected' || data.status === 'ready') {
+                        status.textContent = 'Connected — speak to begin';
+                    }
+                    break;
+
+                case 'audio':
+                    playAudio(data.data);
+                    circle.className = 'voice-circle responding';
+                    status.textContent = 'Client speaking...';
+                    break;
+
+                case 'transcript':
+                    addTranscript(data.role, data.text);
+                    break;
+
+                case 'transcript_delta':
+                    updateStreamingTranscript(data.role, data.delta);
+                    break;
+
+                case 'state_update':
+                    updateStateBar(data.data);
+                    break;
+
+                case 'error':
+                    showToast(data.message, 'error');
+                    break;
+            }
+        }
+
+        // ── Audio Capture ────────────────────────────────────
+        function startAudioCapture() {
+            if (!mediaStream) return;
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            const source = audioContext.createMediaStreamSource(mediaStream);
+            const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            processor.onaudioprocess = (e) => {
+                if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                const float32 = e.inputBuffer.getChannelData(0);
+                const pcm16 = new Int16Array(float32.length);
+                for (let i = 0; i < float32.length; i++) {
+                    pcm16[i] = Math.max(-1, Math.min(1, float32[i])) * 0x7FFF;
+                }
+                const base64 = arrayBufferToBase64(pcm16.buffer);
+                ws.send(JSON.stringify({ type: 'audio', data: base64 }));
+            };
+        }
+
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // ── Audio Playback ───────────────────────────────────
+        let audioQueue = [];
+        let isPlaying = false;
+
+        function playAudio(base64Data) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            }
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const int16 = new Int16Array(bytes.buffer);
+            const float32 = new Float32Array(int16.length);
+            for (let i = 0; i < int16.length; i++) {
+                float32[i] = int16[i] / 0x7FFF;
+            }
+            const buffer = audioContext.createBuffer(1, float32.length, 24000);
+            buffer.getChannelData(0).set(float32);
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start();
+        }
+
+        // ── Transcript Display ───────────────────────────────
+        let streamingDiv = null;
+
+        function addTranscript(role, text) {
+            streamingDiv = null;
+            const container = document.getElementById('transcriptContent');
+            const msg = document.createElement('div');
+            msg.className = 'transcript-msg';
+            msg.innerHTML = `
+                <div class="role ${role}">${role === 'agent' ? 'You (Agent)' : 'AI Client'}</div>
+                <div class="text">${text}</div>
+            `;
+            container.appendChild(msg);
+            const area = document.getElementById('transcriptArea');
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function updateStreamingTranscript(role, delta) {
+            if (!streamingDiv) {
+                const container = document.getElementById('transcriptContent');
+                streamingDiv = document.createElement('div');
+                streamingDiv.className = 'transcript-msg';
+                streamingDiv.innerHTML = `
+                    <div class="role ${role}">${role === 'agent' ? 'You (Agent)' : 'AI Client'}</div>
+                    <div class="text streaming-text"></div>
+                `;
+                container.appendChild(streamingDiv);
+            }
+            const textDiv = streamingDiv.querySelector('.streaming-text');
+            textDiv.textContent += delta;
+            const area = document.getElementById('transcriptArea');
+            area.scrollTop = area.scrollHeight;
+        }
+
+        // ── State Bar ────────────────────────────────────────
+        function updateStateBar(state) {
+            if (state.phase) document.getElementById('statePhase').textContent = state.phase;
+            if (state.trust !== undefined) document.getElementById('stateTrust').textContent = Math.round(state.trust);
+            if (state.authority !== undefined) document.getElementById('stateAuth').textContent = Math.round(state.authority);
+            if (state.engagement !== undefined) document.getElementById('stateEng').textContent = Math.round(state.engagement);
+        }
+
+        // ── Timer ────────────────────────────────────────────
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const secs = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${mins}:${secs}`;
+        }
+
+        // ── Visualizer ───────────────────────────────────────
+        function initVisualizer() {
+            const viz = document.getElementById('visualizer');
+            viz.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'viz-bar';
+                viz.appendChild(bar);
+            }
+            animateVisualizer();
+        }
+
+        function animateVisualizer() {
+            const bars = document.querySelectorAll('.viz-bar');
+            bars.forEach(bar => {
+                const h = Math.random() * 30 + 4;
+                bar.style.height = h + 'px';
+            });
+            requestAnimationFrame(() => setTimeout(animateVisualizer, 100));
+        }
+
+        // ── End Training ─────────────────────────────────────
+        async function endTraining() {
+            if (!sessionId) return;
+
+            clearInterval(timerInterval);
+
+            // Close WebSocket
+            if (ws) {
+                ws.send(JSON.stringify({ type: 'end' }));
+                ws.close();
+            }
+
+            // Stop mic
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+
+            // Get report
+            try {
+                const result = await API.endSession(sessionId);
+                showReport(result);
+            } catch (err) {
+                showToast('Error generating report: ' + err.message, 'error');
+                window.location.href = '/dashboard.html';
+            }
+        }
+
+        // ── Show Report ──────────────────────────────────────
+        function showReport(result) {
+            const report = result.report;
+            const overlay = document.getElementById('reportOverlay');
+            const content = document.getElementById('reportContent');
+
+            const categories = (report.categories || []).map(cat => `
+                <div class="report-cat">
+                    <div class="report-cat-header">
+                        <h4>${cat.name}</h4>
+                        <span class="score" style="color: ${cat.score >= 70 ? 'var(--accent-green)' : cat.score >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)'}">${cat.score.toFixed(0)}</span>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-fill ${cat.score >= 70 ? 'green' : cat.score >= 50 ? 'blue' : 'amber'}" style="width:${cat.score}%"></div>
+                    </div>
+                    ${cat.pros && cat.pros.length ? `<div class="pros">+ ${cat.pros.join(' | ')}</div>` : ''}
+                    ${cat.consequences && cat.consequences.length ? `<div class="cons">→ ${cat.consequences.join(' | ')}</div>` : ''}
+                </div>
+            `).join('');
+
+            content.innerHTML = `
+                <div class="report-header">
+                    <h2>Session Report Card</h2>
+                    <div class="report-header .grade-big grade ${gradeClass(report.letter_grade || 'F')}" style="font-size:5rem;font-weight:900;margin:1rem 0;">${report.letter_grade || 'F'}</div>
+                    <p style="font-size:1.25rem;color:var(--text-secondary);">Overall Score: <strong>${(report.overall_score || 0).toFixed(1)}/100</strong></p>
+                    <p style="color:var(--text-muted);">
+                        Duration: ${formatDuration(result.duration_seconds)} |
+                        Style: ${report.detected_sales_style || 'Unknown'} |
+                        Close Probability: ${(report.close_probability || 0).toFixed(0)}%
+                    </p>
+                    <div style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:center;">
+                        <a href="/dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
+                        <button class="btn btn-primary" onclick="window.location.href='/training.html'">Train Again</button>
+                    </div>
+                </div>
+                <div class="report-categories">${categories}</div>
+            `;
+
+            overlay.classList.add('visible');
+        }
+
+        // ── Init ─────────────────────────────────────────────
+        init();
+    </script>
+</body>
+</html>

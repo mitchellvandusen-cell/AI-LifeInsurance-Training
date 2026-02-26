@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics — InsuranceGrokBot Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        .period-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        .period-tab {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: var(--font-sans);
+            transition: all var(--transition);
+        }
+        .period-tab.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+        .chart-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .chart-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        .chart-canvas {
+            width: 100%;
+            height: 200px;
+            position: relative;
+        }
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 100%;
+            padding-top: 1rem;
+        }
+        .bar-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .bar {
+            width: 100%;
+            max-width: 32px;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease;
+            min-height: 2px;
+        }
+        .bar-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+        }
+        .kpi-name {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        .kpi-score {
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+        .kpi-bar {
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar (same as dashboard) -->
+    <aside class="sidebar">
+        <div class="sidebar-logo"><a href="/dashboard.html" class="nav-logo" style="font-size:1.1rem;"><span class="logo-accent">GrokBot</span> Training</a></div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="/training.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>Start Training</a>
+            <a href="/analytics.html" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Analytics</a>
+            <a href="/report-cards.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Report Cards</a>
+            <a href="/recordings.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Recordings</a>
+            <a href="/billing.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
+            <a href="/settings.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <h1 style="margin-bottom:0.5rem;">Performance Analytics</h1>
+        <p style="margin-bottom:1.5rem;">Track your improvement over time across every KPI.</p>
+
+        <div class="period-tabs">
+            <button class="period-tab" data-days="7">7 Days</button>
+            <button class="period-tab" data-days="14">14 Days</button>
+            <button class="period-tab" data-days="21">21 Days</button>
+            <button class="period-tab active" data-days="30">30 Days</button>
+            <button class="period-tab" data-days="60">60 Days</button>
+            <button class="period-tab" data-days="90">90 Days</button>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="grid-4 mb-4" id="summaryStats">
+            <div class="stat-card"><div class="stat-label">Total Sessions</div><div class="stat-value" id="totalSessions">--</div></div>
+            <div class="stat-card"><div class="stat-label">Training Time</div><div class="stat-value" id="totalTime">--</div></div>
+            <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value" id="avgScore">--</div></div>
+            <div class="stat-card"><div class="stat-label">Objection Rate</div><div class="stat-value" id="objRate">--</div></div>
+        </div>
+
+        <!-- Score Trend Chart -->
+        <div class="chart-container">
+            <div class="chart-title">Overall Score Trend</div>
+            <div class="chart-canvas"><div class="bar-chart" id="scoreTrend"></div></div>
+        </div>
+
+        <!-- KPI Breakdown -->
+        <h3 style="margin-bottom:1rem;">KPI Breakdown</h3>
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <!-- Objection Stats -->
+        <div class="chart-container">
+            <div class="chart-title">Objection Resolution</div>
+            <div class="grid-3" id="objStats">
+                <div class="stat-card"><div class="stat-label">Faced</div><div class="stat-value" id="objFaced">--</div></div>
+                <div class="stat-card"><div class="stat-label">Resolved</div><div class="stat-value" id="objResolved">--</div></div>
+                <div class="stat-card"><div class="stat-label">Resolution Rate</div><div class="stat-value" id="objResRate">--</div></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        if (!requireAuth()) {}
+
+        let currentDays = 30;
+
+        document.querySelectorAll('.period-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelector('.period-tab.active').classList.remove('active');
+                tab.classList.add('active');
+                currentDays = parseInt(tab.dataset.days);
+                loadAnalytics(currentDays);
+            });
+        });
+
+        async function loadAnalytics(days) {
+            try {
+                const [overview, trends] = await Promise.all([
+                    API.getAnalyticsOverview(days),
+                    API.getAnalyticsTrends(days),
+                ]);
+
+                // Summary
+                document.getElementById('totalSessions').textContent = overview.total_sessions;
+                document.getElementById('totalTime').textContent = overview.total_minutes.toFixed(0) + ' min';
+                document.getElementById('avgScore').textContent = overview.avg_score.toFixed(1);
+                document.getElementById('objRate').textContent = overview.objection_stats.rate + '%';
+
+                // Score trend chart
+                const trendEl = document.getElementById('scoreTrend');
+                if (trends.daily && trends.daily.length) {
+                    const maxScore = Math.max(...trends.daily.map(d => d.overall), 1);
+                    trendEl.innerHTML = trends.daily.map(d => {
+                        const h = (d.overall / 100) * 180;
+                        const color = d.overall >= 70 ? 'var(--accent-green)' : d.overall >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)';
+                        return `<div class="bar-col"><div class="bar" style="height:${Math.max(2,h)}px;background:${color};"></div><div class="bar-label">${d.date.slice(5)}</div></div>`;
+                    }).join('');
+                } else {
+                    trendEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);">No data yet</div>';
+                }
+
+                // KPI breakdown
+                const kpiGrid = document.getElementById('kpiGrid');
+                const cats = overview.category_averages || {};
+                const kpiNames = {
+                    tonality: 'Tonality', rapport: 'Rapport', questions: 'Questions',
+                    compliance: 'Compliance', flow: 'Flow', trust: 'Trust Building',
+                    objection_handling: 'Objection Handling', preframing: 'Preframing',
+                    presentation: 'Presentation', close: 'Close', underwriting: 'Underwriting'
+                };
+                kpiGrid.innerHTML = Object.entries(kpiNames).map(([key, name]) => {
+                    const score = cats[key] || 0;
+                    const color = score >= 70 ? 'green' : score >= 50 ? 'blue' : 'amber';
+                    return `
+                        <div class="kpi-card">
+                            <div class="kpi-name">${name}</div>
+                            <div class="kpi-score" style="color: ${score >= 70 ? 'var(--accent-green)' : score >= 50 ? 'var(--accent-cyan)' : 'var(--accent-red)'}">${score.toFixed(1)}</div>
+                            <div class="kpi-bar"><div class="score-bar"><div class="score-bar-fill ${color}" style="width:${score}%"></div></div></div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Objection stats
+                document.getElementById('objFaced').textContent = overview.objection_stats.faced;
+                document.getElementById('objResolved').textContent = overview.objection_stats.resolved;
+                document.getElementById('objResRate').textContent = overview.objection_stats.rate + '%';
+
+            } catch (err) {
+                console.error('Analytics error:', err);
+            }
+        }
+
+        loadAnalytics(currentDays);
+    </script>
+</body>
+</html>

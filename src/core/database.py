@@ -1,0 +1,524 @@
+"""
+Database connection and operations for the training platform.
+Uses asyncpg for async PostgreSQL access with Neon.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
+
+import asyncpg
+
+_pool: Optional[asyncpg.Pool] = None
+
+
+async def get_pool() -> asyncpg.Pool:
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(
+            dsn=os.getenv("DATABASE_URL"),
+            min_size=2,
+            max_size=20,
+        )
+    return _pool
+
+
+async def close_pool():
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
+
+
+# ── Helper ────────────────────────────────────────────────────
+
+def _row_to_dict(row: asyncpg.Record) -> dict:
+    return dict(row) if row else {}
+
+
+def _uuid() -> str:
+    return str(uuid.uuid4())
+
+
+# ══════════════════════════════════════════════════════════════
+# USER / AUTH OPERATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def get_user_by_email(email: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow("SELECT * FROM users WHERE email = $1", email)
+    return _row_to_dict(row) if row else None
+
+
+async def get_user_by_id(user_id: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow("SELECT * FROM users WHERE id = $1", uuid.UUID(user_id))
+    return _row_to_dict(row) if row else None
+
+
+async def create_user(email: str, password_hash: str, name: str) -> dict:
+    pool = await get_pool()
+    user_id = uuid.uuid4()
+    await pool.execute(
+        """INSERT INTO users (id, email, password_hash, name, created_at)
+           VALUES ($1, $2, $3, $4, NOW())""",
+        user_id, email, password_hash, name,
+    )
+    return {"id": str(user_id), "email": email, "name": name}
+
+
+# ══════════════════════════════════════════════════════════════
+# SUBSCRIPTION OPERATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def get_subscription(user_id: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM training_subscriptions WHERE user_id = $1",
+        uuid.UUID(user_id),
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def create_subscription(user_id: str, stripe_customer_id: str = None) -> dict:
+    pool = await get_pool()
+    sub_id = uuid.uuid4()
+    now = datetime.now(timezone.utc)
+    period_end = now + timedelta(days=30)
+    await pool.execute(
+        """INSERT INTO training_subscriptions
+           (id, user_id, stripe_customer_id, plan_status,
+            included_minutes_total, included_minutes_used,
+            billing_period_start, billing_period_end, wallet_balance_cents)
+           VALUES ($1, $2, $3, 'active', 300, 0, $4, $5, 0)""",
+        sub_id, uuid.UUID(user_id), stripe_customer_id, now, period_end,
+    )
+    return {"id": str(sub_id), "user_id": user_id, "plan_status": "active"}
+
+
+async def update_subscription_status(user_id: str, status: str):
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE training_subscriptions SET plan_status = $1 WHERE user_id = $2",
+        status, uuid.UUID(user_id),
+    )
+
+
+async def use_subscription_minutes(user_id: str, minutes: int) -> bool:
+    """Deduct minutes from subscription. Returns True if enough minutes available."""
+    pool = await get_pool()
+    result = await pool.fetchrow(
+        """UPDATE training_subscriptions
+           SET included_minutes_used = included_minutes_used + $1
+           WHERE user_id = $2
+             AND plan_status = 'active'
+             AND (included_minutes_total - included_minutes_used) >= $1
+           RETURNING id""",
+        minutes, uuid.UUID(user_id),
+    )
+    return result is not None
+
+
+async def get_remaining_minutes(user_id: str) -> dict:
+    """Get remaining subscription minutes and wallet balance."""
+    sub = await get_subscription(user_id)
+    if not sub:
+        return {"subscription_minutes": 0, "wallet_cents": 0, "addon_minutes": 0}
+
+    # Check add-on minutes
+    pool = await get_pool()
+    addons = await pool.fetch(
+        """SELECT COALESCE(SUM(minutes_total - minutes_used), 0) as remaining
+           FROM addon_purchases
+           WHERE user_id = $1 AND billing_period_end > NOW()""",
+        uuid.UUID(user_id),
+    )
+    addon_mins = addons[0]["remaining"] if addons else 0
+
+    return {
+        "subscription_minutes": max(0, sub["included_minutes_total"] - sub["included_minutes_used"]),
+        "wallet_cents": sub["wallet_balance_cents"],
+        "addon_minutes": addon_mins,
+    }
+
+
+async def deduct_wallet(user_id: str, cents: int, session_id: str, description: str) -> bool:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            result = await conn.fetchrow(
+                """UPDATE training_subscriptions
+                   SET wallet_balance_cents = wallet_balance_cents - $1
+                   WHERE user_id = $2 AND wallet_balance_cents >= $1
+                   RETURNING wallet_balance_cents""",
+                cents, uuid.UUID(user_id),
+            )
+            if not result:
+                return False
+            await conn.execute(
+                """INSERT INTO wallet_transactions
+                   (id, user_id, subscription_id, type, amount_cents, balance_after,
+                    description, session_id)
+                   SELECT $1, $2, ts.id, 'deduction', $3, $4, $5, $6
+                   FROM training_subscriptions ts WHERE ts.user_id = $2""",
+                uuid.uuid4(), uuid.UUID(user_id), -cents,
+                result["wallet_balance_cents"], description,
+                uuid.UUID(session_id) if session_id else None,
+            )
+    return True
+
+
+async def add_wallet_funds(user_id: str, cents: int, stripe_payment_id: str = None) -> int:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            result = await conn.fetchrow(
+                """UPDATE training_subscriptions
+                   SET wallet_balance_cents = wallet_balance_cents + $1
+                   WHERE user_id = $2
+                   RETURNING wallet_balance_cents""",
+                cents, uuid.UUID(user_id),
+            )
+            balance = result["wallet_balance_cents"] if result else 0
+            await conn.execute(
+                """INSERT INTO wallet_transactions
+                   (id, user_id, subscription_id, type, amount_cents, balance_after,
+                    description, stripe_payment_id)
+                   SELECT $1, $2, ts.id, 'deposit', $3, $4, 'Wallet top-up', $5
+                   FROM training_subscriptions ts WHERE ts.user_id = $2""",
+                uuid.uuid4(), uuid.UUID(user_id), cents, balance, stripe_payment_id,
+            )
+    return balance
+
+
+# ══════════════════════════════════════════════════════════════
+# SESSION OPERATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def create_session(
+    user_id: str, persona_data: dict, client_info: dict, voice_name: str = "Sal"
+) -> dict:
+    pool = await get_pool()
+    session_id = uuid.uuid4()
+    await pool.execute(
+        """INSERT INTO training_sessions
+           (id, user_id, persona_data, client_info, status, voice_name)
+           VALUES ($1, $2, $3, $4, 'active', $5)""",
+        session_id, uuid.UUID(user_id),
+        json.dumps(persona_data), json.dumps(client_info), voice_name,
+    )
+    return {"id": str(session_id), "status": "active"}
+
+
+async def end_session(
+    session_id: str, duration_seconds: int, report_card: dict,
+    final_state: dict, billed_minutes: int, cost_cents: int, billed_from: str
+) -> dict:
+    pool = await get_pool()
+    await pool.execute(
+        """UPDATE training_sessions
+           SET status = 'completed', ended_at = NOW(),
+               duration_seconds = $1, report_card = $2, final_state = $3,
+               billed_minutes = $4, cost_cents = $5, billed_from = $6
+           WHERE id = $7""",
+        duration_seconds, json.dumps(report_card), json.dumps(final_state),
+        billed_minutes, cost_cents, billed_from, uuid.UUID(session_id),
+    )
+    return {"id": session_id, "status": "completed"}
+
+
+async def get_session(session_id: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM training_sessions WHERE id = $1", uuid.UUID(session_id)
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def get_user_sessions(user_id: str, limit: int = 50, offset: int = 0) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT id, status, started_at, ended_at, duration_seconds,
+                  client_info, billed_minutes, cost_cents
+           FROM training_sessions
+           WHERE user_id = $1
+           ORDER BY started_at DESC
+           LIMIT $2 OFFSET $3""",
+        uuid.UUID(user_id), limit, offset,
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+async def save_transcript(session_id: str, turn_number: int, role: str, content: str, metadata: dict = None):
+    pool = await get_pool()
+    await pool.execute(
+        """INSERT INTO session_transcripts (id, session_id, turn_number, role, content, metadata)
+           VALUES ($1, $2, $3, $4, $5, $6)""",
+        uuid.uuid4(), uuid.UUID(session_id), turn_number, role, content,
+        json.dumps(metadata or {}),
+    )
+
+
+async def get_session_transcript(session_id: str) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT turn_number, role, content, timestamp, metadata
+           FROM session_transcripts
+           WHERE session_id = $1
+           ORDER BY turn_number, timestamp""",
+        uuid.UUID(session_id),
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════
+# REPORT CARD OPERATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def save_report_card(session_id: str, user_id: str, report: dict) -> str:
+    pool = await get_pool()
+    report_id = uuid.uuid4()
+    await pool.execute(
+        """INSERT INTO report_cards
+           (id, session_id, user_id, overall_score, letter_grade,
+            close_probability, detected_style, categories, deal_killers, full_report)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
+        report_id, uuid.UUID(session_id), uuid.UUID(user_id),
+        report.get("overall_score", 0), report.get("letter_grade", "F"),
+        report.get("close_probability", 0), report.get("detected_sales_style"),
+        json.dumps(report.get("categories", [])),
+        json.dumps(report.get("deal_killers", {})),
+        json.dumps(report),
+    )
+    return str(report_id)
+
+
+async def get_report_card(report_id: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM report_cards WHERE id = $1", uuid.UUID(report_id)
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def get_user_report_cards(user_id: str, limit: int = 50, offset: int = 0) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT rc.*, ts.client_info, ts.duration_seconds
+           FROM report_cards rc
+           JOIN training_sessions ts ON rc.session_id = ts.id
+           WHERE rc.user_id = $1
+           ORDER BY rc.created_at DESC
+           LIMIT $2 OFFSET $3""",
+        uuid.UUID(user_id), limit, offset,
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════
+# ANALYTICS OPERATIONS
+# ══════════════════════════════════════════════════════════════
+
+async def get_analytics(user_id: str, days: int = 30) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT * FROM analytics_daily
+           WHERE user_id = $1 AND date >= (CURRENT_DATE - $2::integer)
+           ORDER BY date ASC""",
+        uuid.UUID(user_id), days,
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+async def compute_analytics_for_date(user_id: str, date: datetime) -> dict:
+    """Compute daily analytics from report cards for a specific date."""
+    pool = await get_pool()
+    target_date = date.date() if isinstance(date, datetime) else date
+
+    reports = await pool.fetch(
+        """SELECT rc.full_report, ts.duration_seconds
+           FROM report_cards rc
+           JOIN training_sessions ts ON rc.session_id = ts.id
+           WHERE rc.user_id = $1 AND DATE(rc.created_at) = $2""",
+        uuid.UUID(user_id), target_date,
+    )
+
+    if not reports:
+        return {}
+
+    count = len(reports)
+    total_minutes = sum(r["duration_seconds"] or 0 for r in reports) / 60.0
+
+    # Aggregate scores from report cards
+    score_keys = [
+        "tonality", "rapport", "questions", "compliance", "flow",
+        "trust", "objection_handling", "preframing", "presentation",
+        "close", "underwriting"
+    ]
+    avgs = {}
+    for key in score_keys:
+        scores = []
+        for r in reports:
+            report = json.loads(r["full_report"]) if isinstance(r["full_report"], str) else r["full_report"]
+            for cat in report.get("categories", []):
+                if cat.get("name", "").lower().replace(" ", "_").replace("&", "").replace("/", "_") == key:
+                    scores.append(cat.get("score", 0))
+                    break
+        avgs[f"avg_{key}"] = sum(scores) / len(scores) if scores else 0
+
+    overall_scores = []
+    close_probs = []
+    styles = {}
+    objections_faced = 0
+    objections_resolved = 0
+
+    for r in reports:
+        report = json.loads(r["full_report"]) if isinstance(r["full_report"], str) else r["full_report"]
+        overall_scores.append(report.get("overall_score", 0))
+        close_probs.append(report.get("close_probability", 0))
+        style = report.get("detected_sales_style", "unknown")
+        styles[style] = styles.get(style, 0) + 1
+        dk = report.get("deal_killers", {})
+        objections_faced += dk.get("total_objections", 0)
+        objections_resolved += dk.get("resolved_objections", 0)
+
+    analytics = {
+        "user_id": user_id,
+        "date": str(target_date),
+        "sessions_count": count,
+        "total_minutes": total_minutes,
+        "avg_overall": sum(overall_scores) / len(overall_scores) if overall_scores else 0,
+        "avg_close_probability": sum(close_probs) / len(close_probs) if close_probs else 0,
+        "objections_faced": objections_faced,
+        "objections_resolved": objections_resolved,
+        "style_distribution": styles,
+        **avgs,
+    }
+
+    # Upsert into analytics_daily
+    await pool.execute(
+        """INSERT INTO analytics_daily (id, user_id, date, sessions_count, total_minutes,
+               avg_overall, avg_tonality, avg_rapport, avg_questions, avg_compliance,
+               avg_flow, avg_trust, avg_objection_handling, avg_preframing,
+               avg_presentation, avg_close, avg_underwriting,
+               objections_faced, objections_resolved, style_distribution, avg_close_probability)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+           ON CONFLICT (user_id, date) DO UPDATE SET
+               sessions_count = EXCLUDED.sessions_count,
+               total_minutes = EXCLUDED.total_minutes,
+               avg_overall = EXCLUDED.avg_overall,
+               avg_close_probability = EXCLUDED.avg_close_probability""",
+        uuid.uuid4(), uuid.UUID(user_id), target_date,
+        count, total_minutes, analytics["avg_overall"],
+        avgs.get("avg_tonality", 0), avgs.get("avg_rapport", 0),
+        avgs.get("avg_questions", 0), avgs.get("avg_compliance", 0),
+        avgs.get("avg_flow", 0), avgs.get("avg_trust", 0),
+        avgs.get("avg_objection_handling", 0), avgs.get("avg_preframing", 0),
+        avgs.get("avg_presentation", 0), avgs.get("avg_close", 0),
+        avgs.get("avg_underwriting", 0),
+        objections_faced, objections_resolved,
+        json.dumps(styles), analytics["avg_close_probability"],
+    )
+
+    return analytics
+
+
+# ══════════════════════════════════════════════════════════════
+# WALLET TRANSACTION HISTORY
+# ══════════════════════════════════════════════════════════════
+
+async def get_wallet_transactions(user_id: str, limit: int = 50) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT * FROM wallet_transactions
+           WHERE user_id = $1
+           ORDER BY created_at DESC
+           LIMIT $2""",
+        uuid.UUID(user_id), limit,
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════
+# CALL RECORDINGS
+# ══════════════════════════════════════════════════════════════
+
+async def save_call_recording(user_id: str, recording_data: dict) -> str:
+    pool = await get_pool()
+    rec_id = uuid.uuid4()
+    await pool.execute(
+        """INSERT INTO call_recordings
+           (id, user_id, twilio_recording_sid, twilio_call_sid,
+            recording_url, duration_seconds, call_date, caller_number, agent_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
+        rec_id, uuid.UUID(user_id),
+        recording_data.get("recording_sid"), recording_data.get("call_sid"),
+        recording_data.get("recording_url"), recording_data.get("duration"),
+        recording_data.get("call_date"), recording_data.get("caller_number"),
+        recording_data.get("agent_name"),
+    )
+    return str(rec_id)
+
+
+async def get_call_recordings(user_id: str, limit: int = 50) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT * FROM call_recordings
+           WHERE user_id = $1
+           ORDER BY call_date DESC
+           LIMIT $2""",
+        uuid.UUID(user_id), limit,
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+async def update_recording_report(recording_id: str, transcript: dict, report: dict):
+    pool = await get_pool()
+    await pool.execute(
+        """UPDATE call_recordings
+           SET status = 'completed', transcript = $1, report_card = $2, processed_at = NOW()
+           WHERE id = $3""",
+        json.dumps(transcript), json.dumps(report), uuid.UUID(recording_id),
+    )
+
+
+# ══════════════════════════════════════════════════════════════
+# SETTINGS
+# ══════════════════════════════════════════════════════════════
+
+async def get_settings(user_id: str) -> dict:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM training_settings WHERE user_id = $1", uuid.UUID(user_id)
+    )
+    if row:
+        return _row_to_dict(row)
+    # Create default settings
+    await pool.execute(
+        "INSERT INTO training_settings (id, user_id) VALUES ($1, $2)",
+        uuid.uuid4(), uuid.UUID(user_id),
+    )
+    return {"user_id": user_id, "preferred_voice": "Sal", "auto_import_recordings": False}
+
+
+async def update_settings(user_id: str, settings: dict):
+    pool = await get_pool()
+    allowed = [
+        "preferred_voice", "auto_import_recordings",
+        "grokbot_account_linked", "grokbot_api_key",
+        "twilio_account_sid", "twilio_auth_token",
+        "email_weekly_report", "email_session_summary",
+    ]
+    updates = {k: v for k, v in settings.items() if k in allowed}
+    if not updates:
+        return
+    set_clauses = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(updates.keys()))
+    values = [uuid.UUID(user_id)] + list(updates.values())
+    await pool.execute(
+        f"UPDATE training_settings SET {set_clauses} WHERE user_id = $1",
+        *values,
+    )

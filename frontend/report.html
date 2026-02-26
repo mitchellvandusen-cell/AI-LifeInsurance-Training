@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Card — InsuranceGrokBot Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        .report-header {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .grade-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
+        .grade-circle .score {
+            font-size: 0.9rem;
+            font-weight: 600;
+            opacity: 0.85;
+        }
+        .grade-A { background: rgba(16,185,129,0.15); color: var(--accent-green); border: 2px solid var(--accent-green); }
+        .grade-B { background: rgba(6,182,212,0.15); color: var(--accent-cyan); border: 2px solid var(--accent-cyan); }
+        .grade-C { background: rgba(245,158,11,0.15); color: var(--accent-amber); border: 2px solid var(--accent-amber); }
+        .grade-D { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 2px solid var(--accent-red); }
+        .grade-F { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 2px solid var(--accent-red); }
+        .report-meta { flex: 1; }
+        .report-meta h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .report-meta .meta-row {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .cat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+        }
+        .cat-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cat-card .cat-score {
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+        .cat-card .bar-track {
+            height: 8px;
+            background: var(--bg-input);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+        .cat-card .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
+        .cat-card .feedback { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
+        .deal-killers-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .deal-killers-section h3 { margin-bottom: 1rem; }
+        .dk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .dk-item {
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+            background: var(--bg-primary);
+        }
+        .dk-item h5 { font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .dk-item p { font-size: 0.8rem; color: var(--text-muted); }
+        .style-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .style-section h3 { margin-bottom: 0.5rem; }
+        .style-badge {
+            display: inline-block;
+            padding: 0.35rem 1rem;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            font-size: 0.9rem;
+            background: rgba(79,70,229,0.15);
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+        }
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .pros-cons h5 { font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-muted); }
+        .pros-cons ul { list-style: none; padding: 0; }
+        .pros-cons li {
+            font-size: 0.85rem;
+            padding: 0.35rem 0;
+            color: var(--text-secondary);
+        }
+        .pros li::before { content: '+ '; color: var(--accent-green); font-weight: 700; }
+        .cons li::before { content: '- '; color: var(--accent-red); font-weight: 700; }
+        .transcript-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+        .transcript-section h3 { margin-bottom: 1rem; }
+        .transcript-line {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+        .transcript-line:last-child { border-bottom: none; }
+        .transcript-line .role {
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            margin-bottom: 0.15rem;
+        }
+        .transcript-line .role.agent { color: var(--accent-blue); }
+        .transcript-line .role.client { color: var(--accent-cyan); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><a href="/dashboard.html" class="nav-logo" style="font-size:1.1rem;"><span class="logo-accent">GrokBot</span> Training</a></div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="/training.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>Start Training</a>
+            <a href="/analytics.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Analytics</a>
+            <a href="/report-cards.html" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Report Cards</a>
+            <a href="/recordings.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Recordings</a>
+            <a href="/billing.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
+            <a href="/settings.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <a href="/report-cards.html" style="color:var(--text-muted);font-size:0.85rem;text-decoration:none;display:inline-block;margin-bottom:1rem;">&larr; Back to Report Cards</a>
+
+        <div id="reportContent">
+            <div style="text-align:center;padding:3rem;color:var(--text-muted);">
+                <div class="spinner"></div>
+                <p style="margin-top:1rem;">Loading report card...</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        if (!requireAuth()) {}
+
+        const params = new URLSearchParams(window.location.search);
+        const reportId = params.get('id');
+
+        async function loadReport() {
+            if (!reportId) {
+                document.getElementById('reportContent').innerHTML =
+                    '<p style="color:var(--accent-red);">No report ID specified.</p>';
+                return;
+            }
+
+            try {
+                const report = await API.getReportCard(reportId);
+                renderReport(report);
+            } catch (err) {
+                document.getElementById('reportContent').innerHTML =
+                    `<p style="color:var(--accent-red);">Failed to load report: ${err.message}</p>`;
+            }
+        }
+
+        function barColor(score) {
+            if (score >= 80) return 'var(--accent-green)';
+            if (score >= 60) return 'var(--accent-cyan)';
+            if (score >= 40) return 'var(--accent-amber)';
+            return 'var(--accent-red)';
+        }
+
+        function renderReport(data) {
+            const report = typeof data.full_report === 'string' ? JSON.parse(data.full_report) : (data.full_report || data);
+            const categories = typeof data.categories === 'string' ? JSON.parse(data.categories) : (data.categories || report.categories || []);
+            const dealKillers = typeof data.deal_killers === 'string' ? JSON.parse(data.deal_killers) : (data.deal_killers || report.deal_killers || {});
+            const clientInfo = typeof data.client_info === 'string' ? JSON.parse(data.client_info) : (data.client_info || {});
+
+            const grade = data.letter_grade || report.letter_grade || 'N/A';
+            const score = data.overall_score || report.overall_score || 0;
+            const style = data.detected_style || report.detected_sales_style || 'Unknown';
+            const closeProb = data.close_probability || report.close_probability || 0;
+            const duration = data.duration_seconds || 0;
+
+            const gradeClass = grade.startsWith('A') ? 'grade-A' :
+                               grade.startsWith('B') ? 'grade-B' :
+                               grade.startsWith('C') ? 'grade-C' :
+                               grade.startsWith('D') ? 'grade-D' : 'grade-F';
+
+            let html = `
+                <div class="report-header">
+                    <div class="grade-circle ${gradeClass}">
+                        ${grade}
+                        <span class="score">${Math.round(score)}%</span>
+                    </div>
+                    <div class="report-meta">
+                        <h1>Training Report Card</h1>
+                        <div class="meta-row">
+                            <span>Client: ${clientInfo.first_name || 'Unknown'}, ${clientInfo.age || '?'}yo</span>
+                            <span>State: ${clientInfo.state || 'N/A'}</span>
+                            <span>Duration: ${formatDuration(duration)}</span>
+                            <span>Close Probability: ${Math.round(closeProb)}%</span>
+                            <span>Date: ${data.created_at ? formatDate(data.created_at) : 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Style section
+            const styleInfo = report.style_analysis || {};
+            html += `
+                <div class="style-section">
+                    <h3>Detected Sales Style</h3>
+                    <div class="style-badge">${style}</div>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h5>Strengths</h5>
+                            <ul>
+                                ${(styleInfo.pros || []).map(p => `<li>${p}</li>`).join('') || '<li>No data</li>'}
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h5>Consequences</h5>
+                            <ul>
+                                ${(styleInfo.consequences || styleInfo.cons || []).map(c => `<li>${c}</li>`).join('') || '<li>No data</li>'}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Category grid
+            html += '<h3 style="margin-bottom:1rem;">Performance by Category</h3><div class="category-grid">';
+            for (const cat of categories) {
+                const catScore = cat.score || 0;
+                const color = barColor(catScore);
+                html += `
+                    <div class="cat-card">
+                        <h4>
+                            ${cat.name || cat.category || 'Unknown'}
+                            <span class="cat-score" style="color:${color}">${Math.round(catScore)}</span>
+                        </h4>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width:${catScore}%;background:${color};"></div>
+                        </div>
+                        <div class="feedback">${cat.feedback || cat.notes || ''}</div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+
+            // Deal killers
+            const dkEntries = dealKillers.killers || dealKillers.entries || [];
+            if (dkEntries.length > 0 || dealKillers.total_objections) {
+                html += `
+                    <div class="deal-killers-section">
+                        <h3>Deal Killers &amp; Objections</h3>
+                        <div class="meta-row" style="margin-bottom:1rem;font-size:0.9rem;color:var(--text-muted);">
+                            <span>Total Objections: ${dealKillers.total_objections || 0}</span>
+                            <span>Resolved: ${dealKillers.resolved_objections || 0}</span>
+                        </div>
+                        <div class="dk-grid">
+                            ${dkEntries.map(dk => `
+                                <div class="dk-item">
+                                    <h5>${dk.name || dk.type || 'Objection'}</h5>
+                                    <p>${dk.status || ''}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Suggestions
+            const suggestions = report.suggestions || report.coaching_notes || [];
+            if (suggestions.length > 0) {
+                html += `
+                    <div class="style-section">
+                        <h3>Coaching Notes</h3>
+                        <ul style="padding-left:1.25rem;">
+                            ${suggestions.map(s => `<li style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:0.5rem;">${s}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            document.getElementById('reportContent').innerHTML = html;
+        }
+
+        loadReport();
+    </script>
+</body>
+</html>

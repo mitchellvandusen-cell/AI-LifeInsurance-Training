@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Recordings — InsuranceGrokBot Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><a href="/dashboard.html" class="nav-logo" style="font-size:1.1rem;"><span class="logo-accent">GrokBot</span> Training</a></div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="/training.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>Start Training</a>
+            <a href="/analytics.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Analytics</a>
+            <a href="/report-cards.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Report Cards</a>
+            <a href="/recordings.html" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Recordings</a>
+            <a href="/billing.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
+            <a href="/settings.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="flex-between mb-4">
+            <div>
+                <h1>Call Recordings</h1>
+                <p style="margin-top:0.25rem;">Import and analyze your real call recordings from InsuranceGrokBot.</p>
+            </div>
+            <button class="btn btn-primary" onclick="syncRecordings()">Sync from Twilio</button>
+        </div>
+
+        <div id="recordingsList">
+            <div class="empty-state" style="text-align:center;padding:3rem;color:var(--text-muted);">
+                <h3>No recordings imported</h3>
+                <p>Connect your InsuranceGrokBot account in Settings to import call recordings.</p>
+                <a href="/settings.html" class="btn btn-secondary mt-2">Go to Settings</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        if (!requireAuth()) {}
+
+        async function loadRecordings() {
+            try {
+                const recordings = await API.getRecordings();
+                const container = document.getElementById('recordingsList');
+                if (!recordings || !recordings.length) return;
+
+                container.innerHTML = recordings.map(r => `
+                    <div class="card" style="margin-bottom:0.75rem;display:flex;align-items:center;gap:1rem;">
+                        <div style="width:60px;text-align:center;">
+                            ${r.status === 'completed' ?
+                                `<span class="badge badge-green">${r.status}</span>` :
+                                r.status === 'processing' ?
+                                `<span class="badge badge-amber">${r.status}</span>` :
+                                `<span class="badge badge-blue">${r.status}</span>`
+                            }
+                        </div>
+                        <div style="flex:1;">
+                            <h4 style="font-size:0.95rem;">${r.agent_name || 'Call'} — ${r.caller_number || 'Unknown'}</h4>
+                            <p style="font-size:0.8rem;color:var(--text-muted);">
+                                Duration: ${formatDuration(r.duration_seconds || 0)} |
+                                ${r.call_date ? formatDate(r.call_date) : 'Unknown date'}
+                            </p>
+                        </div>
+                        ${r.status === 'completed' ? '<button class="btn btn-ghost btn-sm">View Report</button>' : ''}
+                    </div>
+                `).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        async function syncRecordings() {
+            try {
+                showToast('Syncing recordings from Twilio...', 'info');
+                const result = await API.syncRecordings();
+                showToast(`Imported ${result.imported_count} recordings`, 'success');
+                loadRecordings();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        loadRecordings();
+    </script>
+</body>
+</html>
