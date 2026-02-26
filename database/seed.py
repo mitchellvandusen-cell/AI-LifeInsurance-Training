@@ -24,7 +24,7 @@ def _hash(password: str) -> str:
 async def seed_beta_user():
     """Create the beta test user if they don't already exist.
 
-    Gives them an active subscription with full minutes and $50 wallet balance
+    Gives them an active subscription with unlimited minutes and wallet balance
     so every feature can be tested without Stripe.
     """
     from src.core.database import get_pool
@@ -49,7 +49,7 @@ async def seed_beta_user():
         user_id, BETA_EMAIL, password_hash, BETA_NAME,
     )
 
-    # 2. Create active subscription with full minutes + $50 wallet
+    # 2. Create active subscription with unlimited minutes + unlimited wallet
     from datetime import datetime, timedelta, timezone
 
     now = datetime.now(timezone.utc)
@@ -61,7 +61,7 @@ async def seed_beta_user():
            (id, user_id, stripe_customer_id, plan_status,
             included_minutes_total, included_minutes_used,
             billing_period_start, billing_period_end, wallet_balance_cents)
-           VALUES ($1, $2, $3, 'active', 300, 0, $4, $5, 5000)""",
+           VALUES ($1, $2, $3, 'active', 999999, 0, $4, $5, 99999999)""",
         sub_id, user_id, "beta_test_account", now, period_end,
     )
 
@@ -74,7 +74,7 @@ async def seed_beta_user():
     print(f"[SEED] Beta user created successfully!")
     print(f"       Email:    {BETA_EMAIL}")
     print(f"       Password: {BETA_PASSWORD}")
-    print(f"       Sub:      active | 300 min | $50.00 wallet")
+    print(f"       Sub:      active | 999,999 min | $999,999.99 wallet")
 
 
 async def _main():
