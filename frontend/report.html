@@ -30,11 +30,11 @@
             font-weight: 600;
             opacity: 0.85;
         }
-        .grade-A { background: rgba(16,185,129,0.15); color: var(--accent-green); border: 2px solid var(--accent-green); }
-        .grade-B { background: rgba(6,182,212,0.15); color: var(--accent-cyan); border: 2px solid var(--accent-cyan); }
-        .grade-C { background: rgba(245,158,11,0.15); color: var(--accent-amber); border: 2px solid var(--accent-amber); }
-        .grade-D { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 2px solid var(--accent-red); }
-        .grade-F { background: rgba(239,68,68,0.15); color: var(--accent-red); border: 2px solid var(--accent-red); }
+        .grade-A { background: rgba(79,70,229,0.12); color: #818cf8; border: 2px solid rgba(79,70,229,0.5); }
+        .grade-B { background: rgba(79,70,229,0.10); color: #a5b4fc; border: 2px solid rgba(79,70,229,0.35); }
+        .grade-C { background: rgba(79,70,229,0.06); color: #c7d2fe; border: 2px solid rgba(79,70,229,0.2); }
+        .grade-D { background: rgba(239,68,68,0.08); color: #fca5a5; border: 2px solid rgba(239,68,68,0.25); }
+        .grade-F { background: rgba(239,68,68,0.08); color: #fca5a5; border: 2px solid rgba(239,68,68,0.25); }
         .report-meta { flex: 1; }
         .report-meta h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
         .report-meta .meta-row {
@@ -76,8 +76,8 @@
             font-weight: 600;
         }
         .phase-chip.reached {
-            background: rgba(16,185,129,0.15);
-            color: var(--accent-green);
+            background: rgba(79,70,229,0.15);
+            color: #a5b4fc;
         }
         .phase-chip.not-reached {
             background: var(--bg-input);
@@ -185,8 +185,8 @@
             padding: 0.35rem 0;
             color: var(--text-secondary);
         }
-        .pros li::before { content: '+ '; color: var(--accent-green); font-weight: 700; }
-        .cons li::before { content: '- '; color: var(--accent-red); font-weight: 700; }
+        .pros li::before { content: '+ '; color: #818cf8; font-weight: 700; }
+        .cons li::before { content: '- '; color: var(--text-muted); font-weight: 700; }
     </style>
 </head>
 <body>
@@ -246,10 +246,10 @@
         }
 
         function barColor(score) {
-            if (score >= 80) return 'var(--accent-green)';
-            if (score >= 60) return 'var(--accent-cyan)';
-            if (score >= 40) return 'var(--accent-amber)';
-            return 'var(--accent-red)';
+            if (score >= 80) return '#818cf8';
+            if (score >= 60) return '#a5b4fc';
+            if (score >= 40) return '#c7d2fe';
+            return 'rgba(239,68,68,0.6)';
         }
 
         const ALL_PHASES = [
@@ -335,6 +335,17 @@
                 `;
             }
 
+            // AI coaching note (most impactful thing to focus on)
+            const aiNote = report.ai_coaching_note;
+            if (aiNote) {
+                html += `
+                    <div style="background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.15);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1.5rem;">
+                        <div style="font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#818cf8;margin-bottom:0.5rem;">Coach's Top Priority</div>
+                        <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6;">${aiNote}</p>
+                    </div>
+                `;
+            }
+
             // Style section
             html += `
                 <div class="style-section">
@@ -355,7 +366,7 @@
                             </ul>
                         </div>
                     </div>
-                    ${salesStyle.coaching ? `<p style="font-size:0.85rem;color:var(--text-muted);margin-top:1rem;font-style:italic;">${salesStyle.coaching}</p>` : ''}
+                    ${salesStyle.coaching ? `<p style="font-size:0.85rem;color:#a5b4fc;margin-top:1rem;font-style:italic;">${salesStyle.coaching}</p>` : ''}
                 </div>
             `;
 
@@ -380,7 +391,7 @@
                                 <div class="bar-fill" style="width:${catScore}%;background:${color};"></div>
                             </div>
                             <div class="feedback">${cat.feedback || ''}</div>
-                            ${cat.coaching ? `<div style="font-size:0.78rem;color:var(--accent-blue);margin-top:0.5rem;font-style:italic;">${cat.coaching}</div>` : ''}
+                            ${cat.coaching ? `<div style="font-size:0.78rem;color:#a5b4fc;margin-top:0.5rem;font-style:italic;">${cat.coaching}</div>` : ''}
                         </div>
                     `;
                 }
@@ -428,13 +439,13 @@
                                     statusColor = 'var(--text-muted)';
                                 } else if (isEarly) {
                                     statusText = 'Early Smokescreen';
-                                    statusColor = 'var(--accent-amber)';
+                                    statusColor = '#c7d2fe';
                                 } else if (status === 'resolved' || status === 'confirmed') {
                                     statusText = status === 'confirmed' ? 'Confirmed' : 'Resolved';
-                                    statusColor = 'var(--accent-green)';
+                                    statusColor = '#818cf8';
                                 } else if (status === 'unresolved' || status === 'challenged') {
                                     statusText = status === 'challenged' ? 'Challenged' : 'Unresolved';
-                                    statusColor = 'var(--accent-red)';
+                                    statusColor = '#fca5a5';
                                 } else {
                                     statusText = status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                                     statusColor = 'var(--text-muted)';

@@ -333,8 +333,16 @@ async def end_session(session_id: str, request: Request):
     if voice_sess:
         await voice_sess.disconnect()
 
-    # Generate report card
+    # Generate report card (scores from grading engine)
     report = orch.end_session()
+
+    # Enhance report with AI-generated coaching text
+    try:
+        from src.engine.report_analyzer import enhance_report_with_ai
+        conversation_log = orch.sm.state.conversation_log
+        report = await enhance_report_with_ai(report, conversation_log)
+    except Exception as e:
+        logger.warning("AI report enhancement failed, using template text: %s", e)
 
     # Calculate billing
     duration_seconds = int(time.time() - session["start_time"])
