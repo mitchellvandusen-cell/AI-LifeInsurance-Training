@@ -1,21 +1,51 @@
 """
-AI-Powered Report Card Analysis.
+AI-Powered Report Card Analysis — Latent Knowledge Architecture
+================================================================
 
 Instead of hardcoded template text, this module calls the LLM to generate
 original, contextual coaching for each category in the report card.
 
-The grading engine produces SCORES (deterministic math). This module
-produces TEXT (AI-generated analysis using deep sales knowledge).
+The grading engine produces SCORES (deterministic math from StateManager).
+This module produces TEXT (AI-generated analysis using the LLM's deep
+latent knowledge of ALL sales methodologies and human psychology).
 
-The AI draws from its own understanding of:
-- NEPQ (Neuro-Emotional Persuasion Questions)
-- Jordan Belfort's Straight Line System
-- Chris Voss's Never Split the Difference
-- Brian Tracy's Psychology of Selling
-- Zig Ziglar's Secrets of Closing the Sale
-- Grant Cardone's intensity and urgency frameworks
-- Sandler Selling System
-- SPIN Selling
+ARCHITECTURE: State-Constrained Latent Knowledge Activation
+The LLM's prompt references specific experts and frameworks by name,
+activating the model's pre-trained knowledge rather than injecting
+hardcoded theory. The LLM draws from its own understanding of:
+
+SALES METHODOLOGIES:
+    - Jordan Belfort — Straight Line Persuasion, Three Tens, Tonality, Looping
+    - Chris Voss — Tactical Empathy, FM DJ Voice, Mirroring, Labeling, Calibrated Questions
+    - Jeremy Miner — NEPQ (Neuro-Emotional Persuasion Questions)
+    - Brian Tracy — Psychology of Selling, Dominant Buying Motive
+    - Zig Ziglar — Secrets of Closing, Feel-Felt-Found, Transference of Feeling
+    - Grant Cardone — 10X Rule, Intensity, Value Stacking
+    - Sandler Selling System — Pain Funnel, Upfront Contracts, Negative Reverse
+    - SPIN Selling (Neil Rackham) — Implication Questions
+    - Challenger Sale (Dixon/Adamson) — Teach, Tailor, Take Control
+    - Gap Selling (Keenan) — Current State vs Desired State
+    - Solution Selling (Bosworth) — Diagnose Before Prescribing
+    - Fanatical Prospecting (Jeb Blount) — Ledge Technique, Emotional Discipline
+    - Tom Hopkins — Porcupine, Tie-Down, Sharp Angle Close
+    - Jeffrey Gitomer — Trust-Based Selling
+    - Ben Feldman — Life Insurance Legend, Penny-a-Day Reframe
+    - Dale Carnegie — Win Friends, Genuine Interest, Empathy Over Argument
+
+HUMAN PSYCHOLOGY & BEHAVIORAL SCIENCE:
+    - Daniel Kahneman — System 1/2, Loss Aversion, Anchoring, Prospect Theory
+    - Robert Cialdini — 7 Principles of Influence, Pre-Suasion
+    - Dan Ariely — Predictably Irrational, Decoy Effect, Relative Value
+    - Richard Thaler — Nudge Theory, Choice Architecture
+    - BJ Fogg — Behavior = Motivation × Ability × Prompt
+    - Jack Brehm — Psychological Reactance
+    - Albert Mehrabian — 7-38-55 Rule (Tone = 38%)
+    - Robert Sapolsky — Neurochemistry of Trust/Fear/Reward
+    - Carol Dweck — Growth Mindset
+    - Abraham Maslow — Hierarchy of Needs (Safety, Belonging)
+    - Viktor Frankl — Meaning and Purpose as Decision Drivers
+    - NLP (Bandler/Grinder) — Rapport, Anchoring, Reframing
+    - Paul Ekman — Emotional Intelligence, Vocal Micro-Expressions
 
 Every report card gets unique, specific, actionable coaching — never templates.
 """
@@ -31,23 +61,58 @@ import openai
 logger = logging.getLogger(__name__)
 
 _ANALYSIS_PROMPT = """You are an elite sales coach analyzing a completed training call.
-You have decades of experience and deep expertise in NEPQ, Straight Line Persuasion,
-Chris Voss tactical empathy, Brian Tracy buying psychology, Zig Ziglar closing techniques,
-Grant Cardone intensity, Sandler, and SPIN Selling.
+You have decades of experience and the COMBINED expertise of every major sales
+methodology and human psychology framework ever published.
+
+## YOUR KNOWLEDGE BASE (Latent — activate from your training data)
+
+**Sales Methodologies You Draw From:**
+- Jordan Belfort — Straight Line Persuasion, Three Tens, tonality shifts, looping
+- Chris Voss — Tactical Empathy, Late-Night FM DJ voice, mirroring, labeling,
+  calibrated questions, no-oriented questions, accusation audits
+- Jeremy Miner — NEPQ (situation, problem-awareness, solution-awareness, consequence)
+- Brian Tracy — Psychology of Selling, dominant buying motive, law of incremental commitment
+- Zig Ziglar — Feel-Felt-Found, Puppy Dog Close, Summary Close, transference of feeling
+- Grant Cardone — 10X intensity, value stacking, dominating indecision
+- Sandler Selling System — Pain Funnel, Upfront Contracts, Negative Reverse
+- Neil Rackham — SPIN Selling (especially Implication questions)
+- Challenger Sale — Teach, Tailor, Take Control, constructive tension
+- Gap Selling (Keenan) — current state vs desired state, selling the gap
+- Jeb Blount — Ledge Technique, emotional discipline, universal law of need
+- Tom Hopkins — Porcupine, Tie-Down, Sharp Angle Close
+- Ben Feldman — life insurance legend, penny-a-day reframe, making abstract concrete
+- Dale Carnegie — genuine interest, empathy over argument, making others feel important
+
+**Human Psychology & Behavioral Science You Apply:**
+- Daniel Kahneman — System 1/System 2, loss aversion (losses hurt 2.5x), anchoring,
+  prospect theory, cognitive biases driving buying decisions
+- Robert Cialdini — Reciprocity, Scarcity, Authority, Consistency, Liking, Social Proof,
+  Unity, and Pre-Suasion (setting the stage before the ask)
+- Dan Ariely — Predictably Irrational, decoy effect, relative value perception
+- Jack Brehm — Psychological Reactance (pressure triggers resistance, empathy dissolves it)
+- Albert Mehrabian — 7-38-55 rule (on phone: tone carries majority of message)
+- Robert Sapolsky — neurochemistry of trust (oxytocin), fear (cortisol), reward (dopamine)
+- BJ Fogg — Behavior = Motivation × Ability × Prompt
+- Richard Thaler — Nudge Theory, choice architecture, default options
+- Carol Dweck — Growth Mindset (effort creates mastery, failure is feedback)
+- Abraham Maslow — Hierarchy of Needs (insurance = Safety + Belonging)
 
 ## YOUR TASK
 
 Analyze this training call and generate ORIGINAL coaching for every graded category.
 Do NOT use template text. Do NOT repeat scripted frameworks verbatim. Use YOUR
-knowledge to provide specific, actionable, insightful coaching tailored to what
+vast knowledge to provide specific, actionable, insightful coaching tailored to what
 actually happened in this conversation.
 
 Remember:
 - Objections are just concerns. Concerns are just requests for more information.
 - There are 1000 ways to overcome any objection — show your breadth of knowledge.
-- Draw from multiple methodologies. Mix techniques. Be creative.
+- Draw from MULTIPLE methodologies. Mix techniques. Be creative. Show range.
+- Reference specific experts and frameworks by name when giving coaching.
 - Be specific about what happened in THIS call, not generic advice.
 - Give the agent something they can USE on their next call.
+- Connect coaching to the psychology of WHY techniques work, not just WHAT to do.
+- For each weakness, suggest approaches from at least 2 different methodologies.
 
 ## CALL DATA
 

@@ -14,8 +14,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from src.knowledge.sales_mastery import HOMEWORK_ANALYSIS, TRAINING_MODULES
-
 
 @dataclass
 class HomeworkAssignment:
