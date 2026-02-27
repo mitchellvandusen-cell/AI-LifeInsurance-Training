@@ -198,9 +198,10 @@
             background: var(--accent-blue);
             border-radius: 2px;
             transition: height 0.1s;
-            height: 4px;
+            height: 2px;
         }
         .voice-circle.recording ~ .visualizer .viz-bar { background: var(--accent-red); }
+        .voice-circle.responding ~ .visualizer .viz-bar { background: var(--accent-cyan); }
 
         /* ── State Bar ───────────────────────────────────── */
         .state-bar {
@@ -771,21 +772,27 @@
             switch (data.type) {
                 case 'status':
                     if (data.status === 'recording') {
+                        voiceState = 'recording';
                         circle.className = 'voice-circle recording';
                         status.textContent = 'Listening...';
                     } else if (data.status === 'processing') {
+                        voiceState = 'idle';
                         circle.className = 'voice-circle processing';
                         status.textContent = 'Processing...';
                     } else if (data.status === 'listening') {
+                        voiceState = 'idle';
                         circle.className = 'voice-circle';
                         status.textContent = 'Your turn — speak now';
                         resetAudioQueue();
                     } else if (data.status === 'connecting_voice') {
+                        voiceState = 'idle';
                         status.textContent = 'Connecting to voice service...';
                     } else if (data.status === 'responding') {
+                        voiceState = 'responding';
                         circle.className = 'voice-circle responding';
                         status.textContent = (trainingMode && trainingMode !== 'full') ? 'Coach is thinking...' : 'Client is thinking...';
                     } else if (data.status === 'connected' || data.status === 'ready') {
+                        voiceState = 'idle';
                         circle.className = 'voice-circle';
                         // For modules, coach speaks first; for full sim, agent speaks first
                         if (trainingMode && trainingMode !== 'full') {
@@ -797,6 +804,7 @@
                     break;
 
                 case 'audio':
+                    voiceState = 'responding';
                     playAudio(data.data);
                     circle.className = 'voice-circle responding';
                     status.textContent = (trainingMode && trainingMode !== 'full') ? 'Coach speaking...' : 'Client speaking...';
@@ -823,6 +831,11 @@
 
         // ── Audio Capture (mic → server) ─────────────────────
         let playbackContext = null;  // Separate context for playback
+        let voiceState = 'idle';     // 'idle' | 'recording' (human) | 'responding' (coach)
+        let micAnalyser = null;      // Analyser on mic input for visualizer/pitch
+        let playbackAnalyser = null; // Analyser on coach audio for visualizer/pitch
+        let playbackPitchAnalyser = null; // Separate analyser for pitch detection on coach audio
+        let playbackPitchBuffer = null;
 
         function startAudioCapture() {
             if (!mediaStream) return;
@@ -838,8 +851,24 @@
             const source = audioContext.createMediaStreamSource(mediaStream);
             const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
+            // Create mic analyser for visualizer and pitch detection
+            micAnalyser = audioContext.createAnalyser();
+            micAnalyser.fftSize = 256;
+            source.connect(micAnalyser);
+
             source.connect(processor);
             processor.connect(audioContext.destination);
+
+            // Create playback analyser for coach audio visualizer
+            playbackAnalyser = playbackContext.createAnalyser();
+            playbackAnalyser.fftSize = 256;
+            playbackAnalyser.connect(playbackContext.destination);
+
+            // Create playback pitch analyser for tonality module coach audio
+            playbackPitchAnalyser = playbackContext.createAnalyser();
+            playbackPitchAnalyser.fftSize = 2048;
+            playbackPitchBuffer = new Float32Array(playbackPitchAnalyser.fftSize);
+            playbackPitchAnalyser.connect(playbackContext.destination);
 
             processor.onaudioprocess = (e) => {
                 if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -887,7 +916,17 @@
 
             const source = ctx.createBufferSource();
             source.buffer = buffer;
-            source.connect(ctx.destination);
+
+            // Route through analysers so visualizer and pitch detection can see coach audio
+            if (playbackAnalyser) {
+                source.connect(playbackAnalyser);
+            }
+            if (playbackPitchAnalyser) {
+                source.connect(playbackPitchAnalyser);
+            }
+            if (!playbackAnalyser) {
+                source.connect(ctx.destination);
+            }
 
             // Schedule chunks back-to-back instead of overlapping
             const now = ctx.currentTime;
@@ -958,7 +997,9 @@
             document.getElementById('timer').textContent = `${mins}:${secs}`;
         }
 
-        // ── Visualizer ───────────────────────────────────────
+        // ── Visualizer (driven by real audio) ────────────────
+        let vizAnimId = null;
+
         function initVisualizer() {
             const viz = document.getElementById('visualizer');
             viz.innerHTML = '';
@@ -967,15 +1008,38 @@
                 bar.className = 'viz-bar';
                 viz.appendChild(bar);
             }
+            if (vizAnimId) cancelAnimationFrame(vizAnimId);
             animateVisualizer();
         }
 
         function animateVisualizer() {
             const bars = document.querySelectorAll('.viz-bar');
-            bars.forEach(bar => {
-                bar.style.height = (Math.random() * 30 + 4) + 'px';
-            });
-            requestAnimationFrame(() => setTimeout(animateVisualizer, 100));
+            if (!bars.length) return;
+
+            // Pick the right analyser based on who's talking
+            let analyser = null;
+            if (voiceState === 'recording' && micAnalyser) {
+                analyser = micAnalyser;
+            } else if (voiceState === 'responding' && playbackAnalyser) {
+                analyser = playbackAnalyser;
+            }
+
+            if (analyser) {
+                const freqData = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(freqData);
+                const binStep = Math.floor(freqData.length / bars.length);
+                bars.forEach((bar, i) => {
+                    const val = freqData[i * binStep] / 255;
+                    bar.style.height = Math.max(2, val * 36) + 'px';
+                });
+            } else {
+                // Flat line when nobody is speaking
+                bars.forEach(bar => {
+                    bar.style.height = '2px';
+                });
+            }
+
+            vizAnimId = requestAnimationFrame(animateVisualizer);
         }
 
         // ── End Training ─────────────────────────────────────
@@ -1006,12 +1070,21 @@
             }
             resetAudioQueue();
 
-            // Stop pitch detection
+            // Stop visualizer and pitch detection
+            if (vizAnimId) {
+                cancelAnimationFrame(vizAnimId);
+                vizAnimId = null;
+            }
             if (pitchAnimId) {
                 cancelAnimationFrame(pitchAnimId);
                 pitchAnimId = null;
             }
             pitchAnalyser = null;
+            micAnalyser = null;
+            playbackAnalyser = null;
+            playbackPitchAnalyser = null;
+            playbackPitchBuffer = null;
+            voiceState = 'idle';
 
             // Get report
             document.getElementById('voiceStatus').textContent = 'Generating report...';
@@ -1310,8 +1383,17 @@
 
         function drawPitchLoop() {
             if (!pitchAnalyser) return;
-            pitchAnalyser.getFloatTimeDomainData(pitchBuffer);
-            const hz = autoCorrelate(pitchBuffer, audioContext.sampleRate);
+
+            let hz = -1;
+            if (voiceState === 'responding' && playbackPitchAnalyser && playbackPitchBuffer) {
+                // Analyze coach audio for pitch
+                playbackPitchAnalyser.getFloatTimeDomainData(playbackPitchBuffer);
+                hz = autoCorrelate(playbackPitchBuffer, playbackContext.sampleRate);
+            } else {
+                // Analyze mic audio for pitch (human speaking)
+                pitchAnalyser.getFloatTimeDomainData(pitchBuffer);
+                hz = autoCorrelate(pitchBuffer, audioContext.sampleRate);
+            }
 
             if (hz > 0 && hz < 800) {
                 pitchHistory.push(hz);
@@ -1349,15 +1431,33 @@
             // Hz range: 60 - 400
             const minHz = 60, maxHz = 400;
             const hzToY = (hz) => h - ((hz - minHz) / (maxHz - minHz)) * h;
+            const step = w / PITCH_HISTORY_LEN;
+
+            // Check if we have any actual pitch data
+            const hasData = pitchHistory.some(v => v !== null);
+
+            if (!hasData) {
+                // Draw flat line at center when silent
+                ctx.strokeStyle = 'rgba(100,116,139,0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, h / 2);
+                ctx.lineTo(w, h / 2);
+                ctx.stroke();
+                return;
+            }
+
+            // Color based on who's speaking: cyan for coach, blue for human
+            const lineColor = voiceState === 'responding' ? '#06b6d4' : '#4f46e5';
+            const glowColor = voiceState === 'responding' ? 'rgba(6,182,212,0.2)' : 'rgba(79,70,229,0.2)';
 
             // Draw pitch line
-            ctx.strokeStyle = '#4f46e5';
+            ctx.strokeStyle = lineColor;
             ctx.lineWidth = 2.5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.beginPath();
             let started = false;
-            const step = w / PITCH_HISTORY_LEN;
 
             for (let i = 0; i < pitchHistory.length; i++) {
                 const val = pitchHistory[i];
@@ -1377,7 +1477,7 @@
             ctx.stroke();
 
             // Glow effect
-            ctx.strokeStyle = 'rgba(79,70,229,0.2)';
+            ctx.strokeStyle = glowColor;
             ctx.lineWidth = 6;
             ctx.stroke();
         }
@@ -1392,9 +1492,11 @@
                 arrow.className = 'pitch-arrow flat';
                 arrow.textContent = '→';
                 label.textContent = 'Waiting for voice...';
+                label.style.color = 'var(--text-muted)';
                 return;
             }
 
+            const speaker = voiceState === 'responding' ? 'Coach' : 'You';
             const firstHalf = recent.slice(0, Math.floor(recent.length / 2));
             const secondHalf = recent.slice(Math.floor(recent.length / 2));
             const avgFirst = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
@@ -1404,18 +1506,18 @@
             if (diff > 8) {
                 arrow.className = 'pitch-arrow up';
                 arrow.textContent = '↗';
-                label.textContent = 'Rising (Question)';
+                label.textContent = `${speaker}: Rising (Question)`;
                 label.style.color = 'var(--accent-amber)';
             } else if (diff < -8) {
                 arrow.className = 'pitch-arrow down';
                 arrow.textContent = '↘';
-                label.textContent = 'Falling (Declarative)';
+                label.textContent = `${speaker}: Falling (Declarative)`;
                 label.style.color = 'var(--accent-green)';
             } else {
                 arrow.className = 'pitch-arrow flat';
                 arrow.textContent = '→';
-                label.textContent = 'Level (Steady)';
-                label.style.color = 'var(--accent-blue)';
+                label.textContent = `${speaker}: Level (Steady)`;
+                label.style.color = voiceState === 'responding' ? 'var(--accent-cyan)' : 'var(--accent-blue)';
             }
         }
 
