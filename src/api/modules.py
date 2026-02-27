@@ -167,36 +167,28 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         await websocket.close()
         return
 
+    # Disconnect any existing voice session to prevent duplicate agents
+    existing_voice = session.get("voice_session")
+    if existing_voice:
+        logger.warning("[MODULE][%s] Disconnecting previous voice session before new connection", session_id)
+        await existing_voice.disconnect()
+        session["voice_session"] = None
+
     # Build module-specific system prompt
     module_key = session["module_key"]
     system_prompt = build_module_prompt(module_key, session.get("session_state", {}))
 
     # Callbacks for transcript processing
+    # NOTE: voice.py receive_events() already sends transcript/transcript_delta
+    # to the browser via send_to_browser. These callbacks are for server-side
+    # processing only — do NOT send duplicate transcripts to the browser here.
     async def on_agent_transcript(text: str, turn: int):
-        """When the student speaks — log and potentially update coach context."""
+        """When the student speaks — log for server-side processing."""
         print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
-        try:
-            await websocket.send_json({
-                "type": "transcript",
-                "role": "agent",
-                "text": text,
-                "turn": turn,
-            })
-        except Exception:
-            pass
 
     async def on_client_transcript(text: str, turn: int):
-        """When the AI coach speaks — log."""
+        """When the AI coach speaks — log for server-side processing."""
         print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
-        try:
-            await websocket.send_json({
-                "type": "transcript",
-                "role": "coach",
-                "text": text,
-                "turn": turn,
-            })
-        except Exception:
-            pass
 
     # Create voice session
     voice_session = VoiceSession(

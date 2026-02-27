@@ -1,6 +1,6 @@
 {
-    "name": "GrokBot Sales Training",
-    "short_name": "GrokBot",
+    "name": "InsuranceGrokBot Sales Training",
+    "short_name": "InsuranceGrokBot",
     "description": "AI-powered life insurance sales training with real-time voice coaching",
     "start_url": "/dashboard",
     "display": "standalone",

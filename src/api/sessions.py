@@ -207,6 +207,13 @@ async def training_websocket(websocket: WebSocket, session_id: str):
 
     orch: ConversationOrchestrator = session["orchestrator"]
 
+    # Disconnect any existing voice session to prevent duplicate agents
+    existing_voice = session.get("voice_session")
+    if existing_voice:
+        print(f"[WS][{session_id}] Disconnecting previous voice session before new connection")
+        await existing_voice.disconnect()
+        session["voice_session"] = None
+
     # Build initial system prompt
     state_vars = orch.sm.get_state_for_prompt()
     objection_context = orch.objection_engine.get_objection_context(orch.sm)

@@ -613,6 +613,12 @@
 
         // ── Connect Module Voice WS ──────────────────────────
         function connectModuleVoice() {
+            // Close any existing WebSocket to prevent duplicate voice agents
+            if (ws) {
+                try { ws.close(); } catch (e) {}
+                ws = null;
+            }
+
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${location.host}/api/modules/ws/${sessionId}`;
 
@@ -725,6 +731,12 @@
 
         // ── Voice WebSocket ──────────────────────────────────
         function connectVoice() {
+            // Close any existing WebSocket to prevent duplicate voice agents
+            if (ws) {
+                try { ws.close(); } catch (e) {}
+                ws = null;
+            }
+
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const token = API.token;
             ws = new WebSocket(`${protocol}//${window.location.host}/api/sessions/ws/${sessionId}?token=${token}`);
@@ -892,7 +904,11 @@
         let streamingDiv = null;
 
         function addTranscript(role, text) {
-            streamingDiv = null;
+            // Remove the streaming div if it exists — the final transcript replaces it
+            if (streamingDiv) {
+                streamingDiv.remove();
+                streamingDiv = null;
+            }
             const container = document.getElementById('transcriptContent');
             const msg = document.createElement('div');
             msg.className = 'transcript-msg';
