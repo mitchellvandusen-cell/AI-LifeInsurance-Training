@@ -353,6 +353,16 @@ async def end_session(session_id: str, request: Request):
 
     session = _active_sessions.get(session_id)
     if not session:
+        # Session already ended — return existing report card if available
+        existing = await db.get_report_card_by_session(session_id)
+        if existing and str(existing["user_id"]) == user["user_id"]:
+            return {
+                "session_id": session_id,
+                "report_id": str(existing["id"]),
+                "report": existing.get("full_report", {}),
+                "duration_seconds": existing.get("duration_seconds", 0),
+                "already_ended": True,
+            }
         raise HTTPException(status_code=404, detail="Session not found")
 
     if session["user_id"] != user["user_id"]:

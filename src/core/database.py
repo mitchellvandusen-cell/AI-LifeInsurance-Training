@@ -139,8 +139,8 @@ async def init_schema():
             full_report     JSONB NOT NULL,
             created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_session  ON report_cards(session_id);
         CREATE INDEX IF NOT EXISTS idx_reports_user         ON report_cards(user_id);
-        CREATE INDEX IF NOT EXISTS idx_reports_session      ON report_cards(session_id);
         CREATE INDEX IF NOT EXISTS idx_reports_created      ON report_cards(created_at);
         CREATE INDEX IF NOT EXISTS idx_reports_user_created ON report_cards(user_id, created_at);
 
@@ -588,11 +588,13 @@ async def save_report_card(session_id: str, user_id: str, report: dict) -> str:
         or (report.get("sales_style", {}).get("detected"))
         or "Unknown"
     )
-    await pool.execute(
+    row = await pool.fetchrow(
         """INSERT INTO report_cards
            (id, session_id, user_id, overall_score, letter_grade,
             close_probability, detected_style, categories, deal_killers, full_report)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (session_id) DO NOTHING
+           RETURNING id""",
         report_id, uuid.UUID(session_id), uuid.UUID(user_id),
         report.get("overall_score", 0), letter_grade,
         report.get("close_probability", 0), detected_style,
@@ -600,7 +602,14 @@ async def save_report_card(session_id: str, user_id: str, report: dict) -> str:
         json.dumps(report.get("deal_killers", {})),
         json.dumps(report),
     )
-    return str(report_id)
+    if row:
+        return str(row["id"])
+    # Already exists — return the existing report card id
+    existing = await pool.fetchval(
+        "SELECT id FROM report_cards WHERE session_id = $1",
+        uuid.UUID(session_id),
+    )
+    return str(existing)
 
 
 async def get_report_card(report_id: str) -> Optional[dict]:
@@ -752,6 +761,20 @@ async def compute_analytics_for_date(user_id: str, date: datetime) -> dict:
                sessions_count = EXCLUDED.sessions_count,
                total_minutes = EXCLUDED.total_minutes,
                avg_overall = EXCLUDED.avg_overall,
+               avg_tonality = EXCLUDED.avg_tonality,
+               avg_rapport = EXCLUDED.avg_rapport,
+               avg_questions = EXCLUDED.avg_questions,
+               avg_compliance = EXCLUDED.avg_compliance,
+               avg_flow = EXCLUDED.avg_flow,
+               avg_trust = EXCLUDED.avg_trust,
+               avg_objection_handling = EXCLUDED.avg_objection_handling,
+               avg_preframing = EXCLUDED.avg_preframing,
+               avg_presentation = EXCLUDED.avg_presentation,
+               avg_close = EXCLUDED.avg_close,
+               avg_underwriting = EXCLUDED.avg_underwriting,
+               objections_faced = EXCLUDED.objections_faced,
+               objections_resolved = EXCLUDED.objections_resolved,
+               style_distribution = EXCLUDED.style_distribution,
                avg_close_probability = EXCLUDED.avg_close_probability""",
         uuid.uuid4(), uuid.UUID(user_id), target_date,
         count, total_minutes, analytics["avg_overall"],
