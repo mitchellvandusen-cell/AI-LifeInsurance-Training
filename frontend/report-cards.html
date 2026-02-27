@@ -6,6 +6,11 @@
     <title>Report Cards — InsuranceGrokBot Training</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/mobile.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <aside class="sidebar">
@@ -35,7 +40,9 @@
     </main>
 
     <script src="/js/api.js"></script>
+    <script src="/js/mobile-nav.js"></script>
     <script>
+        initMobileNav('report-cards');
         if (!requireAuth()) {}
 
         async function loadReports() {

@@ -1,0 +1,22 @@
+{
+    "name": "GrokBot Sales Training",
+    "short_name": "GrokBot",
+    "description": "AI-powered life insurance sales training with real-time voice coaching",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#0a0a1a",
+    "theme_color": "#4F46E5",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

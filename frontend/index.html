@@ -7,6 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/mobile.css">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
         /* ── Landing Page Specific Styles ─────────────────────── */
         .hero {
@@ -341,9 +345,58 @@
             color: var(--text-muted);
             font-size: 0.85rem;
         }
+
+        /* ── Landing Page Mobile Nav ───────────────────────────── */
+        .landing-mobile-nav {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 0.75rem 1rem;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10, 10, 26, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .landing-mobile-nav .lm-logo {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .landing-mobile-nav .lm-logo .logo-accent {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .landing-mobile-nav .lm-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .landing-mobile-nav { display: flex; }
+            .navbar { display: none !important; }
+            .hero { padding-top: 5rem; }
+            .section { padding: 3rem 1rem; }
+            .cta-section { padding: 3rem 1rem; }
+        }
     </style>
 </head>
 <body>
+    <!-- ═══ Mobile Landing Nav ═══ -->
+    <div class="landing-mobile-nav">
+        <span class="lm-logo"><span class="logo-accent">GrokBot</span></span>
+        <div class="lm-actions">
+            <a href="/login" class="btn btn-ghost btn-sm">Log In</a>
+            <a href="/register" class="btn btn-primary btn-sm">Start</a>
+        </div>
+    </div>
+
     <!-- ═══ Navbar ═══ -->
     <nav class="navbar">
         <a href="/" class="nav-logo">
