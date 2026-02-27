@@ -191,22 +191,23 @@ CREATE TABLE IF NOT EXISTS call_recordings (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id         UUID NOT NULL,
 
-    -- Twilio data
-    twilio_recording_sid TEXT,
-    twilio_call_sid      TEXT,
+    -- Call identification (call_sid is unique key for dedup)
+    call_sid             TEXT,
     recording_url        TEXT,
     duration_seconds     INTEGER,
     call_date            TIMESTAMPTZ,
 
+    -- Metadata from InsuranceGrokBot Dialer
+    contact_name    TEXT,
+    caller_number   TEXT,
+    direction       TEXT,           -- 'inbound' or 'outbound'
+    disposition     TEXT,
+
     -- Processing
     status          TEXT NOT NULL DEFAULT 'pending'
                     CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-    transcript      JSONB,                  -- Full transcription
-    report_card     JSONB,                  -- Analysis report
-
-    -- Metadata
-    caller_number   TEXT,
-    agent_name      TEXT,
+    transcript      JSONB,                  -- Full transcription from dialer
+    report_card     JSONB,                  -- Analysis report from training engine
 
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     processed_at    TIMESTAMPTZ
@@ -215,6 +216,7 @@ CREATE TABLE IF NOT EXISTS call_recordings (
 CREATE INDEX idx_recordings_user ON call_recordings(user_id);
 CREATE INDEX idx_recordings_status ON call_recordings(status);
 CREATE INDEX idx_recordings_date ON call_recordings(call_date);
+CREATE UNIQUE INDEX idx_recordings_call_sid ON call_recordings(user_id, call_sid) WHERE call_sid IS NOT NULL;
 
 -- ══════════════════════════════════════════════════════════════
 -- DAILY ANALYTICS SNAPSHOTS
@@ -273,10 +275,7 @@ CREATE TABLE IF NOT EXISTS training_settings (
 
     -- InsuranceGrokBot Dialer connection
     grokbot_account_linked  BOOLEAN DEFAULT FALSE,
-    dialer_connection_code  TEXT,  -- Code from InsuranceGrokBot admin panel
-    grokbot_api_key         TEXT,  -- Encrypted
-    twilio_account_sid      TEXT,  -- Resolved from connection code
-    twilio_auth_token       TEXT,  -- Resolved from connection code, encrypted
+    dialer_connection_code  TEXT,  -- trn_xxxx token from InsuranceGrokBot admin panel
 
     -- Notification preferences
     email_weekly_report    BOOLEAN DEFAULT TRUE,

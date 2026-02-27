@@ -5,26 +5,18 @@ Integrates with InsuranceGrokBot Dialer to fetch and analyze real call recording
 
 from __future__ import annotations
 
-import os
+import uuid
 from datetime import datetime
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
 
 from src.api.middleware import get_current_user
 from src.core import database as db
 
 router = APIRouter(prefix="/api/recordings", tags=["recordings"])
 
-
-class ImportRecordingRequest(BaseModel):
-    recording_sid: str | None = None
-    call_sid: str | None = None
-    recording_url: str | None = None
-    duration: int | None = None
-    call_date: str | None = None
-    caller_number: str | None = None
-    agent_name: str | None = None
+GROKBOT_API_URL = "https://insurancegrokbot.click/api/v1/training"
 
 
 @router.get("/")
@@ -33,77 +25,129 @@ async def list_recordings(request: Request, limit: int = 50):
     return await db.get_call_recordings(user["user_id"], limit)
 
 
-@router.post("/import")
-async def import_recording(req: ImportRecordingRequest, request: Request):
-    """Import a single call recording for analysis."""
-    user = get_current_user(request)
-
-    recording_data = {
-        "recording_sid": req.recording_sid,
-        "call_sid": req.call_sid,
-        "recording_url": req.recording_url,
-        "duration": req.duration,
-        "call_date": datetime.fromisoformat(req.call_date) if req.call_date else None,
-        "caller_number": req.caller_number,
-        "agent_name": req.agent_name,
-    }
-
-    rec_id = await db.save_call_recording(user["user_id"], recording_data)
-
-    # TODO: Queue background analysis job
-    # For now, return the recording ID
-    return {"recording_id": rec_id, "status": "pending"}
-
-
 @router.post("/sync")
 async def sync_dialer_recordings(request: Request):
-    """Sync recent call recordings from InsuranceGrokBot Dialer."""
+    """Sync call recordings from InsuranceGrokBot Dialer API."""
     user = get_current_user(request)
     settings = await db.get_settings(user["user_id"])
 
     if not settings.get("grokbot_account_linked"):
-        raise HTTPException(status_code=400, detail="InsuranceGrokBot Dialer not connected. Go to Settings to connect.")
+        raise HTTPException(
+            status_code=400,
+            detail="InsuranceGrokBot Dialer not connected. Go to Settings to connect.",
+        )
 
-    account_sid = settings.get("twilio_account_sid")
-    auth_token = settings.get("twilio_auth_token")
+    token = settings.get("dialer_connection_code")
+    if not token:
+        raise HTTPException(
+            status_code=400,
+            detail="Dialer connection code missing. Please reconnect in Settings.",
+        )
 
-    if not account_sid or not auth_token:
-        raise HTTPException(status_code=400, detail="Dialer credentials not configured. Please reconnect in Settings.")
+    headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        from twilio.rest import Client
-        client = Client(account_sid, auth_token)
-
-        # Fetch recent recordings
-        recordings = client.recordings.list(limit=20)
         imported = []
+        offset = 0
+        limit = 200
 
-        for rec in recordings:
-            recording_data = {
-                "recording_sid": rec.sid,
-                "call_sid": rec.call_sid,
-                "recording_url": f"https://api.twilio.com{rec.uri.replace('.json', '.mp3')}",
-                "duration": int(rec.duration) if rec.duration else None,
-                "call_date": rec.date_created,
-                "caller_number": None,
-                "agent_name": None,
-            }
-            rec_id = await db.save_call_recording(user["user_id"], recording_data)
-            imported.append(rec_id)
+        async with httpx.AsyncClient(timeout=30) as client:
+            # Get the latest recording we already have for incremental sync
+            existing = await db.get_call_recordings(user["user_id"], limit=1)
+            since = None
+            if existing and existing[0].get("call_date"):
+                since = existing[0]["call_date"]
+                if isinstance(since, datetime):
+                    since = since.isoformat()
+
+            # Paginate through all recordings
+            while True:
+                params = {"limit": limit, "offset": offset}
+                if since:
+                    params["since"] = since
+
+                resp = await client.get(
+                    f"{GROKBOT_API_URL}/recordings",
+                    headers=headers,
+                    params=params,
+                )
+
+                if resp.status_code == 401:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Connection code expired or revoked. Please reconnect in Settings.",
+                    )
+                if resp.status_code != 200:
+                    raise HTTPException(
+                        status_code=502,
+                        detail="Failed to fetch recordings from InsuranceGrokBot.",
+                    )
+
+                data = resp.json()
+                recordings = data if isinstance(data, list) else data.get("recordings", [])
+
+                if not recordings:
+                    break
+
+                for rec in recordings:
+                    recording_data = {
+                        "call_sid": rec.get("call_sid"),
+                        "recording_url": rec.get("recording_url"),
+                        "duration": rec.get("duration"),
+                        "call_date": rec.get("call_date") or rec.get("created_at"),
+                        "caller_number": rec.get("phone"),
+                        "agent_name": rec.get("contact_name"),
+                        "direction": rec.get("direction"),
+                        "disposition": rec.get("disposition"),
+                        "transcript": rec.get("transcript"),
+                    }
+                    rec_id = await db.save_call_recording(user["user_id"], recording_data)
+                    if rec_id:
+                        imported.append(rec_id)
+
+                # If we got fewer than the limit, we've reached the end
+                if len(recordings) < limit:
+                    break
+                offset += limit
 
         return {"imported_count": len(imported), "recording_ids": imported}
 
-    except ImportError:
-        raise HTTPException(status_code=500, detail="Recording sync service not available")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Recording sync failed: {str(e)}")
+    except httpx.RequestError:
+        raise HTTPException(
+            status_code=502,
+            detail="Could not reach InsuranceGrokBot servers. Please try again later.",
+        )
+
+
+@router.get("/stats")
+async def recording_stats(request: Request):
+    """Get summary stats for imported recordings."""
+    user = get_current_user(request)
+    settings = await db.get_settings(user["user_id"])
+
+    if not settings.get("grokbot_account_linked") or not settings.get("dialer_connection_code"):
+        return {"connected": False}
+
+    token = settings["dialer_connection_code"]
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                f"{GROKBOT_API_URL}/stats",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        if resp.status_code == 200:
+            stats = resp.json()
+            stats["connected"] = True
+            return stats
+        return {"connected": True}
+    except httpx.RequestError:
+        return {"connected": True, "error": "Could not fetch stats"}
 
 
 @router.get("/{recording_id}")
 async def get_recording(recording_id: str, request: Request):
     user = get_current_user(request)
     pool = await db.get_pool()
-    import uuid
     row = await pool.fetchrow(
         "SELECT * FROM call_recordings WHERE id = $1",
         uuid.UUID(recording_id),

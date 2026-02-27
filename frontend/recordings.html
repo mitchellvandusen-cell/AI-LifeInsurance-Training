@@ -58,9 +58,13 @@
                 const container = document.getElementById('recordingsList');
                 if (!recordings || !recordings.length) return;
 
-                container.innerHTML = recordings.map(r => `
+                container.innerHTML = recordings.map(r => {
+                    const name = r.contact_name || r.caller_number || 'Unknown';
+                    const dirIcon = r.direction === 'inbound' ? '↙' : r.direction === 'outbound' ? '↗' : '';
+                    const dirLabel = r.direction ? ` ${dirIcon} ${r.direction}` : '';
+                    return `
                     <div class="card" style="margin-bottom:0.75rem;display:flex;align-items:center;gap:1rem;">
-                        <div style="width:60px;text-align:center;">
+                        <div style="width:70px;text-align:center;">
                             ${r.status === 'completed' ?
                                 `<span class="badge badge-green">${r.status}</span>` :
                                 r.status === 'processing' ?
@@ -69,15 +73,16 @@
                             }
                         </div>
                         <div style="flex:1;">
-                            <h4 style="font-size:0.95rem;">${r.agent_name || 'Call'} — ${r.caller_number || 'Unknown'}</h4>
+                            <h4 style="font-size:0.95rem;">${name}${r.caller_number && r.contact_name ? ` — ${r.caller_number}` : ''}</h4>
                             <p style="font-size:0.8rem;color:var(--text-muted);">
-                                Duration: ${formatDuration(r.duration_seconds || 0)} |
+                                ${formatDuration(r.duration_seconds || 0)}${dirLabel} |
                                 ${r.call_date ? formatDate(r.call_date) : 'Unknown date'}
+                                ${r.disposition ? ` | ${r.disposition}` : ''}
                             </p>
                         </div>
                         ${r.status === 'completed' ? '<button class="btn btn-ghost btn-sm">View Report</button>' : ''}
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
             } catch (err) { console.error(err); }
         }
 

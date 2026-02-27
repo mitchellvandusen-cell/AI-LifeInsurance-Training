@@ -788,19 +788,53 @@ async def get_wallet_transactions(user_id: str, limit: int = 50) -> list[dict]:
 # CALL RECORDINGS
 # ══════════════════════════════════════════════════════════════
 
-async def save_call_recording(user_id: str, recording_data: dict) -> str:
+async def save_call_recording(user_id: str, recording_data: dict) -> str | None:
+    """Save a call recording, skipping duplicates based on call_sid."""
     pool = await get_pool()
+    uid = uuid.UUID(user_id)
+    call_sid = recording_data.get("call_sid")
+
+    # Skip if we already have this call_sid for this user
+    if call_sid:
+        existing = await pool.fetchval(
+            "SELECT id FROM call_recordings WHERE user_id = $1 AND call_sid = $2",
+            uid, call_sid,
+        )
+        if existing:
+            return None
+
+    # Parse call_date if it's a string
+    call_date = recording_data.get("call_date")
+    if isinstance(call_date, str):
+        try:
+            from datetime import datetime
+            call_date = datetime.fromisoformat(call_date.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            call_date = None
+
+    # Parse transcript to JSON if needed
+    transcript = recording_data.get("transcript")
+    if transcript is not None:
+        import json
+        if isinstance(transcript, (list, dict)):
+            transcript = json.dumps(transcript)
+
     rec_id = uuid.uuid4()
     await pool.execute(
         """INSERT INTO call_recordings
-           (id, user_id, twilio_recording_sid, twilio_call_sid,
-            recording_url, duration_seconds, call_date, caller_number, agent_name)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
-        rec_id, uuid.UUID(user_id),
-        recording_data.get("recording_sid"), recording_data.get("call_sid"),
-        recording_data.get("recording_url"), recording_data.get("duration"),
-        recording_data.get("call_date"), recording_data.get("caller_number"),
-        recording_data.get("agent_name"),
+           (id, user_id, call_sid, recording_url, duration_seconds, call_date,
+            contact_name, caller_number, direction, disposition, transcript)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)""",
+        rec_id, uid,
+        call_sid,
+        recording_data.get("recording_url"),
+        recording_data.get("duration"),
+        call_date,
+        recording_data.get("agent_name") or recording_data.get("contact_name"),
+        recording_data.get("caller_number"),
+        recording_data.get("direction"),
+        recording_data.get("disposition"),
+        transcript,
     )
     return str(rec_id)
 
@@ -851,7 +885,6 @@ async def update_settings(user_id: str, settings: dict):
     allowed = [
         "preferred_voice", "auto_import_recordings",
         "grokbot_account_linked", "dialer_connection_code",
-        "grokbot_api_key", "twilio_account_sid", "twilio_auth_token",
         "email_weekly_report", "email_session_summary",
     ]
     updates = {k: v for k, v in settings.items() if k in allowed}
