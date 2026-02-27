@@ -23,6 +23,8 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            overflow-y: auto;
+            padding: 2rem 1rem;
         }
         .screen-pre::before {
             content: '';
@@ -391,21 +393,21 @@
 <body>
     <!-- ═══ Screen 0: Training Mode Selection ═══ -->
     <div class="screen screen-pre active" id="screenSelect">
-        <div class="client-card" style="width:560px;">
-            <div class="card-header">
+        <div class="client-card" style="width:520px;max-height:85vh;display:flex;flex-direction:column;padding:1.75rem;">
+            <div class="card-header" style="margin-bottom:1.25rem;">
                 <h2>Choose Training Mode</h2>
                 <p>Full call simulation or focused skill modules</p>
             </div>
 
-            <div onclick="selectMode('full')" style="cursor:pointer;padding:1.25rem;margin-bottom:1rem;border:2px solid var(--accent-blue);border-radius:var(--radius-md);transition:all .2s;background:rgba(79,70,229,0.05);">
-                <h3 style="font-size:1.1rem;margin-bottom:0.25rem;">Full Call Simulation</h3>
-                <p style="font-size:0.85rem;color:var(--text-muted);">Complete end-to-end call with an AI prospect. All skills graded.</p>
+            <div onclick="selectMode('full')" style="cursor:pointer;padding:0.85rem 1rem;margin-bottom:0.75rem;border:2px solid var(--accent-blue);border-radius:var(--radius-md);transition:all .2s;background:rgba(79,70,229,0.05);">
+                <h3 style="font-size:1rem;margin-bottom:0.15rem;">Full Call Simulation</h3>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Complete end-to-end call with an AI prospect. All skills graded.</p>
             </div>
 
-            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin:1.25rem 0 0.75rem;">Focused Skill Modules</div>
-            <div id="moduleList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin:0.75rem 0 0.5rem;">Focused Skill Modules</div>
+            <div id="moduleList" style="display:flex;flex-direction:column;gap:0.35rem;overflow-y:auto;flex:1;min-height:0;"></div>
 
-            <div style="margin-top:1.5rem;text-align:center;">
+            <div style="margin-top:1rem;text-align:center;flex-shrink:0;">
                 <a href="/homework" style="font-size:0.85rem;color:var(--accent-cyan);">View Homework Assignments</a>
             </div>
         </div>
@@ -518,9 +520,9 @@
                 const data = await API.getModules();
                 const list = document.getElementById('moduleList');
                 list.innerHTML = (data.modules || []).map(m => `
-                    <div onclick="selectMode('${m.key}')" style="cursor:pointer;padding:1rem;border:1px solid var(--border-color);border-radius:var(--radius-sm);transition:all .2s;">
-                        <h4 style="font-size:0.95rem;margin-bottom:0.15rem;">${m.name}</h4>
-                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">${m.description}</p>
+                    <div onclick="selectMode('${m.key}')" style="cursor:pointer;padding:0.6rem 0.85rem;border:1px solid var(--border-color);border-radius:var(--radius-sm);transition:all .2s;">
+                        <h4 style="font-size:0.85rem;margin-bottom:0.1rem;">${m.name}</h4>
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin:0;line-height:1.3;">${m.description}</p>
                     </div>
                 `).join('');
             } catch (err) {
