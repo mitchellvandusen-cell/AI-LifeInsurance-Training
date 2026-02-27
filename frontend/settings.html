@@ -81,22 +81,21 @@
     <main class="main-content">
         <h1 style="margin-bottom:1.5rem;">Settings</h1>
 
-        <!-- InsuranceGrokBot Link -->
+        <!-- Connect InsuranceGrokBot Dialer -->
         <div class="settings-section">
-            <h3>InsuranceGrokBot Account</h3>
+            <h3>Connect InsuranceGrokBot Dialer</h3>
             <div id="linkStatus" class="link-status unlinked">Not Connected</div>
             <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1rem;">
-                Connect your InsuranceGrokBot account to automatically import call recordings for analysis.
+                Enter your connection code to link your InsuranceGrokBot Dialer and automatically import call recordings for analysis.
             </p>
             <div class="form-group">
-                <label class="form-label">Twilio Account SID</label>
-                <input type="text" class="form-input" id="twilioSid" placeholder="AC...">
+                <label class="form-label">Connection Code</label>
+                <input type="text" class="form-input" id="connectionCode" placeholder="Enter your connection code" style="font-family:monospace;letter-spacing:0.05em;">
             </div>
-            <div class="form-group">
-                <label class="form-label">Twilio Auth Token</label>
-                <input type="password" class="form-input" id="twilioToken" placeholder="Enter your Twilio auth token">
-            </div>
-            <button class="btn btn-primary" onclick="linkAccount()">Connect Account</button>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:1rem;">
+                Get your connection code from your InsuranceGrokBot Dialer admin panel.
+            </p>
+            <button class="btn btn-primary" id="connectBtn" onclick="linkAccount()">Connect Dialer</button>
         </div>
 
         <!-- Training Preferences -->
@@ -156,8 +155,20 @@
 
         async function loadSettings() {
             try {
-                const me = await API.getMe();
-                // Settings endpoint (would need to add to API)
+                const data = await API.get('/api/settings');
+                if (data.grokbot_account_linked) {
+                    document.getElementById('linkStatus').className = 'link-status linked';
+                    document.getElementById('linkStatus').textContent = 'Connected';
+                    document.getElementById('connectionCode').value = data.dialer_connection_code || '';
+                    document.getElementById('connectionCode').disabled = true;
+                    document.getElementById('connectBtn').textContent = 'Disconnect';
+                    document.getElementById('connectBtn').className = 'btn btn-danger';
+                    document.getElementById('connectBtn').onclick = disconnectDialer;
+                }
+                if (data.preferred_voice) document.getElementById('voiceSelect').value = data.preferred_voice;
+                if (data.auto_import_recordings) document.getElementById('autoImportToggle').classList.add('on');
+                if (data.email_weekly_report === false) document.getElementById('weeklyToggle').classList.remove('on');
+                if (data.email_session_summary === false) document.getElementById('sessionToggle').classList.remove('on');
             } catch (err) { console.error(err); }
         }
 
@@ -173,18 +184,38 @@
         }
 
         async function linkAccount() {
-            const sid = document.getElementById('twilioSid').value;
-            const token = document.getElementById('twilioToken').value;
-            if (!sid || !token) { showToast('Please enter both credentials', 'error'); return; }
+            const code = document.getElementById('connectionCode').value.trim();
+            if (!code) { showToast('Please enter your connection code', 'error'); return; }
             try {
-                await API.post('/api/settings', {
-                    twilio_account_sid: sid,
-                    twilio_auth_token: token,
-                    grokbot_account_linked: true,
-                });
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').textContent = 'Connecting...';
+                await API.post('/api/settings/connect', { connection_code: code });
                 document.getElementById('linkStatus').className = 'link-status linked';
                 document.getElementById('linkStatus').textContent = 'Connected';
-                showToast('Account linked successfully', 'success');
+                document.getElementById('connectionCode').disabled = true;
+                document.getElementById('connectBtn').textContent = 'Disconnect';
+                document.getElementById('connectBtn').className = 'btn btn-danger';
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').onclick = disconnectDialer;
+                showToast('InsuranceGrokBot Dialer connected successfully', 'success');
+            } catch (err) {
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Connect Dialer';
+                showToast(err.message || 'Invalid connection code', 'error');
+            }
+        }
+
+        async function disconnectDialer() {
+            try {
+                await API.post('/api/settings/disconnect');
+                document.getElementById('linkStatus').className = 'link-status unlinked';
+                document.getElementById('linkStatus').textContent = 'Not Connected';
+                document.getElementById('connectionCode').value = '';
+                document.getElementById('connectionCode').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Connect Dialer';
+                document.getElementById('connectBtn').className = 'btn btn-primary';
+                document.getElementById('connectBtn').onclick = linkAccount;
+                showToast('Dialer disconnected', 'success');
             } catch (err) { showToast(err.message, 'error'); }
         }
 

@@ -850,8 +850,8 @@ async def update_settings(user_id: str, settings: dict):
     pool = await get_pool()
     allowed = [
         "preferred_voice", "auto_import_recordings",
-        "grokbot_account_linked", "grokbot_api_key",
-        "twilio_account_sid", "twilio_auth_token",
+        "grokbot_account_linked", "dialer_connection_code",
+        "grokbot_api_key", "twilio_account_sid", "twilio_auth_token",
         "email_weekly_report", "email_session_summary",
     ]
     updates = {k: v for k, v in settings.items() if k in allowed}

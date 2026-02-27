@@ -271,11 +271,12 @@ CREATE TABLE IF NOT EXISTS training_settings (
     preferred_voice TEXT DEFAULT 'Sal',
     auto_import_recordings BOOLEAN DEFAULT FALSE,
 
-    -- InsuranceGrokBot account link
-    grokbot_account_linked BOOLEAN DEFAULT FALSE,
-    grokbot_api_key        TEXT,  -- Encrypted
-    twilio_account_sid     TEXT,  -- For recording import
-    twilio_auth_token      TEXT,  -- Encrypted
+    -- InsuranceGrokBot Dialer connection
+    grokbot_account_linked  BOOLEAN DEFAULT FALSE,
+    dialer_connection_code  TEXT,  -- Code from InsuranceGrokBot admin panel
+    grokbot_api_key         TEXT,  -- Encrypted
+    twilio_account_sid      TEXT,  -- Resolved from connection code
+    twilio_auth_token       TEXT,  -- Resolved from connection code, encrypted
 
     -- Notification preferences
     email_weekly_report    BOOLEAN DEFAULT TRUE,

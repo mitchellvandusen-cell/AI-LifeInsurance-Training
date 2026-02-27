@@ -1,6 +1,6 @@
 """
 Call recording import routes.
-Integrates with Twilio to fetch and analyze real call recordings.
+Integrates with InsuranceGrokBot Dialer to fetch and analyze real call recordings.
 """
 
 from __future__ import annotations
@@ -56,19 +56,19 @@ async def import_recording(req: ImportRecordingRequest, request: Request):
 
 
 @router.post("/sync")
-async def sync_twilio_recordings(request: Request):
-    """Sync recent call recordings from Twilio."""
+async def sync_dialer_recordings(request: Request):
+    """Sync recent call recordings from InsuranceGrokBot Dialer."""
     user = get_current_user(request)
     settings = await db.get_settings(user["user_id"])
 
     if not settings.get("grokbot_account_linked"):
-        raise HTTPException(status_code=400, detail="InsuranceGrokBot account not linked")
+        raise HTTPException(status_code=400, detail="InsuranceGrokBot Dialer not connected. Go to Settings to connect.")
 
     account_sid = settings.get("twilio_account_sid")
     auth_token = settings.get("twilio_auth_token")
 
     if not account_sid or not auth_token:
-        raise HTTPException(status_code=400, detail="Twilio credentials not configured")
+        raise HTTPException(status_code=400, detail="Dialer credentials not configured. Please reconnect in Settings.")
 
     try:
         from twilio.rest import Client
@@ -94,9 +94,9 @@ async def sync_twilio_recordings(request: Request):
         return {"imported_count": len(imported), "recording_ids": imported}
 
     except ImportError:
-        raise HTTPException(status_code=500, detail="Twilio SDK not available")
+        raise HTTPException(status_code=500, detail="Recording sync service not available")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Twilio sync failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Recording sync failed: {str(e)}")
 
 
 @router.get("/{recording_id}")

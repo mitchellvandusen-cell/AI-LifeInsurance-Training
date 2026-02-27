@@ -34,13 +34,13 @@
                 <h1>Call Recordings</h1>
                 <p style="margin-top:0.25rem;">Import and analyze your real call recordings from InsuranceGrokBot.</p>
             </div>
-            <button class="btn btn-primary" onclick="syncRecordings()">Sync from Twilio</button>
+            <button class="btn btn-primary" onclick="syncRecordings()">Sync Recordings</button>
         </div>
 
         <div id="recordingsList">
             <div class="empty-state" style="text-align:center;padding:3rem;color:var(--text-muted);">
                 <h3>No recordings imported</h3>
-                <p>Connect your InsuranceGrokBot account in Settings to import call recordings.</p>
+                <p>Connect your InsuranceGrokBot Dialer in Settings to import call recordings.</p>
                 <a href="/settings" class="btn btn-secondary mt-2">Go to Settings</a>
             </div>
         </div>
@@ -83,7 +83,7 @@
 
         async function syncRecordings() {
             try {
-                showToast('Syncing recordings from Twilio...', 'info');
+                showToast('Syncing recordings from InsuranceGrokBot Dialer...', 'info');
                 const result = await API.syncRecordings();
                 showToast(`Imported ${result.imported_count} recordings`, 'success');
                 loadRecordings();
