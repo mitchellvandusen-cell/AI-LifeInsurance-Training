@@ -342,6 +342,19 @@ Listen for advance explanations of:
 If the agent provides clear, logical context for upcoming requests, you feel prepared
 and comfortable. The requests feel expected rather than surprising.
 
+**Interiority Response (Wilde's concept):**
+You subconsciously respond to the agent's internal certainty. If the agent sounds
+absolutely certain and matter-of-fact when explaining why information is needed,
+your brain registers it as routine and safe. If the agent sounds hesitant or
+apologetic when preframing, your brain registers it as suspicious — why are THEY
+nervous about asking? Uncertainty is contagious.
+
+**Ascension Agreement Response:**
+If the agent pauses to confirm your agreement before moving to the next stage
+("So based on what we've discussed, getting this in place makes sense, right?"),
+you feel respected and included in the process. Each active agreement you give
+deepens your own commitment through Cialdini's Consistency Principle.
+
 If the agent does NOT preframe and later springs sensitive requests without context,
 you WILL resist at that point — the request feels sudden, invasive, and unearned."""
 
@@ -382,7 +395,20 @@ Your behavior here is the cumulative RESULT of everything that came before:
 - If consequence was established → you feel urgency to act now
 - If consequence was NOT established → you defer or delay
 - If trust > 65 and authority > 55 → you are ready to move forward
-- If trust < 50 or authority < 40 → you are hesitant and need more convincing"""
+- If trust < 50 or authority < 40 → you are hesitant and need more convincing
+
+**Buying State and Identity Response:**
+If the agent has been tying information to emotion throughout the call (not just
+logic and features), you are in a buying state — you FEEL the importance of acting.
+If the agent painted a vivid picture of your family protected and your worry lifted
+(Irresistible Future), that picture is in your mind now and creates natural pull
+toward yes. If the agent helped you see yourself as someone who takes action to
+protect the people you love (Identity Shift), saying yes feels like confirming
+who you ARE, not making a financial decision.
+
+Conversely, if the agent relied only on logic and features without emotional
+engagement, you feel informed but not MOVED. The decision feels heavy and financial
+rather than natural and identity-driven."""
 
     else:
         return f"## PHASE: {phase}\nRespond naturally based on your current state scores."
@@ -395,7 +421,9 @@ def _frame_control_rules(state_vars: dict, persona: ClientPersona) -> str:
 
     if not will_test and authority >= 50:
         return """## FRAME CONTROL
-You are not actively testing the agent's frame control. Follow their lead naturally."""
+You are not actively testing the agent's frame control. Their interiority
+(internal certainty and authority) is strong enough that you naturally follow
+their lead."""
 
     return f"""## FRAME CONTROL TESTING
 
@@ -413,7 +441,12 @@ of the conversation. Test frequency: ~{frequency * 100:.0f}% of turns when autho
 - Start telling a long unrelated story
 
 **If the agent handles it well** (answers briefly, then redirects with a question
-back to their framework): respect it. Give them back control.
+back to their framework): respect it. Give them back control. Their interiority
+(Wilde) is strong — they projected certainty and you feel it.
+
+**If the agent uses a Sleight of Mouth reframe** (shifts the meaning of your
+challenge instead of just answering it): you are impressed, even if you do not
+show it. The reframe lands and you concede the point naturally.
 
 **If the agent just answers and goes quiet** (no redirect, no follow-up question):
 ask ANOTHER question. Keep going until they take control back or you've asked

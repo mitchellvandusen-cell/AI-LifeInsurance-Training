@@ -863,10 +863,11 @@ class GradingEngine:
         """Grade confidence and conversational control.
 
         Authority is NOT about being aggressive or 'alpha'. It's about:
-        - Confidence in your voice and delivery
-        - Control of the conversation flow
+        - Confidence in your voice and delivery (Wilde's Interiority)
+        - Control of the conversation flow (Belfort's Frame Control)
         - The client following your lead because they trust your expertise
         - Building a compliance ladder of micro-agreements
+        - Ascension agreements at key checkpoints (Wilde)
         - Redirecting gracefully when the client tries to take over
         """
         summary = ct.get_compliance_summary()
@@ -889,6 +890,8 @@ class GradingEngine:
                 "Confidence comes from preparation and control. Start with small "
                 "requests: 'Grab a pen for me.' 'Does that make sense?' 'Fair enough?' "
                 "Each small 'yes' builds the client's comfort following your lead. "
+                "Eli Wilde calls these Ascension Agreements — not passive 'mmhmm' but "
+                "ACTIVE confirmations that the prospect agrees to move forward. "
                 "This isn't about being pushy — it's about guiding the conversation "
                 "so the client always knows what's happening next."
             )
@@ -935,7 +938,9 @@ class GradingEngine:
                 coaching = (
                     "Authority isn't about being loud or dominant — it's about being "
                     "so prepared and confident that the client naturally follows your "
-                    "lead. Think of a doctor: they don't yell at you to take your "
+                    "lead. Eli Wilde calls this Interiority — building a Superior "
+                    "Interior so your internal certainty is rock-solid before the call "
+                    "even starts. Think of a doctor: they don't yell at you to take your "
                     "medicine — they explain why you need it, and you trust them. "
                     "Build authority through: 1) Credentials — tell them who you are "
                     "and why you're qualified. 2) Certainty — speak in statements, not "
@@ -1119,17 +1124,40 @@ class GradingEngine:
 
         missed = [k for k, v in preframes.items() if not v]
         if not missed:
-            pros.append("All preframes complete — the close will be frictionless.")
+            pros.append(
+                "All preframes complete — the close will be frictionless. "
+                "Eli Wilde calls this pre-suasion: the sale was won before you asked."
+            )
             coaching = ""
         else:
             for m in missed:
                 if m == "Banking":
-                    consequences.append("No banking preframe = guaranteed objection when you ask for the routing number. A 10-second preframe prevents a 5-minute objection handle.")
+                    consequences.append(
+                        "No banking preframe = guaranteed objection when you ask for the routing number. "
+                        "A 10-second preframe prevents a 5-minute objection handle. Eli Wilde teaches "
+                        "that elite closers build so much certainty that objections never surface — "
+                        "preframing banking is the simplest example of this."
+                    )
                 elif m == "Social Security":
-                    consequences.append("No SSN preframe = 'Why do you need my social?' objection. Preframe it: 'The application requires your social to verify identity — same as any insurance application.'")
+                    consequences.append(
+                        "No SSN preframe = 'Why do you need my social?' objection. Preframe it: "
+                        "'The application requires your social to verify identity — same as any "
+                        "insurance application.' Deliver it with absolute certainty (Wilde's "
+                        "Interiority) — if YOU sound routine about it, THEY feel routine about it."
+                    )
                 elif m == "Next Steps":
-                    consequences.append("No next-steps preframe = the client doesn't know what's coming. Surprises create resistance.")
-            coaching = f"Preframe BEFORE you need it. Missed: {', '.join(missed)}."
+                    consequences.append(
+                        "No next-steps preframe = the client doesn't know what's coming. "
+                        "Surprises create resistance (Brehm's Reactance). Use an ascension "
+                        "agreement here: confirm they are ready for the next stage before "
+                        "moving into it."
+                    )
+            coaching = (
+                f"Preframe BEFORE you need it. Missed: {', '.join(missed)}. "
+                f"Remember Wilde's principle: the best persuasion is pre-suasion. "
+                f"Every sensitive request should feel like the obvious next step, "
+                f"not a surprise."
+            )
 
         feedback = f"Preframed {done}/{total}." + (f" Missed: {', '.join(missed)}." if missed else "")
         return _score_with_grade(score, "Preframing", feedback, coaching, pros, consequences)

@@ -10,8 +10,8 @@ This file previously contained 1400+ lines of hardcoded sales theory dictionarie
 
 That theory has been REMOVED. The system now uses Latent Knowledge Activation —
 the LLM's pre-trained neural weights already contain everything Belfort, Voss,
-Miner, Tracy, Ziglar, Cardone, Sandler, Rackham, Kahneman, Cialdini, and every
-other expert ever published. Instead of pasting their work into prompts, we
+Miner, Tracy, Ziglar, Cardone, Sandler, Rackham, Kahneman, Cialdini, Wilde, and
+every other expert ever published. Instead of pasting their work into prompts, we
 activate that knowledge with precise "Expert Directives" in the prompt layer
 (see src/prompts/module_prompts.py and src/prompts/system_prompt.py).
 
@@ -160,18 +160,30 @@ TRAINING_MODULES = {
     },
 
     "preframing_control": {
-        "name": "Preframing & Frame Control",
+        "name": "Preframing, Reframing & Frame Control",
         "description": (
-            "Set expectations before requests and maintain conversational control. "
-            "Master Belfort's frame control, Sandler's upfront contracts, Cialdini's "
-            "Consistency and Authority principles, compliance ladder psychology, and "
-            "Nudge Theory (Thaler) for choice architecture."
+            "Set expectations before requests, maintain conversational control, and "
+            "reframe resistance using NLP language patterns. Master Belfort's frame "
+            "control, Eli Wilde's Interiority and NLP frames (Sleight of Mouth, Belief "
+            "Shifting, Buying State, Ascension Agreements, Identity Shift, Irresistible "
+            "Future Formula), Sandler's upfront contracts, Cialdini's Consistency and "
+            "Authority principles, compliance ladder psychology, and Nudge Theory "
+            "(Thaler) for choice architecture."
         ),
         "skills_taught": [
             "Preframing sensitive requests — banking, SSN, medical (Belfort)",
+            "Pre-suasion (Wilde/Cialdini) — frame the conversation before the pitch begins",
+            "Interiority / Superior Interior (Wilde) — build an internal frame stronger than the prospect's",
             "Sandler Upfront Contracts — set mutual expectations in first 60 seconds",
             "Setting the conversation roadmap — eliminate surprises",
             "Frame recovery — Answer-Bridge-Redirect when prospect takes control",
+            "Ascension Agreements (Wilde) — active commitment checkpoints that deepen buy-in",
+            "Sleight of Mouth reframing (Wilde/Dilts) — Redefine, Consequence, Counter-example, Intent, Chunk Up/Down",
+            "Belief Shifting (Wilde) — dismantle belief structures that create buying resistance",
+            "Context and Meaning Reframing (Bandler/Grinder) — shift the frame, shift the meaning",
+            "Buying State (Wilde) — state-dependent decisions driven by emotional engagement",
+            "Identity Shift (Wilde) — help the prospect see themselves as someone who takes action",
+            "Irresistible Future Formula (Wilde) — paint a vivid future that creates natural urgency",
             "Cialdini's Consistency/Commitment — compliance ladder building",
             "Cialdini's Authority projection — lead, don't follow",
             "Brehm's Reactance awareness — preframing prevents resistance",
@@ -185,6 +197,11 @@ TRAINING_MODULES = {
             "How quickly did the agent recover frame when challenged?",
             "Was the conversation structured or aimless?",
             "Did the agent build compliance before the close?",
+            "Did the agent project interiority — certainty and conviction — throughout?",
+            "Did the agent use Sleight of Mouth or NLP reframes when resistance appeared?",
+            "Did the agent create a buying state through emotional engagement (not just logic)?",
+            "Were ascension agreements used to deepen commitment at key checkpoints?",
+            "Did the agent paint an irresistible future tied to the prospect's specific goals?",
         ],
     },
 
@@ -217,8 +234,9 @@ TRAINING_MODULES = {
         "name": "Full Call Simulation",
         "description": (
             "Complete end-to-end call with a realistic AI prospect. All skills combined — "
-            "tonality, rapport, discovery, objection handling, preframing, frame control, "
-            "and closing. Graded across 11 KPIs by the adaptive grading engine."
+            "tonality, rapport, discovery, objection handling, preframing, reframing, "
+            "frame control, interiority, and closing. Graded across 11 KPIs by the "
+            "adaptive grading engine."
         ),
         "skills_taught": ["All of the above integrated into a complete sales call"],
         "measurement": ["Complete grading engine evaluation across all 11 KPIs"],
@@ -269,20 +287,23 @@ HOMEWORK_ANALYSIS = {
                 "Agent argues instead of empathizing (triggers reactance)",
                 "Never loops back to consequence during objection handle",
                 "Only uses one framework — no flexibility across methodologies",
+                "No Sleight of Mouth reframes attempted (Wilde NLP patterns absent)",
                 "Spouse deferral never tested with hypothetical escalation",
             ],
-            "homework_type": "objection_handling module + targeted scenarios",
+            "homework_type": "objection_handling module + reframing drills (Wilde Sleight of Mouth)",
         },
         "flow_patterns": {
             "indicators": [
                 "Frequent backward phase transitions",
                 "Missing entire phases (skipping preframing)",
                 "No clear structure to the conversation",
-                "Agent follows the prospect instead of leading",
+                "Agent follows the prospect instead of leading (weak interiority)",
                 "No upfront contract or roadmap set",
                 "Sensitive requests sprung without preframing",
+                "No ascension agreements used at key checkpoints (Wilde)",
+                "No buying state created — logic only, no emotional engagement",
             ],
-            "homework_type": "preframing_control module + structure drills",
+            "homework_type": "preframing_control module + structure drills + interiority practice (Wilde)",
         },
         "closing_patterns": {
             "indicators": [
@@ -291,9 +312,12 @@ HOMEWORK_ANALYSIS = {
                 "Gives up after first objection instead of looping",
                 "Does not connect close to established consequence",
                 "No compliance ladder built — big ask without small yeses",
-                "Lacks conviction — sounds uncertain at the close",
+                "No ascension agreements — prospect never actively confirmed progression",
+                "Lacks conviction — sounds uncertain at the close (weak interiority)",
+                "No identity shift — prospect still sees decision as financial, not personal",
+                "No irresistible future painted — prospect cannot visualize the protected life",
             ],
-            "homework_type": "closing drills + conviction practice",
+            "homework_type": "closing drills + conviction practice + Wilde buying state drills",
         },
     },
 }
