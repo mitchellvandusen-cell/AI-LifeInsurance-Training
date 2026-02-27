@@ -45,6 +45,20 @@
             position: relative;
         }
 
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--text-primary); }
+        .back-link svg { width: 14px; height: 14px; }
+
         .card-header { text-align: center; margin-bottom: 2rem; }
         .card-header h2 { font-size: 1.5rem; margin-bottom: 0.25rem; }
         .card-header p { font-size: 0.85rem; color: var(--text-muted); }
@@ -394,6 +408,10 @@
     <!-- ═══ Screen 0: Training Mode Selection ═══ -->
     <div class="screen screen-pre active" id="screenSelect">
         <div class="client-card" style="width:520px;max-height:85vh;display:flex;flex-direction:column;padding:1.75rem;">
+            <a href="/dashboard" class="back-link" style="flex-shrink:0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Back to Dashboard
+            </a>
             <div class="card-header" style="margin-bottom:1.25rem;">
                 <h2>Choose Training Mode</h2>
                 <p>Full call simulation or focused skill modules</p>
@@ -416,6 +434,10 @@
     <!-- ═══ Screen 1: Pre-Session (client card — Full Sim) ═══ -->
     <div class="screen screen-pre" id="screenPre">
         <div class="client-card" id="clientCard">
+            <a onclick="showScreen('screenSelect')" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Back
+            </a>
             <div class="card-header">
                 <h2>Your Lead</h2>
                 <p>This is all you know. The rest is up to you.</p>
@@ -432,6 +454,10 @@
     <!-- ═══ Screen 1b: Module Pre-Session ═══ -->
     <div class="screen screen-pre" id="screenModulePre">
         <div class="client-card" style="width:480px;">
+            <a onclick="showScreen('screenSelect')" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Back
+            </a>
             <div class="card-header">
                 <h2 id="moduleTitle">Module Training</h2>
                 <p id="moduleDesc">Focused skill practice with your AI coach</p>
