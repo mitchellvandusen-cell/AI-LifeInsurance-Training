@@ -9,7 +9,6 @@ import asyncio
 import json
 import logging
 import random
-import string
 import time
 
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -28,6 +27,32 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 # Active sessions in memory (session_id → orchestrator)
 _active_sessions: dict[str, dict] = {}
+
+# Maximum session age before automatic cleanup (2 hours)
+_SESSION_TTL_SECONDS = 2 * 60 * 60
+
+
+async def _cleanup_stale_sessions():
+    """Background task: evict sessions older than TTL to prevent memory leaks."""
+    while True:
+        await asyncio.sleep(300)  # Check every 5 minutes
+        now = time.time()
+        stale = [
+            sid for sid, s in _active_sessions.items()
+            if now - s.get("start_time", now) > _SESSION_TTL_SECONDS
+        ]
+        for sid in stale:
+            session = _active_sessions.pop(sid, None)
+            if session:
+                voice_sess = session.get("voice_session")
+                if voice_sess:
+                    await voice_sess.disconnect()
+                logger.warning("[SESSION] Evicted stale session %s (TTL exceeded)", sid)
+
+
+def start_session_cleanup():
+    """Call once at startup to begin the background cleanup loop."""
+    asyncio.create_task(_cleanup_stale_sessions())
 
 
 def _generate_client_info(persona) -> dict:
@@ -357,6 +382,7 @@ async def end_session(session_id: str, request: Request):
         await db.use_subscription_minutes(user["user_id"], billed_minutes)
     elif remaining["addon_minutes"] >= billed_minutes:
         billed_from = "add_on"
+        await db.use_addon_minutes(user["user_id"], billed_minutes)
     else:
         # Bill from wallet at 10 cents per minute
         billed_from = "wallet"

@@ -28,6 +28,33 @@ router = APIRouter(prefix="/api/modules", tags=["modules"])
 # Active module sessions in memory
 _active_module_sessions: dict[str, dict] = {}
 
+# Maximum module session age before automatic cleanup (2 hours)
+_MODULE_SESSION_TTL_SECONDS = 2 * 60 * 60
+
+
+async def _cleanup_stale_module_sessions():
+    """Background task: evict module sessions older than TTL to prevent memory leaks."""
+    while True:
+        await asyncio.sleep(300)  # Check every 5 minutes
+        now = time.time()
+        stale = [
+            sid for sid, s in _active_module_sessions.items()
+            if now - s.get("start_time", now) > _MODULE_SESSION_TTL_SECONDS
+        ]
+        for sid in stale:
+            session = _active_module_sessions.pop(sid, None)
+            if session:
+                voice_sess = session.get("voice_session")
+                if voice_sess:
+                    await voice_sess.disconnect()
+                logger.warning("[MODULE] Evicted stale module session %s (TTL exceeded)", sid)
+
+
+def start_module_session_cleanup():
+    """Call once at startup to begin the background cleanup loop."""
+    asyncio.create_task(_cleanup_stale_module_sessions())
+
+
 AVAILABLE_MODULES = {
     key: {
         "key": key,
@@ -278,6 +305,7 @@ async def end_module_session(session_id: str, request: Request):
         await db.use_subscription_minutes(user["user_id"], billed_minutes)
     elif remaining["addon_minutes"] >= billed_minutes:
         billed_from = "add_on"
+        await db.use_addon_minutes(user["user_id"], billed_minutes)
     else:
         billed_from = "wallet"
         cost_cents = billed_minutes * 10

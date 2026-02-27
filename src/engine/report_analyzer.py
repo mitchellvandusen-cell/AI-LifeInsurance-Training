@@ -46,6 +46,7 @@ HUMAN PSYCHOLOGY & BEHAVIORAL SCIENCE:
     - Viktor Frankl — Meaning and Purpose as Decision Drivers
     - NLP (Bandler/Grinder) — Rapport, Anchoring, Reframing
     - Paul Ekman — Emotional Intelligence, Vocal Micro-Expressions
+    - Chase Hughes — Six-Axis Model of Influence, Authority Triangle, Behavioral Profiling
 
 Every report card gets unique, specific, actionable coaching — never templates.
 """
@@ -96,6 +97,9 @@ methodology and human psychology framework ever published.
 - Richard Thaler — Nudge Theory, choice architecture, default options
 - Carol Dweck — Growth Mindset (effort creates mastery, failure is feedback)
 - Abraham Maslow — Hierarchy of Needs (insurance = Safety + Belonging)
+- Chase Hughes — Six-Axis Model of Influence (suggestibility, focus, openness,
+  connection, compliance, expectancy), Authority Triangle, behavioral profiling
+  (Six-Minute X-Ray), FATE Model, agentic shift, linguistic harvesting
 
 ## YOUR TASK
 

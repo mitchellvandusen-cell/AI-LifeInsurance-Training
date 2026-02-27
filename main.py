@@ -52,6 +52,12 @@ async def startup():
     except Exception as e:
         print(f"[SEED] Skipped: {e}")
 
+    # Start background cleanup for orphaned sessions
+    from src.api.sessions import start_session_cleanup
+    from src.api.modules import start_module_session_cleanup
+    start_session_cleanup()
+    start_module_session_cleanup()
+
     # Debug: verify frontend directory
     frontend_dir = BASE_DIR / "frontend"
     if frontend_dir.is_dir():

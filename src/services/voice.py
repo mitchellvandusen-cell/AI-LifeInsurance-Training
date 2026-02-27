@@ -24,7 +24,7 @@ import logging
 import os
 import time
 import traceback
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import websockets
 from websockets.asyncio.client import ClientConnection
@@ -76,10 +76,10 @@ class VoiceSession:
     async def connect(self) -> bool:
         """Establish WebSocket connection to xAI Voice Agent API."""
         if not XAI_API_KEY:
-            print(f"[VOICE][{self.session_id}] ERROR: XAI_API_KEY not set")
+            logger.error("[%s] XAI_API_KEY not set", self.session_id)
             return False
 
-        print(f"[VOICE][{self.session_id}] Connecting to xAI Voice API ({XAI_WS_URL})...")
+        logger.info("[%s] Connecting to xAI Voice API (%s)...", self.session_id, XAI_WS_URL)
         try:
             self.xai_ws = await asyncio.wait_for(
                 websockets.connect(
@@ -90,19 +90,18 @@ class VoiceSession:
                 timeout=15,
             )
             self.connected = True
-            print(f"[VOICE][{self.session_id}] Connected to xAI Voice API")
+            logger.info("[%s] Connected to xAI Voice API", self.session_id)
 
             # Configure session
             await self._configure_session()
             return True
 
         except asyncio.TimeoutError:
-            print(f"[VOICE][{self.session_id}] ERROR: xAI connection timed out (15s)")
+            logger.error("[%s] xAI connection timed out (15s)", self.session_id)
             self.connected = False
             return False
         except Exception as e:
-            print(f"[VOICE][{self.session_id}] ERROR: Failed to connect to xAI: {e}")
-            traceback.print_exc()
+            logger.error("[%s] Failed to connect to xAI: %s", self.session_id, e, exc_info=True)
             self.connected = False
             return False
 
@@ -127,7 +126,7 @@ class VoiceSession:
             },
         }
         await self.xai_ws.send(json.dumps(config))
-        print(f"[VOICE][{self.session_id}] Session configured: voice={self.voice}, rate={SAMPLE_RATE}")
+        logger.info("[%s] Session configured: voice=%s, rate=%d", self.session_id, self.voice, SAMPLE_RATE)
 
     async def trigger_greeting(self):
         """Trigger the AI to speak first without waiting for user input.
@@ -141,9 +140,9 @@ class VoiceSession:
             return
         try:
             await self.xai_ws.send(json.dumps({"type": "response.create"}))
-            print(f"[VOICE][{self.session_id}] Triggered AI greeting (response.create)")
+            logger.info("[%s] Triggered AI greeting (response.create)", self.session_id)
         except Exception as e:
-            print(f"[VOICE][{self.session_id}] ERROR triggering greeting: {e}")
+            logger.error("[%s] Error triggering greeting: %s", self.session_id, e)
 
     async def update_instructions(self, new_prompt: str):
         """Update the system prompt mid-session (after state changes)."""
@@ -158,9 +157,9 @@ class VoiceSession:
         }
         try:
             await self.xai_ws.send(json.dumps(update))
-            logger.debug(f"[{self.session_id}] Instructions updated (turn {self._turn_count})")
+            logger.debug("[%s] Instructions updated (turn %d)", self.session_id, self._turn_count)
         except Exception as e:
-            print(f"[VOICE][{self.session_id}] ERROR updating instructions: {e}")
+            logger.error("[%s] Error updating instructions: %s", self.session_id, e)
 
     async def send_audio(self, audio_base64: str):
         """Forward audio chunk from browser to xAI."""
@@ -173,7 +172,7 @@ class VoiceSession:
         try:
             await self.xai_ws.send(json.dumps(msg))
         except Exception as e:
-            print(f"[VOICE][{self.session_id}] ERROR sending audio: {e}")
+            logger.error("[%s] Error sending audio: %s", self.session_id, e)
             self.connected = False
 
     async def receive_events(self, send_to_browser: Callable):
@@ -184,7 +183,7 @@ class VoiceSession:
         send_to_browser: async function that sends JSON to the browser WebSocket
         """
         if not self.xai_ws:
-            print(f"[VOICE][{self.session_id}] ERROR: No xAI WebSocket in receive_events")
+            logger.error("[%s] No xAI WebSocket in receive_events", self.session_id)
             return
 
         try:
@@ -192,7 +191,7 @@ class VoiceSession:
                 try:
                     data = json.loads(message)
                 except json.JSONDecodeError:
-                    print(f"[VOICE][{self.session_id}] Non-JSON message from xAI ({len(message)} bytes)")
+                    logger.warning("[%s] Non-JSON message from xAI (%d bytes)", self.session_id, len(message))
                     continue
 
                 event_type = data.get("type", "")
@@ -213,7 +212,7 @@ class VoiceSession:
                     if text:
                         self._current_agent_text = text
                         self._turn_count += 1
-                        print(f"[VOICE][{self.session_id}] Agent said (turn {self._turn_count}): {text[:80]}...")
+                        logger.info("[%s] Agent said (turn %d): %.80s...", self.session_id, self._turn_count, text)
                         await send_to_browser({
                             "type": "transcript",
                             "role": "agent",
@@ -225,8 +224,7 @@ class VoiceSession:
                             try:
                                 await self.on_agent_transcript(text, self._turn_count)
                             except Exception as e:
-                                print(f"[VOICE][{self.session_id}] ERROR in on_agent_transcript callback: {e}")
-                                traceback.print_exc()
+                                logger.error("[%s] Error in on_agent_transcript callback: %s", self.session_id, e, exc_info=True)
 
                 # ── Client transcript delta (streaming) ──────────
                 # xAI: response.output_audio_transcript.delta
@@ -244,7 +242,7 @@ class VoiceSession:
                 elif event_type in ("response.output_audio_transcript.done", "response.audio_transcript.done"):
                     text = data.get("transcript", self._current_client_text)
                     if text:
-                        print(f"[VOICE][{self.session_id}] Client said (turn {self._turn_count}): {text[:80]}...")
+                        logger.info("[%s] Client said (turn %d): %.80s...", self.session_id, self._turn_count, text)
                         await send_to_browser({
                             "type": "transcript",
                             "role": "client",
@@ -255,13 +253,12 @@ class VoiceSession:
                             try:
                                 await self.on_client_transcript(text, self._turn_count)
                             except Exception as e:
-                                print(f"[VOICE][{self.session_id}] ERROR in on_client_transcript callback: {e}")
-                                traceback.print_exc()
+                                logger.error("[%s] Error in on_client_transcript callback: %s", self.session_id, e, exc_info=True)
                     self._current_client_text = ""
 
                 # ── Response complete ────────────────────────────
                 elif event_type == "response.done":
-                    print(f"[VOICE][{self.session_id}] Response complete")
+                    logger.debug("[%s] Response complete", self.session_id)
                     await send_to_browser({
                         "type": "status",
                         "status": "listening",
@@ -269,7 +266,7 @@ class VoiceSession:
 
                 # ── Speech detected (user starts talking) ────────
                 elif event_type == "input_audio_buffer.speech_started":
-                    print(f"[VOICE][{self.session_id}] Speech detected")
+                    logger.debug("[%s] Speech detected", self.session_id)
                     await send_to_browser({
                         "type": "status",
                         "status": "recording",
@@ -277,7 +274,7 @@ class VoiceSession:
 
                 # ── Speech stopped (processing) ──────────────────
                 elif event_type in ("input_audio_buffer.speech_stopped", "input_audio_buffer.committed"):
-                    print(f"[VOICE][{self.session_id}] Speech ended, processing...")
+                    logger.debug("[%s] Speech ended, processing...", self.session_id)
                     await send_to_browser({
                         "type": "status",
                         "status": "processing",
@@ -285,18 +282,18 @@ class VoiceSession:
 
                 # ── Session lifecycle ─────────────────────────────
                 elif event_type == "session.created":
-                    print(f"[VOICE][{self.session_id}] Session created by xAI")
+                    logger.info("[%s] Session created by xAI", self.session_id)
                     await send_to_browser({
                         "type": "status",
                         "status": "connected",
                     })
 
                 elif event_type == "session.updated":
-                    print(f"[VOICE][{self.session_id}] Session config updated by xAI")
+                    logger.debug("[%s] Session config updated by xAI", self.session_id)
 
                 # ── Response lifecycle (informational) ────────────
                 elif event_type == "response.created":
-                    print(f"[VOICE][{self.session_id}] AI generating response...")
+                    logger.debug("[%s] AI generating response...", self.session_id)
                     await send_to_browser({
                         "type": "status",
                         "status": "responding",
@@ -311,14 +308,14 @@ class VoiceSession:
                 # ── Transcription failed ─────────────────────────
                 elif event_type == "conversation.item.input_audio_transcription.failed":
                     error = data.get("error", {}).get("message", "Transcription failed")
-                    print(f"[VOICE][{self.session_id}] Transcription failed: {error}")
+                    logger.warning("[%s] Transcription failed: %s", self.session_id, error)
 
                 # ── Error handling ───────────────────────────────
                 elif event_type == "error":
                     error_data = data.get("error", {})
                     error_msg = error_data.get("message", "Unknown error")
                     error_code = error_data.get("code", "unknown")
-                    print(f"[VOICE][{self.session_id}] xAI ERROR [{error_code}]: {error_msg}")
+                    logger.error("[%s] xAI error [%s]: %s", self.session_id, error_code, error_msg)
                     await send_to_browser({
                         "type": "error",
                         "message": error_msg,
@@ -326,18 +323,16 @@ class VoiceSession:
 
                 # ── Catch-all: log unknown events for debugging ──
                 else:
-                    # Log unhandled events so we can see what xAI sends
                     preview = json.dumps(data)[:200]
-                    print(f"[VOICE][{self.session_id}] Unhandled event: {event_type} | {preview}")
+                    logger.debug("[%s] Unhandled event: %s | %s", self.session_id, event_type, preview)
 
         except websockets.exceptions.ConnectionClosed as e:
-            print(f"[VOICE][{self.session_id}] xAI connection closed: code={e.code}, reason={e.reason}")
+            logger.warning("[%s] xAI connection closed: code=%s, reason=%s", self.session_id, e.code, e.reason)
         except Exception as e:
-            print(f"[VOICE][{self.session_id}] Error in receive loop: {e}")
-            traceback.print_exc()
+            logger.error("[%s] Error in receive loop: %s", self.session_id, e, exc_info=True)
         finally:
             self.connected = False
-            print(f"[VOICE][{self.session_id}] receive_events loop ended")
+            logger.info("[%s] receive_events loop ended", self.session_id)
 
     async def disconnect(self):
         """Close the xAI WebSocket connection."""
@@ -347,7 +342,7 @@ class VoiceSession:
                 await self.xai_ws.close()
             except Exception:
                 pass
-        print(f"[VOICE][{self.session_id}] Disconnected from xAI Voice API")
+        logger.info("[%s] Disconnected from xAI Voice API", self.session_id)
 
     def get_duration_seconds(self) -> int:
         return int(time.time() - self.start_time)

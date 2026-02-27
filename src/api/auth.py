@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import bcrypt
 from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from src.api.middleware import create_token, get_current_user
 from src.core import database as db

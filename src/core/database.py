@@ -398,6 +398,26 @@ async def use_subscription_minutes(user_id: str, minutes: int) -> bool:
     return result is not None
 
 
+async def use_addon_minutes(user_id: str, minutes: int) -> bool:
+    """Deduct minutes from the oldest active add-on purchase. Returns True if enough."""
+    pool = await get_pool()
+    result = await pool.fetchrow(
+        """UPDATE addon_purchases
+           SET minutes_used = minutes_used + $1
+           WHERE id = (
+               SELECT id FROM addon_purchases
+               WHERE user_id = $2
+                 AND billing_period_end > NOW()
+                 AND (minutes_total - minutes_used) >= $1
+               ORDER BY created_at ASC
+               LIMIT 1
+           )
+           RETURNING id""",
+        minutes, uuid.UUID(user_id),
+    )
+    return result is not None
+
+
 async def get_remaining_minutes(user_id: str) -> dict:
     """Get remaining subscription minutes and wallet balance."""
     sub = await get_subscription(user_id)

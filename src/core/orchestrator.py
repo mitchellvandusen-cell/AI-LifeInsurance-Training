@@ -16,9 +16,6 @@ Flow per turn:
 
 from __future__ import annotations
 
-import json
-from typing import Optional
-
 from src.core.state_manager import StateManager
 from src.engine.compliance_tracker import ComplianceTracker
 from src.engine.grading_engine import GradingEngine
@@ -30,7 +27,6 @@ from src.models.state import (
     ClientPersona,
     ConversationPhase,
     SessionState,
-    TonalitySnapshot,
 )
 from src.prompts.system_prompt import build_objection_injection, build_system_prompt
 

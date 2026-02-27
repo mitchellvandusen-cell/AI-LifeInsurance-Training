@@ -12,7 +12,6 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-import httpx
 import openai
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -67,8 +66,8 @@ class ArchetypeListResponse(BaseModel):
 
 # ── LLM Client ─────────────────────────────────────────────────
 
-def _get_llm_response(system_prompt: str, conversation_history: list[dict]) -> str:
-    """Call xAI Grok to generate the AI client response."""
+async def _get_llm_response(system_prompt: str, conversation_history: list[dict]) -> str:
+    """Call xAI Grok to generate the AI client response (async)."""
     api_key = os.getenv("XAI_API_KEY")
     if not api_key:
         raise HTTPException(
@@ -76,14 +75,14 @@ def _get_llm_response(system_prompt: str, conversation_history: list[dict]) -> s
             detail="No LLM API key configured. Set XAI_API_KEY.",
         )
 
-    client = openai.OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
+    client = openai.AsyncOpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
 
     messages = [{"role": "system", "content": system_prompt}]
     for msg in conversation_history:
         role = "user" if msg["role"] == "agent" else "assistant"
         messages.append({"role": role, "content": msg["content"]})
 
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=os.getenv("LLM_MODEL", "grok4-1-fast-reasoning"),
         max_tokens=500,
         messages=messages,
@@ -157,7 +156,7 @@ async def send_message(req: AgentMessageRequest):
 
     # Generate AI client response
     try:
-        client_response = _get_llm_response(
+        client_response = await _get_llm_response(
             system_prompt=result["system_prompt"],
             conversation_history=history,
         )
