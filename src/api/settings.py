@@ -55,6 +55,7 @@ async def connect_dialer(req: ConnectDialerRequest, request: Request):
         raise HTTPException(status_code=400, detail="Connection code is required")
 
     # Validate the token with InsuranceGrokBot API
+    validated = False
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(
@@ -68,25 +69,24 @@ async def connect_dialer(req: ConnectDialerRequest, request: Request):
                 detail="Invalid connection code. Please check the code and try again.",
             )
 
-        if resp.status_code != 200:
-            raise HTTPException(
-                status_code=400,
-                detail="Could not validate connection code. Please try again.",
-            )
-
-        # Token is valid — store it
-        await db.update_settings(user["user_id"], {
-            "dialer_connection_code": token,
-            "grokbot_account_linked": True,
-        })
-
-        return {"ok": True, "message": "Dialer connected successfully"}
+        if resp.status_code == 200:
+            validated = True
 
     except httpx.RequestError:
-        raise HTTPException(
-            status_code=502,
-            detail="Could not reach InsuranceGrokBot servers. Please try again later.",
-        )
+        # GrokBot API unreachable — save code anyway so it persists,
+        # we'll re-validate on next sync or recording import.
+        pass
+
+    # Store the connection code and mark as linked
+    await db.update_settings(user["user_id"], {
+        "dialer_connection_code": token,
+        "grokbot_account_linked": True,
+    })
+
+    msg = "Dialer connected successfully"
+    if not validated:
+        msg = "Connection code saved. Will verify when InsuranceGrokBot servers are reachable."
+    return {"ok": True, "message": msg}
 
 
 @router.post("/disconnect")

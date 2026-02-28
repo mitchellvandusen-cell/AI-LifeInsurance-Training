@@ -942,7 +942,12 @@ async def get_settings(user_id: str) -> dict:
         "INSERT INTO training_settings (id, user_id) VALUES ($1, $2)",
         uuid.uuid4(), uuid.UUID(user_id),
     )
-    return {"user_id": user_id, "preferred_voice": "Sal", "auto_import_recordings": False}
+    return {
+        "user_id": user_id, "preferred_voice": "Sal",
+        "auto_import_recordings": False, "grokbot_account_linked": False,
+        "dialer_connection_code": None, "email_weekly_report": True,
+        "email_session_summary": True,
+    }
 
 
 async def update_settings(user_id: str, settings: dict):
@@ -955,10 +960,19 @@ async def update_settings(user_id: str, settings: dict):
     updates = {k: v for k, v in settings.items() if k in allowed}
     if not updates:
         return
-    set_clauses = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(updates.keys()))
-    values = [uuid.UUID(user_id)] + list(updates.values())
+    uid = uuid.UUID(user_id)
+
+    # Ensure the settings row exists before updating
     await pool.execute(
-        f"UPDATE training_settings SET {set_clauses} WHERE user_id = $1",
+        "INSERT INTO training_settings (id, user_id) VALUES ($1, $2) "
+        "ON CONFLICT (user_id) DO NOTHING",
+        uuid.uuid4(), uid,
+    )
+
+    set_clauses = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(updates.keys()))
+    values = [uid] + list(updates.values())
+    await pool.execute(
+        f"UPDATE training_settings SET {set_clauses}, updated_at = NOW() WHERE user_id = $1",
         *values,
     )
 
