@@ -259,6 +259,88 @@
         }
         .transcript-msg .role.agent { color: var(--accent-cyan); }
         .transcript-msg .role.client { color: var(--accent-purple); }
+
+        /* ── Script Mastery Panel (sidebar) ─────────────── */
+        .script-panel { padding: 0; }
+        .script-panel-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .script-panel-header h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.35rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mastery-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .mastery-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .mastery-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .mastery-bar-fill.level-0 { width: 0%; background: var(--border-color); }
+        .mastery-bar-fill.level-1 { width: 20%; background: var(--accent-amber); }
+        .mastery-bar-fill.level-2 { width: 40%; background: var(--accent-amber); }
+        .mastery-bar-fill.level-3 { width: 60%; background: var(--accent-cyan); }
+        .mastery-bar-fill.level-4 { width: 80%; background: var(--accent-blue); }
+        .mastery-bar-fill.level-5 { width: 100%; background: var(--accent-green); }
+        .mastery-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .mastery-level-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(79,70,229,0.15);
+            color: var(--accent-blue);
+        }
+        .script-content-area {
+            padding: 1rem 1.25rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 140px);
+            font-size: 0.82rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+        .script-content-area .blank-word {
+            display: inline-block;
+            min-width: 2.5em;
+            border-bottom: 2px solid var(--accent-blue);
+            margin: 0 0.1em;
+            color: transparent;
+            user-select: none;
+        }
+        .script-hidden-msg {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-muted);
+        }
+        .script-hidden-msg h4 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-green);
+        }
+        .script-hidden-msg p {
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
         .transcript-msg .text {
             font-size: 0.9rem;
             color: var(--text-secondary);
@@ -597,6 +679,11 @@
             }
         }
 
+        // ── Script mastery state ─────────────────────────────
+        let currentMastery = null;
+        let currentScriptContent = null;
+        let currentScriptName = null;
+
         // ── Start Module Training ────────────────────────────
         async function startModuleTraining() {
             const btn = document.getElementById('moduleStartBtn');
@@ -608,13 +695,24 @@
                 const data = await API.startModuleSession(selectedModule, null, scriptId);
                 sessionId = data.session_id;
 
-                // Reuse session screen but without sidebar client card
-                document.getElementById('sidebarFields').innerHTML = `
-                    <div style="padding:1rem;text-align:center;">
-                        <h3 style="font-size:1rem;margin-bottom:0.5rem;">${data.module.name}</h3>
-                        <p style="font-size:0.8rem;color:var(--text-muted);">${data.module.description}</p>
-                    </div>
-                `;
+                // Store mastery data if this is script practice
+                if (data.mastery) {
+                    currentMastery = data.mastery;
+                    currentScriptContent = data.script_content;
+                    currentScriptName = data.script_name;
+                }
+
+                // Build sidebar content
+                if (selectedModule === 'script_practice' && currentScriptContent) {
+                    buildScriptPanel(data);
+                } else {
+                    document.getElementById('sidebarFields').innerHTML = `
+                        <div style="padding:1rem;text-align:center;">
+                            <h3 style="font-size:1rem;margin-bottom:0.5rem;">${data.module.name}</h3>
+                            <p style="font-size:0.8rem;color:var(--text-muted);">${data.module.description}</p>
+                        </div>
+                    `;
+                }
                 document.getElementById('sessionClientName').textContent = data.module.name;
                 document.getElementById('stateBar').style.display = 'none'; // No state bar for modules
 
@@ -639,6 +737,134 @@
                 btn.disabled = false;
                 btn.textContent = 'Start Module';
             }
+        }
+
+        // ── Script Panel with Progressive Word Elimination ───
+        const MASTERY_LABELS = ['Full Read', 'Light Recall', 'Building Memory', 'Deep Recall', 'Near Mastery', 'Full Mastery'];
+        const BLANK_PERCENTAGES = [0, 0.20, 0.40, 0.60, 0.80, 1.0];
+
+        function buildScriptPanel(data) {
+            const sidebar = document.getElementById('sidebarFields');
+            const level = data.mastery.mastery_level;
+            const count = data.mastery.practice_count;
+            const label = MASTERY_LABELS[level] || 'Full Read';
+
+            sidebar.innerHTML = '';
+            sidebar.className = 'script-panel';
+
+            // Header with mastery progress
+            const header = document.createElement('div');
+            header.className = 'script-panel-header';
+            header.innerHTML = `
+                <h3 title="${escapeHTML(data.script_name)}">${escapeHTML(data.script_name)}</h3>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span class="mastery-level-badge">Level ${level} — ${label}</span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);">${count} sessions</span>
+                </div>
+                <div class="mastery-bar-container">
+                    <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
+                    <span class="mastery-label">${level}/5</span>
+                </div>
+            `;
+            sidebar.appendChild(header);
+
+            // Script content area with progressive blanking
+            const contentArea = document.createElement('div');
+
+            if (level >= 5) {
+                // Full mastery — script hidden
+                contentArea.className = 'script-hidden-msg';
+                contentArea.innerHTML = `
+                    <h4>Full Recall Mode</h4>
+                    <p>Your script is hidden. You've practiced this ${count} times — the words are in your memory. Deliver it from heart.</p>
+                    <p style="margin-top:1rem;font-size:0.75rem;color:var(--text-muted);">The coach will test your recall and push for natural delivery.</p>
+                `;
+            } else {
+                contentArea.className = 'script-content-area';
+                contentArea.innerHTML = blankifyScript(data.script_content, BLANK_PERCENTAGES[level]);
+            }
+
+            sidebar.appendChild(contentArea);
+        }
+
+        function blankifyScript(text, blankRatio) {
+            if (blankRatio === 0) return escapeHTML(text).replace(/\n/g, '<br>');
+
+            // Use a seeded approach so blanks are consistent within a session
+            // but different words get blanked. Prioritize blanking middle-of-sentence
+            // words (not first/last words of lines) for better context retention.
+            const lines = text.split('\n');
+            const result = [];
+
+            for (const line of lines) {
+                if (!line.trim()) {
+                    result.push('<br>');
+                    continue;
+                }
+
+                const words = line.split(/(\s+)/);
+                const wordIndices = [];
+
+                // Identify actual word positions (not whitespace)
+                words.forEach((w, i) => {
+                    if (w.trim().length > 0) wordIndices.push(i);
+                });
+
+                // Determine which words to blank — prefer middle words, keep
+                // first and last words of each line visible longer
+                const blankCount = Math.round(wordIndices.length * blankRatio);
+                const blanked = new Set();
+
+                if (blankCount > 0 && wordIndices.length > 2) {
+                    // Start blanking from the middle, expand outward
+                    const middleIndices = wordIndices.slice(1, -1);
+                    // Shuffle deterministically based on word content
+                    middleIndices.sort((a, b) => {
+                        const hashA = simpleHash(words[a]);
+                        const hashB = simpleHash(words[b]);
+                        return hashA - hashB;
+                    });
+
+                    for (let i = 0; i < Math.min(blankCount, middleIndices.length); i++) {
+                        blanked.add(middleIndices[i]);
+                    }
+
+                    // If we need more blanks than middle words, blank edges too
+                    if (blankCount > middleIndices.length) {
+                        const remaining = blankCount - middleIndices.length;
+                        if (remaining >= 1) blanked.add(wordIndices[wordIndices.length - 1]);
+                        if (remaining >= 2) blanked.add(wordIndices[0]);
+                    }
+                } else if (blankCount > 0 && wordIndices.length <= 2) {
+                    // Very short line — blank based on ratio
+                    for (let i = 0; i < Math.min(blankCount, wordIndices.length); i++) {
+                        blanked.add(wordIndices[i]);
+                    }
+                }
+
+                const lineHtml = words.map((w, i) => {
+                    if (blanked.has(i)) {
+                        // Create a blank that's roughly the width of the word
+                        const width = Math.max(2, w.length * 0.6);
+                        return `<span class="blank-word" style="min-width:${width}em;" title="Fill from memory">${escapeHTML(w)}</span>`;
+                    }
+                    return escapeHTML(w);
+                }).join('');
+
+                result.push(lineHtml);
+            }
+
+            return result.join('<br>');
+        }
+
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0;
+            }
+            return Math.abs(hash);
         }
 
         // ── Connect Module Voice WS ──────────────────────────
@@ -681,10 +907,40 @@
                 trainingMode = 'script_practice';
                 showScreen('screenModulePre');
                 document.getElementById('moduleTitle').textContent = 'Script Practice';
-                document.getElementById('moduleDesc').textContent = 'Practice your script with a cooperative AI client. Focus on natural delivery.';
-                document.getElementById('moduleSkills').innerHTML = [
-                    'Natural delivery', 'Conversational flow', 'Confidence through repetition'
-                ].map(s => `<div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">${s}</div>`).join('');
+                document.getElementById('moduleDesc').textContent = 'Adaptive memory training — your script gets progressively blanked as you level up.';
+
+                // Load mastery info for this script
+                try {
+                    const allMastery = await API.getScriptMastery();
+                    const m = allMastery[sid];
+                    const level = m ? m.mastery_level : 0;
+                    const count = m ? m.practice_count : 0;
+                    const label = MASTERY_LABELS[level] || 'Full Read';
+                    const blankPct = Math.round(BLANK_PERCENTAGES[level] * 100);
+
+                    document.getElementById('moduleSkills').innerHTML = `
+                        <div style="background:var(--bg-primary);border-radius:var(--radius-md);padding:1rem;margin-bottom:0.5rem;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                <span style="font-size:0.8rem;font-weight:700;">Level ${level} — ${label}</span>
+                                <span style="font-size:0.75rem;color:var(--text-muted);">${count} session${count !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div class="mastery-bar-container">
+                                <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
+                                <span class="mastery-label">${level}/5</span>
+                            </div>
+                            <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">
+                                ${blankPct}% of words blanked. ${level < 5 ? 'Recall the missing words from memory.' : 'Script fully hidden — pure recall.'}
+                            </p>
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">Active recall & progressive blanking</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">Memory techniques: chunking, visualization, spaced retrieval</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">Natural delivery & tonality coaching</div>
+                    `;
+                } catch (err) {
+                    document.getElementById('moduleSkills').innerHTML = [
+                        'Natural delivery', 'Conversational flow', 'Confidence through repetition'
+                    ].map(s => `<div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">${s}</div>`).join('');
+                }
                 return;
             }
 
@@ -1135,6 +1391,37 @@
         function showModuleComplete(result) {
             const overlay = document.getElementById('reportOverlay');
             const content = document.getElementById('reportContent');
+
+            let masteryHtml = '';
+            if (result.mastery) {
+                const m = result.mastery;
+                const label = MASTERY_LABELS[m.mastery_level] || 'Full Read';
+                const nextLevel = Math.min(m.mastery_level + 1, 5);
+                const nextLabel = MASTERY_LABELS[nextLevel];
+                const sessionsToNext = m.mastery_level < 5
+                    ? Math.max(0, (m.mastery_level + 1) * 2 + 1 - m.practice_count)
+                    : 0;
+
+                masteryHtml = `
+                    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.5rem;margin:1.5rem auto;max-width:400px;text-align:left;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                            <span style="font-size:0.85rem;font-weight:700;">Script Mastery</span>
+                            <span class="mastery-level-badge">Level ${m.mastery_level} — ${label}</span>
+                        </div>
+                        <div class="mastery-bar-container" style="margin-bottom:0.5rem;">
+                            <div class="mastery-bar"><div class="mastery-bar-fill level-${m.mastery_level}"></div></div>
+                            <span class="mastery-label">${m.mastery_level}/5</span>
+                        </div>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">
+                            ${m.practice_count} practice session${m.practice_count !== 1 ? 's' : ''} completed.
+                            ${m.mastery_level < 5
+                                ? `${sessionsToNext} more to reach Level ${nextLevel} (${nextLabel}).`
+                                : 'Script mastered! Keep practicing for peak performance.'}
+                        </p>
+                    </div>
+                `;
+            }
+
             content.innerHTML = `
                 <div class="report-header" style="text-align:center;">
                     <h2>Module Complete</h2>
@@ -1142,9 +1429,10 @@
                         ${selectedModule ? selectedModule.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Training'} Session
                     </p>
                     <p style="color:var(--text-muted);">Duration: ${formatDuration(result.duration_seconds || 0)}</p>
+                    ${masteryHtml}
                     <div style="margin-top:2rem; display:flex; gap:1rem; justify-content:center;">
                         <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
-                        <button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>
+                        ${scriptId ? `<a href="/training?mode=script_practice&script_id=${scriptId}" class="btn btn-primary">Practice Again</a>` : `<button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>`}
                     </div>
                 </div>
             `;

@@ -147,6 +147,9 @@
 
         let editingScriptId = null;
         const MAX_CHARS = 100000;
+        let masteryData = {};
+        const MASTERY_LABELS = ['Full Read', 'Light Recall', 'Building Memory', 'Deep Recall', 'Near Mastery', 'Full Mastery'];
+        const MASTERY_COLORS = ['var(--border-color)', 'var(--accent-amber)', 'var(--accent-amber)', 'var(--accent-cyan)', 'var(--accent-blue)', 'var(--accent-green)'];
 
         // Drag & drop
         const uploadArea = document.getElementById('uploadArea');
@@ -168,7 +171,11 @@
 
         async function loadScripts() {
             try {
-                const data = await API.getScripts();
+                const [data, mastery] = await Promise.all([
+                    API.getScripts(),
+                    API.getScriptMastery().catch(() => ({})),
+                ]);
+                masteryData = mastery || {};
                 const scripts = data.scripts || [];
                 const container = document.getElementById('scriptList');
 
@@ -182,23 +189,47 @@
                     return;
                 }
 
-                container.innerHTML = scripts.map(s => `
-                    <div class="script-card">
-                        <div class="script-info">
-                            <h3>${escapeHtml(s.name)}</h3>
-                            <div class="meta">
-                                ${(s.char_count || 0).toLocaleString()} characters
-                                | ${s.source === 'paste' ? 'Pasted' : 'Uploaded'}
-                                | ${formatDate(s.created_at)}
+                container.innerHTML = scripts.map(s => {
+                    const m = masteryData[s.id];
+                    const level = m ? m.mastery_level : 0;
+                    const count = m ? m.practice_count : 0;
+                    const label = MASTERY_LABELS[level];
+                    const color = MASTERY_COLORS[level];
+                    const pct = (level / 5) * 100;
+
+                    const masteryHtml = count > 0 ? `
+                        <div style="margin-top:0.5rem;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+                                <span style="font-size:0.72rem;font-weight:600;color:${color};">Level ${level} — ${label}</span>
+                                <span style="font-size:0.7rem;color:var(--text-muted);">${count} session${count !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="height:4px;background:var(--bg-primary);border-radius:2px;overflow:hidden;">
+                                <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width 0.3s;"></div>
                             </div>
                         </div>
-                        <div class="script-actions">
-                            <a href="/training?mode=script_practice&script_id=${s.id}" class="btn btn-primary" style="font-size:0.85rem;padding:0.5rem 1rem;">Practice</a>
-                            <button class="btn btn-secondary" style="font-size:0.85rem;padding:0.5rem 0.75rem;" onclick="editScript('${s.id}')">Edit</button>
-                            <button class="btn btn-secondary" style="font-size:0.85rem;padding:0.5rem 0.75rem;color:var(--accent-red);" onclick="deleteScript('${s.id}', '${escapeHtml(s.name)}')">Delete</button>
+                    ` : '';
+
+                    return `
+                        <div class="script-card" style="flex-direction:column;align-items:stretch;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div class="script-info">
+                                    <h3>${escapeHtml(s.name)}</h3>
+                                    <div class="meta">
+                                        ${(s.char_count || 0).toLocaleString()} characters
+                                        | ${s.source === 'paste' ? 'Pasted' : 'Uploaded'}
+                                        | ${formatDate(s.created_at)}
+                                    </div>
+                                </div>
+                                <div class="script-actions">
+                                    <a href="/training?mode=script_practice&script_id=${s.id}" class="btn btn-primary" style="font-size:0.85rem;padding:0.5rem 1rem;">Practice</a>
+                                    <button class="btn btn-secondary" style="font-size:0.85rem;padding:0.5rem 0.75rem;" onclick="editScript('${s.id}')">Edit</button>
+                                    <button class="btn btn-secondary" style="font-size:0.85rem;padding:0.5rem 0.75rem;color:var(--accent-red);" onclick="deleteScript('${s.id}', '${escapeHtml(s.name)}')">Delete</button>
+                                </div>
+                            </div>
+                            ${masteryHtml}
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (err) {
                 console.error('Error loading scripts:', err);
             }

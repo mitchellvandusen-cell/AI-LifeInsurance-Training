@@ -290,6 +290,23 @@ async def init_schema():
         );
         CREATE INDEX IF NOT EXISTS idx_user_scripts_user ON user_scripts(user_id);
 
+        -- SCRIPT MASTERY (tracks per-script practice progress)
+        CREATE TABLE IF NOT EXISTS script_mastery (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            script_id       UUID NOT NULL,
+            practice_count  INTEGER NOT NULL DEFAULT 0,
+            mastery_level   INTEGER NOT NULL DEFAULT 0,
+            best_naturalness  REAL DEFAULT 0,
+            best_confidence   REAL DEFAULT 0,
+            best_recovery     REAL DEFAULT 0,
+            last_practiced_at TIMESTAMPTZ,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(user_id, script_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_script_mastery_user ON script_mastery(user_id);
+
         -- UPDATED_AT TRIGGER FUNCTION
         CREATE OR REPLACE FUNCTION update_updated_at()
         RETURNS TRIGGER AS $$
@@ -305,6 +322,7 @@ async def init_schema():
         ("trg_training_subs_updated", "training_subscriptions"),
         ("trg_training_settings_updated", "training_settings"),
         ("trg_user_scripts_updated", "user_scripts"),
+        ("trg_script_mastery_updated", "script_mastery"),
     ]
     for trig_name, table_name in triggers:
         exists = await pool.fetchval(
@@ -1107,3 +1125,74 @@ async def delete_user_script(user_id: str, script_id: str) -> bool:
         uuid.UUID(script_id), uuid.UUID(user_id),
     )
     return result.endswith("1")
+
+
+# ══════════════════════════════════════════════════════════════
+# SCRIPT MASTERY TRACKING
+# ══════════════════════════════════════════════════════════════
+
+def _mastery_level_from_count(practice_count: int) -> int:
+    """Calculate mastery level from practice session count.
+    Level 0: sessions 1-2  (full script visible)
+    Level 1: sessions 3-4  (~20% words blanked)
+    Level 2: sessions 5-6  (~40% blanked)
+    Level 3: sessions 7-8  (~60% blanked)
+    Level 4: sessions 9-10 (~80% blanked)
+    Level 5: sessions 11+  (full recall — script hidden)
+    """
+    if practice_count <= 2:
+        return 0
+    elif practice_count <= 4:
+        return 1
+    elif practice_count <= 6:
+        return 2
+    elif practice_count <= 8:
+        return 3
+    elif practice_count <= 10:
+        return 4
+    else:
+        return 5
+
+
+async def get_script_mastery(user_id: str, script_id: str) -> dict | None:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """SELECT * FROM script_mastery
+           WHERE user_id = $1 AND script_id = $2""",
+        uuid.UUID(user_id), uuid.UUID(script_id),
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def get_all_script_mastery(user_id: str) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """SELECT * FROM script_mastery WHERE user_id = $1""",
+        uuid.UUID(user_id),
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+async def increment_script_mastery(user_id: str, script_id: str) -> dict:
+    """Increment practice count and recalculate mastery level after a session."""
+    pool = await get_pool()
+    # Upsert: insert or increment
+    row = await pool.fetchrow(
+        """INSERT INTO script_mastery (user_id, script_id, practice_count, mastery_level, last_practiced_at)
+           VALUES ($1, $2, 1, 0, NOW())
+           ON CONFLICT (user_id, script_id) DO UPDATE
+           SET practice_count = script_mastery.practice_count + 1,
+               last_practiced_at = NOW()
+           RETURNING *""",
+        uuid.UUID(user_id), uuid.UUID(script_id),
+    )
+    result = _row_to_dict(row)
+    # Recalculate mastery level
+    new_level = _mastery_level_from_count(result["practice_count"])
+    if new_level != result["mastery_level"]:
+        await pool.execute(
+            "UPDATE script_mastery SET mastery_level = $1 WHERE id = $2",
+            new_level, row["id"],
+        )
+        result["mastery_level"] = new_level
+    return result

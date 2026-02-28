@@ -207,6 +207,9 @@ const API = {
     async deleteScript(scriptId) {
         return this.request('DELETE', `/api/modules/scripts/${scriptId}`);
     },
+    async getScriptMastery() {
+        return this.get('/api/modules/scripts/mastery');
+    },
     async uploadScriptFile(file, name = '') {
         const formData = new FormData();
         formData.append('file', file);
