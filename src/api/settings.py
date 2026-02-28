@@ -27,7 +27,7 @@ class ConnectDialerRequest(BaseModel):
     connection_code: str
 
 
-@router.get("/")
+@router.get("")
 async def get_settings(request: Request):
     user = get_current_user(request)
     settings = await db.get_settings(user["user_id"])
@@ -36,7 +36,7 @@ async def get_settings(request: Request):
     return settings
 
 
-@router.post("/")
+@router.post("")
 async def update_settings(req: UpdateSettingsRequest, request: Request):
     user = get_current_user(request)
     updates = {k: v for k, v in req.model_dump().items() if v is not None}
