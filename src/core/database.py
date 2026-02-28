@@ -307,6 +307,20 @@ async def init_schema():
         );
         CREATE INDEX IF NOT EXISTS idx_script_mastery_user ON script_mastery(user_id);
 
+        -- MODULE MASTERY (tracks per-module practice progress)
+        CREATE TABLE IF NOT EXISTS module_mastery (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL,
+            module_key      TEXT NOT NULL,
+            practice_count  INTEGER NOT NULL DEFAULT 0,
+            mastery_level   INTEGER NOT NULL DEFAULT 0,
+            last_practiced_at TIMESTAMPTZ,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(user_id, module_key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_module_mastery_user ON module_mastery(user_id);
+
         -- UPDATED_AT TRIGGER FUNCTION
         CREATE OR REPLACE FUNCTION update_updated_at()
         RETURNS TRIGGER AS $$
@@ -323,6 +337,7 @@ async def init_schema():
         ("trg_training_settings_updated", "training_settings"),
         ("trg_user_scripts_updated", "user_scripts"),
         ("trg_script_mastery_updated", "script_mastery"),
+        ("trg_module_mastery_updated", "module_mastery"),
     ]
     for trig_name, table_name in triggers:
         exists = await pool.fetchval(
@@ -1131,24 +1146,39 @@ async def delete_user_script(user_id: str, script_id: str) -> bool:
 # SCRIPT MASTERY TRACKING
 # ══════════════════════════════════════════════════════════════
 
-def _mastery_level_from_count(practice_count: int) -> int:
-    """Calculate mastery level from practice session count.
-    Level 0: sessions 1-2  (full script visible)
-    Level 1: sessions 3-4  (~20% words blanked)
-    Level 2: sessions 5-6  (~40% blanked)
-    Level 3: sessions 7-8  (~60% blanked)
-    Level 4: sessions 9-10 (~80% blanked)
-    Level 5: sessions 11+  (full recall — script hidden)
+def _script_sessions_per_level(char_count: int) -> int:
+    """How many sessions per mastery level, scaled by script length.
+    Short scripts (<5K):  4 sessions per level  → 20 sessions to level 5
+    Medium scripts (5-15K): 7 sessions per level → 35 sessions to level 5
+    Long scripts (15K+):  10 sessions per level  → 50 sessions to level 5
     """
-    if practice_count <= 2:
+    if char_count < 5000:
+        return 4
+    elif char_count < 15000:
+        return 7
+    else:
+        return 10
+
+
+def _script_mastery_level(practice_count: int, char_count: int) -> int:
+    """Calculate mastery level from practice count, scaled by script length.
+    Level 0: Full Read       (no blanking)
+    Level 1: Light Recall    (10% blanked)
+    Level 2: Building Memory (25% blanked)
+    Level 3: Deep Recall     (40% blanked)
+    Level 4: Near Mastery    (60% blanked)
+    Level 5: Full Mastery    (80% blanked — anchor words remain)
+    """
+    per_level = _script_sessions_per_level(char_count)
+    if practice_count < per_level:
         return 0
-    elif practice_count <= 4:
+    elif practice_count < per_level * 2:
         return 1
-    elif practice_count <= 6:
+    elif practice_count < per_level * 3:
         return 2
-    elif practice_count <= 8:
+    elif practice_count < per_level * 4:
         return 3
-    elif practice_count <= 10:
+    elif practice_count < per_level * 5:
         return 4
     else:
         return 5
@@ -1157,20 +1187,40 @@ def _mastery_level_from_count(practice_count: int) -> int:
 async def get_script_mastery(user_id: str, script_id: str) -> dict | None:
     pool = await get_pool()
     row = await pool.fetchrow(
-        """SELECT * FROM script_mastery
-           WHERE user_id = $1 AND script_id = $2""",
+        """SELECT sm.*, us.char_count
+           FROM script_mastery sm
+           JOIN user_scripts us ON us.id = sm.script_id
+           WHERE sm.user_id = $1 AND sm.script_id = $2""",
         uuid.UUID(user_id), uuid.UUID(script_id),
     )
-    return _row_to_dict(row) if row else None
+    if not row:
+        return None
+    result = _row_to_dict(row)
+    # Recalculate level with char_count awareness
+    result["mastery_level"] = _script_mastery_level(
+        result["practice_count"], result.get("char_count", 5000)
+    )
+    return result
 
 
 async def get_all_script_mastery(user_id: str) -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
-        """SELECT * FROM script_mastery WHERE user_id = $1""",
+        """SELECT sm.*, us.char_count
+           FROM script_mastery sm
+           JOIN user_scripts us ON us.id = sm.script_id
+           WHERE sm.user_id = $1""",
         uuid.UUID(user_id),
     )
-    return [_row_to_dict(r) for r in rows]
+    results = []
+    for r in rows:
+        d = _row_to_dict(r)
+        d["mastery_level"] = _script_mastery_level(
+            d["practice_count"], d.get("char_count", 5000)
+        )
+        d["sessions_per_level"] = _script_sessions_per_level(d.get("char_count", 5000))
+        results.append(d)
+    return results
 
 
 async def increment_script_mastery(user_id: str, script_id: str) -> dict:
@@ -1187,12 +1237,98 @@ async def increment_script_mastery(user_id: str, script_id: str) -> dict:
         uuid.UUID(user_id), uuid.UUID(script_id),
     )
     result = _row_to_dict(row)
-    # Recalculate mastery level
-    new_level = _mastery_level_from_count(result["practice_count"])
+    # Get char_count for level calculation
+    script_row = await pool.fetchrow(
+        "SELECT char_count FROM user_scripts WHERE id = $1",
+        uuid.UUID(script_id),
+    )
+    char_count = script_row["char_count"] if script_row else 5000
+    new_level = _script_mastery_level(result["practice_count"], char_count)
     if new_level != result["mastery_level"]:
         await pool.execute(
             "UPDATE script_mastery SET mastery_level = $1 WHERE id = $2",
             new_level, row["id"],
         )
-        result["mastery_level"] = new_level
+    result["mastery_level"] = new_level
+    result["char_count"] = char_count
+    result["sessions_per_level"] = _script_sessions_per_level(char_count)
+    return result
+
+
+# ══════════════════════════════════════════════════════════════
+# MODULE MASTERY TRACKING (all modules except script_practice)
+# ══════════════════════════════════════════════════════════════
+
+# Module-specific mastery thresholds — more complex skills need more sessions
+# Each list is [level_1_at, level_2_at, level_3_at, level_4_at, level_5_at]
+_MODULE_MASTERY_THRESHOLDS = {
+    "tonality_mastery":    [3, 7, 12, 18, 25],   # 25 sessions — 8 tones, progressive
+    "question_mastery":    [3, 8, 14, 21, 30],   # 30 sessions — NEPQ, SPIN, Sandler, Voss
+    "objection_handling":  [4, 9, 16, 24, 33],   # 33 sessions — isolation + multiple frameworks
+    "rapport_building":    [3, 7, 12, 18, 25],   # 25 sessions — Voss techniques + discovery
+    "preframing_control":  [4, 10, 18, 27, 37],  # 37 sessions — preframing + Wilde NLP + reframing
+}
+_DEFAULT_THRESHOLDS = [3, 7, 12, 18, 25]
+
+
+def _module_mastery_level(practice_count: int, module_key: str = "") -> int:
+    """Calculate module mastery level from session count.
+    Each module has its own progression curve based on complexity.
+    More advanced skills (objection handling, preframing/Wilde NLP) take more sessions.
+    """
+    thresholds = _MODULE_MASTERY_THRESHOLDS.get(module_key, _DEFAULT_THRESHOLDS)
+    for level, threshold in enumerate(thresholds):
+        if practice_count <= threshold:
+            return level
+    return 5
+
+
+async def get_module_mastery(user_id: str, module_key: str) -> dict | None:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """SELECT * FROM module_mastery
+           WHERE user_id = $1 AND module_key = $2""",
+        uuid.UUID(user_id), module_key,
+    )
+    if not row:
+        return None
+    result = _row_to_dict(row)
+    result["mastery_level"] = _module_mastery_level(result["practice_count"], module_key)
+    return result
+
+
+async def get_all_module_mastery(user_id: str) -> list[dict]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        "SELECT * FROM module_mastery WHERE user_id = $1",
+        uuid.UUID(user_id),
+    )
+    results = []
+    for r in rows:
+        d = _row_to_dict(r)
+        d["mastery_level"] = _module_mastery_level(d["practice_count"], d.get("module_key", ""))
+        results.append(d)
+    return results
+
+
+async def increment_module_mastery(user_id: str, module_key: str) -> dict:
+    """Increment practice count for a module and recalculate mastery level."""
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        """INSERT INTO module_mastery (user_id, module_key, practice_count, mastery_level, last_practiced_at)
+           VALUES ($1, $2, 1, 0, NOW())
+           ON CONFLICT (user_id, module_key) DO UPDATE
+           SET practice_count = module_mastery.practice_count + 1,
+               last_practiced_at = NOW()
+           RETURNING *""",
+        uuid.UUID(user_id), module_key,
+    )
+    result = _row_to_dict(row)
+    new_level = _module_mastery_level(result["practice_count"], module_key)
+    if new_level != result["mastery_level"]:
+        await pool.execute(
+            "UPDATE module_mastery SET mastery_level = $1 WHERE id = $2",
+            new_level, row["id"],
+        )
+    result["mastery_level"] = new_level
     return result

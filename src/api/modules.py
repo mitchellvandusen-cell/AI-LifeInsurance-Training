@@ -108,10 +108,13 @@ async def start_module_session(req: StartModuleRequest, request: Request):
 
     voice = req.voice or "Sal"
 
-    # For script_practice, load the script content + mastery data into session state
+    # Load mastery data for adaptive difficulty
     session_state = {}
     mastery_data = None
+    script = None
+
     if req.module_key == "script_practice" and req.script_id:
+        # Script practice: load script content + script-specific mastery
         script = await db.get_user_script(user_id, req.script_id)
         if not script:
             raise HTTPException(status_code=404, detail="Script not found")
@@ -119,8 +122,20 @@ async def start_module_session(req: StartModuleRequest, request: Request):
         session_state["script_name"] = script["name"]
         session_state["script_id"] = req.script_id
 
-        # Load mastery progress for adaptive difficulty
         mastery = await db.get_script_mastery(user_id, req.script_id)
+        practice_count = mastery["practice_count"] if mastery else 0
+        mastery_level = mastery["mastery_level"] if mastery else 0
+        sessions_per_level = mastery.get("sessions_per_level", 10) if mastery else 10
+        session_state["practice_count"] = practice_count
+        session_state["mastery_level"] = mastery_level
+        mastery_data = {
+            "practice_count": practice_count,
+            "mastery_level": mastery_level,
+            "sessions_per_level": sessions_per_level,
+        }
+    else:
+        # All other modules: load module-level mastery
+        mastery = await db.get_module_mastery(user_id, req.module_key)
         practice_count = mastery["practice_count"] if mastery else 0
         mastery_level = mastery["mastery_level"] if mastery else 0
         session_state["practice_count"] = practice_count
@@ -148,15 +163,15 @@ async def start_module_session(req: StartModuleRequest, request: Request):
     }
 
     module_info = AVAILABLE_MODULES[req.module_key]
-    print(f"[MODULE] Started: {session_record['id']} | {module_info['name']} | voice={voice}")
+    print(f"[MODULE] Started: {session_record['id']} | {module_info['name']} | voice={voice} | level={mastery_level}")
 
     response = {
         "session_id": session_record["id"],
         "module": module_info,
         "voice": voice,
+        "mastery": mastery_data,
     }
-    if mastery_data is not None:
-        response["mastery"] = mastery_data
+    if script:
         response["script_content"] = script["content"]
         response["script_name"] = script["name"]
     return response
@@ -348,12 +363,23 @@ async def end_module_session(session_id: str, request: Request):
         billed_from=billed_from,
     )
 
-    # Increment script mastery if this was a script practice session
+    # Increment mastery
     mastery_data = None
     state = session.get("session_state", {})
-    if session["module_key"] == "script_practice" and state.get("script_id"):
+    module_key = session["module_key"]
+
+    if module_key == "script_practice" and state.get("script_id"):
         mastery = await db.increment_script_mastery(
             user["user_id"], state["script_id"]
+        )
+        mastery_data = {
+            "practice_count": mastery["practice_count"],
+            "mastery_level": mastery["mastery_level"],
+            "sessions_per_level": mastery.get("sessions_per_level", 10),
+        }
+    else:
+        mastery = await db.increment_module_mastery(
+            user["user_id"], module_key
         )
         mastery_data = {
             "practice_count": mastery["practice_count"],
@@ -364,12 +390,11 @@ async def end_module_session(session_id: str, request: Request):
 
     response = {
         "session_id": session_id,
-        "module_key": session["module_key"],
+        "module_key": module_key,
         "duration_seconds": duration_seconds,
         "billed_minutes": billed_minutes,
+        "mastery": mastery_data,
     }
-    if mastery_data:
-        response["mastery"] = mastery_data
     return response
 
 
@@ -383,6 +408,14 @@ async def get_module_history(request: Request, module_key: str = None, limit: in
 
 
 # ── Script Mastery ────────────────────────────────────────────
+
+@router.get("/mastery")
+async def get_all_mastery(request: Request):
+    """Get mastery data for all modules belonging to the current user."""
+    user = get_current_user(request)
+    records = await db.get_all_module_mastery(user["user_id"])
+    return {r["module_key"]: r for r in records}
+
 
 @router.get("/scripts/mastery")
 async def get_all_script_mastery(request: Request):

@@ -210,6 +210,9 @@ const API = {
     async getScriptMastery() {
         return this.get('/api/modules/scripts/mastery');
     },
+    async getModuleMastery() {
+        return this.get('/api/modules/mastery');
+    },
     async uploadScriptFile(file, name = '') {
         const formData = new FormData();
         formData.append('file', file);
