@@ -143,6 +143,24 @@
             </div>
         </div>
 
+        <!-- Change Password -->
+        <div class="settings-section">
+            <h3>Change Password</h3>
+            <div id="passwordFields" style="display:none;">
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-input" id="newPassword" placeholder="Enter new password">
+                </div>
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-input" id="confirmPassword" placeholder="Confirm new password">
+                </div>
+                <button class="btn btn-primary" onclick="savePassword()" id="savePasswordBtn">Save Password</button>
+                <button class="btn" style="margin-left:0.5rem;" onclick="togglePasswordFields()">Cancel</button>
+            </div>
+            <button class="btn btn-primary" id="changePasswordBtn" onclick="togglePasswordFields()">Change Password</button>
+        </div>
+
         <button class="btn btn-primary" onclick="saveSettings()">Save Changes</button>
     </main>
 
@@ -230,6 +248,36 @@
                 });
                 showToast('Settings saved', 'success');
             } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        function togglePasswordFields() {
+            const fields = document.getElementById('passwordFields');
+            const btn = document.getElementById('changePasswordBtn');
+            const showing = fields.style.display !== 'none';
+            fields.style.display = showing ? 'none' : 'block';
+            btn.style.display = showing ? '' : 'none';
+            if (!showing) {
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            }
+        }
+
+        async function savePassword() {
+            const newPw = document.getElementById('newPassword').value;
+            const confirmPw = document.getElementById('confirmPassword').value;
+            if (!newPw || !confirmPw) { showToast('Please fill in both fields', 'error'); return; }
+            if (newPw !== confirmPw) { showToast('Passwords do not match', 'error'); return; }
+            if (newPw.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+            try {
+                document.getElementById('savePasswordBtn').disabled = true;
+                await API.post('/api/auth/change-password', { new_password: newPw, confirm_password: confirmPw });
+                showToast('Password changed successfully', 'success');
+                togglePasswordFields();
+            } catch (err) {
+                showToast(err.message || 'Failed to change password', 'error');
+            } finally {
+                document.getElementById('savePasswordBtn').disabled = false;
+            }
         }
 
         loadSettings();

@@ -25,6 +25,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+    confirm_password: str
+
+
 def _hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -93,6 +98,18 @@ async def login(req: LoginRequest, response: Response):
         "user": {"id": str(user["id"]), "email": user["email"], "name": user.get("name", "")},
         "token": token,
     }
+
+
+@router.post("/change-password")
+async def change_password(req: ChangePasswordRequest, request: Request):
+    user = get_current_user(request)
+    if req.new_password != req.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+    if len(req.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    password_hash = _hash_password(req.new_password)
+    await db.update_password(user["user_id"], password_hash)
+    return {"ok": True}
 
 
 @router.post("/logout")

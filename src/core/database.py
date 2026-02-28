@@ -346,6 +346,14 @@ async def create_user(email: str, password_hash: str, name: str) -> dict:
     return {"id": str(user_id), "email": email, "name": name}
 
 
+async def update_password(user_id: str, password_hash: str):
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE users SET password_hash = $1 WHERE id = $2",
+        password_hash, uuid.UUID(user_id),
+    )
+
+
 # ══════════════════════════════════════════════════════════════
 # SUBSCRIPTION OPERATIONS
 # ══════════════════════════════════════════════════════════════
