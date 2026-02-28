@@ -233,6 +233,7 @@ async def init_schema():
             preferred_voice TEXT DEFAULT 'Sal',
             auto_import_recordings BOOLEAN DEFAULT FALSE,
             grokbot_account_linked BOOLEAN DEFAULT FALSE,
+            dialer_connection_code TEXT,
             grokbot_api_key        TEXT,
             twilio_account_sid     TEXT,
             twilio_auth_token      TEXT,
