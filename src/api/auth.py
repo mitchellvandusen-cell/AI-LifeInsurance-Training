@@ -76,11 +76,23 @@ async def register(req: RegisterRequest, response: Response):
 
 @router.post("/login")
 async def login(req: LoginRequest, response: Response):
+    import logging
+    logger = logging.getLogger(__name__)
+
     user = await db.get_user_by_email(req.email)
     if not user:
+        logger.error(f"Login failed: no user found for email={req.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not _verify_password(req.password, user["password_hash"]):
+    logger.error(f"Login attempt: email={req.email}, hash_len={len(user['password_hash'])}, hash_preview={user['password_hash'][:20]}...")
+    try:
+        pw_ok = _verify_password(req.password, user["password_hash"])
+    except Exception as e:
+        logger.error(f"Password verification error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not pw_ok:
+        logger.error(f"Login failed: password mismatch for email={req.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_token(str(user["id"]), user["email"])
