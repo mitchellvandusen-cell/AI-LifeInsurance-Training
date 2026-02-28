@@ -164,6 +164,8 @@ def main():
         host=config.host,
         port=config.port,
         reload=config.debug,
+        ws_ping_interval=20,   # Send WS ping every 20s to keep connection alive through proxies
+        ws_ping_timeout=30,    # Wait up to 30s for pong before closing
     )
 
 

@@ -241,10 +241,23 @@ async def module_websocket(websocket: WebSocket, session_id: str):
                 pass
         await voice_session.receive_events(send_to_browser)
 
+    async def keepalive_ping():
+        """Send periodic heartbeat pings to prevent proxy/LB idle timeouts."""
+        try:
+            while True:
+                await asyncio.sleep(15)
+                try:
+                    await websocket.send_json({"type": "ping"})
+                except Exception:
+                    break
+        except asyncio.CancelledError:
+            pass
+
     try:
         # Start both listener tasks FIRST so they are ready to receive events
         browser_task = asyncio.create_task(browser_to_xai())
         xai_task = asyncio.create_task(xai_to_browser())
+        ping_task = asyncio.create_task(keepalive_ping())
 
         # Small yield to let the xai_to_browser listener attach before triggering
         await asyncio.sleep(0.05)
@@ -262,6 +275,7 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         )
         for task in pending:
             task.cancel()
+        ping_task.cancel()
     except Exception as e:
         logger.error(f"[MODULE][{session_id}] Bridge error: {e}")
     finally:

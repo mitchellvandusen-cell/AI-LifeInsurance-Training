@@ -318,9 +318,22 @@ async def training_websocket(websocket: WebSocket, session_id: str):
 
     # Run both bridges concurrently — FIRST_COMPLETED is correct here:
     # when either side disconnects, we tear down the other side
+    async def keepalive_ping():
+        """Send periodic heartbeat pings to prevent proxy/LB idle timeouts."""
+        try:
+            while True:
+                await asyncio.sleep(15)
+                try:
+                    await websocket.send_json({"type": "ping"})
+                except Exception:
+                    break
+        except asyncio.CancelledError:
+            pass
+
     try:
         browser_task = asyncio.create_task(browser_to_xai(), name="browser_to_xai")
         xai_task = asyncio.create_task(xai_to_browser(), name="xai_to_browser")
+        ping_task = asyncio.create_task(keepalive_ping(), name="keepalive_ping")
 
         done, pending = await asyncio.wait(
             [browser_task, xai_task],
@@ -338,6 +351,7 @@ async def training_websocket(websocket: WebSocket, session_id: str):
         for task in pending:
             print(f"[WS][{session_id}] Cancelling {task.get_name()}")
             task.cancel()
+        ping_task.cancel()
 
     except Exception as e:
         print(f"[WS][{session_id}] Bridge error: {e}")

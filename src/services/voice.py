@@ -85,7 +85,10 @@ class VoiceSession:
                 websockets.connect(
                     uri=XAI_WS_URL,
                     additional_headers={"Authorization": f"Bearer {XAI_API_KEY}"},
-                    max_size=None,  # No limit on message size for audio
+                    max_size=None,       # No limit on message size for audio
+                    ping_interval=20,    # Send ping every 20s to keep connection alive
+                    ping_timeout=10,     # Wait 10s for pong before considering dead
+                    close_timeout=5,
                 ),
                 timeout=15,
             )
@@ -328,6 +331,14 @@ class VoiceSession:
 
         except websockets.exceptions.ConnectionClosed as e:
             logger.warning("[%s] xAI connection closed: code=%s, reason=%s", self.session_id, e.code, e.reason)
+            # Signal to browser that the voice backend dropped
+            try:
+                await send_to_browser({
+                    "type": "error",
+                    "message": "Voice connection lost. Please end the session and try again.",
+                })
+            except Exception:
+                pass
         except Exception as e:
             logger.error("[%s] Error in receive loop: %s", self.session_id, e, exc_info=True)
         finally:
