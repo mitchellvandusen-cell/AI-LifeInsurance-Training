@@ -166,9 +166,9 @@ TRAINING_MODULES = {
             "reframe resistance using NLP language patterns. Master Belfort's frame "
             "control, Eli Wilde's Interiority and NLP frames (Sleight of Mouth, Belief "
             "Shifting, Buying State, Ascension Agreements, Identity Shift, Irresistible "
-            "Future Formula), Sandler's upfront contracts, Cialdini's Consistency and "
-            "Authority principles, compliance ladder psychology, and Nudge Theory "
-            "(Thaler) for choice architecture."
+            "Future Formula), Chase Hughes' Identity Frames and 6-Axis Influence, "
+            "Sandler's upfront contracts, Cialdini's Consistency and Authority principles, "
+            "compliance ladder psychology, and Nudge Theory (Thaler)."
         ),
         "skills_taught": [
             "Preframing sensitive requests — banking, SSN, medical (Belfort)",
@@ -184,6 +184,8 @@ TRAINING_MODULES = {
             "Buying State (Wilde) — state-dependent decisions driven by emotional engagement",
             "Identity Shift (Wilde) — help the prospect see themselves as someone who takes action",
             "Irresistible Future Formula (Wilde) — paint a vivid future that creates natural urgency",
+            "Chase Hughes Identity Frames — shift the prospect's self-concept through conversational framing",
+            "Chase Hughes 6-Axis Influence — Authority, Rapport, Reciprocity, Social Proof, Urgency, Commitment",
             "Cialdini's Consistency/Commitment — compliance ladder building",
             "Cialdini's Authority projection — lead, don't follow",
             "Brehm's Reactance awareness — preframing prevents resistance",
@@ -202,6 +204,86 @@ TRAINING_MODULES = {
             "Did the agent create a buying state through emotional engagement (not just logic)?",
             "Were ascension agreements used to deepen commitment at key checkpoints?",
             "Did the agent paint an irresistible future tied to the prospect's specific goals?",
+        ],
+    },
+
+    "behavioral_profiling": {
+        "name": "Behavioral Profiling & Influence",
+        "description": (
+            "Master Chase Hughes' behavioral science frameworks for reading people and "
+            "ethically influencing decisions. Learn the Behavioral Table for compliance "
+            "signals, the 6-Axis Model of Influence, the FATE Model, Authority Ladder, "
+            "Identity Framing, and the Compliance Gaining Sequence. Combined with the "
+            "psychology of trust (Sapolsky), persuasion (Cialdini), and decision-making "
+            "(Kahneman) to read prospects and adapt in real time."
+        ),
+        "skills_taught": [
+            "Chase Hughes Behavioral Table — reading compliance, resistance, and deception signals",
+            "6-Axis Model of Influence (Hughes) — Authority, Rapport, Reciprocity, Social Proof, Urgency, Commitment",
+            "FATE Model (Hughes) — Focus, Authority, Tribe, Emotion for behavioral influence",
+            "Authority Ladder (Hughes) — building perceived authority step by step",
+            "Identity Framing (Hughes) — shifting the prospect's self-concept through conversation",
+            "Compliance Gaining Sequence (Hughes) — the specific order of influence techniques",
+            "Behavioral Baselines — reading deviations from normal vocal behavior",
+            "Micro-expressions and vocal cues — detecting hesitation, interest, and deception",
+            "OCEAN/Big Five personality profiling — adapting approach to personality type",
+            "DISC behavioral model — Dominance, Influence, Steadiness, Conscientiousness",
+            "Cialdini's 7 Principles applied to behavioral profiling",
+            "Kahneman's System 1/System 2 — knowing which system you're speaking to",
+            "Sapolsky's neurochemistry of trust — oxytocin, cortisol, dopamine in sales",
+            "Ethical influence vs manipulation — maintaining integrity in persuasion",
+        ],
+        "measurement": [
+            "Can the agent identify the prospect's behavioral baseline?",
+            "Does the agent adapt approach based on behavioral signals?",
+            "Is the agent building authority systematically (not randomly)?",
+            "Does the agent read compliance signals and advance when appropriate?",
+            "Does the agent detect resistance signals and adjust before objections surface?",
+            "Can the agent identify personality type and adapt communication style?",
+            "Does the agent use identity framing ethically and effectively?",
+        ],
+    },
+
+    "mindset_mastery": {
+        "name": "Mindset & Confidence Mastery",
+        "description": (
+            "Build the unshakeable mindset of a top 1% closer. Combine Grant Cardone's "
+            "10X Rule and massive action, Andy Elliott's savage sales mindset and killer "
+            "instinct, Tony Robbins' state management and peak performance, David Goggins' "
+            "mental toughness and callusing the mind, Napoleon Hill's autosuggestion and "
+            "burning desire, and Carol Dweck's growth mindset. Transform fear, rejection, "
+            "and self-doubt into fuel for relentless action."
+        ),
+        "skills_taught": [
+            "Grant Cardone 10X Rule — 10X your goals AND 10X your effort",
+            "Cardone's Massive Action — the fourth degree of action beyond normal",
+            "Cardone's 'Sell or Be Sold' — someone is always being sold in every interaction",
+            "Andy Elliott's Savage Sales Mindset — killer instinct and wolf mentality",
+            "Elliott's rejection as fuel — using 'no' as motivation to sharpen skills",
+            "Elliott's morning routine — cold showers, affirmations, visualization, attack mode",
+            "Tony Robbins' State Management — physiology drives psychology (peak state)",
+            "Robbins' Incantations — embodied affirmations with full physiology",
+            "Robbins' Triad: Focus, Language, Physiology — the three levers of state",
+            "David Goggins' Mental Toughness — callusing the mind through voluntary discomfort",
+            "Goggins' 40% Rule — when you think you're done, you're only at 40%",
+            "Goggins' Accountability Mirror — radical honesty about weaknesses",
+            "Napoleon Hill's Autosuggestion — programming the subconscious for success",
+            "Hill's Burning Desire — the starting point of all achievement",
+            "Hill's Mastermind Principle — the power of aligned minds working together",
+            "Carol Dweck's Growth Mindset — effort and practice create mastery, failure is feedback",
+            "Viktor Frankl's Purpose — meaning drives resilience in any circumstance",
+            "Daily confidence building routines and rituals",
+            "Overcoming call reluctance and fear of rejection",
+            "Building unshakeable conviction in your product and process",
+        ],
+        "measurement": [
+            "Does the agent project confidence and conviction on the phone?",
+            "Can the agent recover quickly from rejection without losing energy?",
+            "Does the agent take massive action (Cardone) or make excuses?",
+            "Does the agent have a morning routine that primes peak state (Elliott/Robbins)?",
+            "Can the agent articulate WHY they believe in their product (conviction)?",
+            "Does the agent embrace discomfort as growth (Goggins)?",
+            "Does the agent treat failure as feedback (Dweck)?",
         ],
     },
 

@@ -37,6 +37,8 @@ def build_module_prompt(module_key: str, session_state: dict | None = None) -> s
         "objection_handling": _build_objection_prompt,
         "rapport_building": _build_rapport_prompt,
         "preframing_control": _build_preframing_prompt,
+        "behavioral_profiling": _build_behavioral_prompt,
+        "mindset_mastery": _build_mindset_prompt,
         "script_practice": _build_script_practice_prompt,
     }
     builder = builders.get(module_key)
@@ -1734,6 +1736,30 @@ You already know:
   mind, of their family protected, of the worry lifted. When the future feels
   more real and desirable than the present, the gap between where they are and
   where they want to be creates natural urgency.
+
+**BEHAVIORAL FRAMING (Chase Hughes — The Ellipsis Manual, Six Minute X-Ray)**
+- **Identity Frames (Hughes)**: Chase Hughes teaches that the most powerful frame
+  is identity — not what you say about the product, but what you say about WHO
+  the prospect IS. "You're the kind of person who takes action when your family's
+  future is on the line." When the prospect accepts the identity frame, every
+  subsequent decision is filtered through that identity. An identity frame is
+  stronger than any logical argument because people act consistently with who they
+  believe they are.
+- **6-Axis Influence Model (Hughes)**: Authority, Rapport, Reciprocity, Social
+  Proof, Urgency, and Commitment — six axes of influence that work together. At any
+  point in the call, you should know which axis you are activating and why. A call
+  that activates all six axes is nearly impossible to resist. Hughes teaches that
+  most agents only use 1-2 axes (usually rapport and urgency). Elite agents use all six.
+- **Authority Ladder (Hughes)**: Authority is not claimed, it is BUILT through a
+  sequence of micro-demonstrations. Each step on the ladder increases perceived
+  authority: leading the conversation, showing expertise casually, making accurate
+  predictions about the prospect's situation, and demonstrating control of the process.
+  Hughes says the Authority Ladder must be climbed BEFORE any ask is made.
+- **Compliance Gaining Sequence (Hughes)**: A specific order of influence techniques
+  that maximizes compliance: establish rapport → build authority → create reciprocity
+  → introduce social proof → frame identity → establish urgency → gain commitment.
+  The sequence matters because each step primes the next. Skip a step and resistance
+  increases. Follow the sequence and compliance feels voluntary.
 
 ### SESSION STRUCTURE
 

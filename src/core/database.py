@@ -1262,11 +1262,13 @@ async def increment_script_mastery(user_id: str, script_id: str) -> dict:
 # Module-specific mastery thresholds — more complex skills need more sessions
 # Each list is [level_1_at, level_2_at, level_3_at, level_4_at, level_5_at]
 _MODULE_MASTERY_THRESHOLDS = {
-    "tonality_mastery":    [3, 7, 12, 18, 25],   # 25 sessions — 8 tones, progressive
-    "question_mastery":    [3, 8, 14, 21, 30],   # 30 sessions — NEPQ, SPIN, Sandler, Voss
-    "objection_handling":  [4, 9, 16, 24, 33],   # 33 sessions — isolation + multiple frameworks
-    "rapport_building":    [3, 7, 12, 18, 25],   # 25 sessions — Voss techniques + discovery
-    "preframing_control":  [4, 10, 18, 27, 37],  # 37 sessions — preframing + Wilde NLP + reframing
+    "tonality_mastery":      [3, 7, 12, 18, 25],   # 25 sessions — 8 tones, progressive
+    "question_mastery":      [3, 8, 14, 21, 30],   # 30 sessions — NEPQ, SPIN, Sandler, Voss
+    "objection_handling":    [4, 9, 16, 24, 33],   # 33 sessions — isolation + multiple frameworks
+    "rapport_building":      [3, 7, 12, 18, 25],   # 25 sessions — Voss techniques + discovery
+    "preframing_control":    [4, 10, 18, 27, 37],  # 37 sessions — preframing + Wilde NLP + Hughes
+    "behavioral_profiling":  [4, 10, 18, 28, 40],  # 40 sessions — Hughes behavioral science, deep
+    "mindset_mastery":       [3, 7, 12, 18, 25],   # 25 sessions — mindset is practice-based
 }
 _DEFAULT_THRESHOLDS = [3, 7, 12, 18, 25]
 
