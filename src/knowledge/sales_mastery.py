@@ -45,6 +45,16 @@ TRAINING_MODULES = {
             "Learn when, why, and how each tone works — grounded in Belfort's Straight Line, "
             "Voss's tactical empathy, and Mehrabian's vocal influence research."
         ),
+        "topics": [
+            {"name": "Belfort Power Tones", "anchor": "Jordan Belfort", "sessions": 3,
+             "focus": "Declarative, Absolute Certainty, and micro-tonality shifts within sentences"},
+            {"name": "Voss De-escalation Voice", "anchor": "Chris Voss", "sessions": 2,
+             "focus": "Late-Night FM DJ, tactical empathy tone, and the Reasonable Man"},
+            {"name": "Scarcity & Urgency Tone", "anchor": "Cialdini / Belfort", "sessions": 2,
+             "focus": "Scarcity whisper, strategic pause, and urgency without pressure"},
+            {"name": "Question Inflection", "anchor": "Mehrabian / Miner", "sessions": 2,
+             "focus": "Upward inflection for discovery, calibrated question tone, and the 38% rule"},
+        ],
         "skills_taught": [
             "Declarative (downward inflection) for authority and price — Belfort",
             "Question inflection for genuine discovery — conversational dynamics",
@@ -72,6 +82,18 @@ TRAINING_MODULES = {
             "Sandler Pain Funnel, Voss calibrated questions, and the Goal-Why-Consequence "
             "discovery sequence. Learn to diagnose before prescribing."
         ),
+        "topics": [
+            {"name": "NEPQ Framework", "anchor": "Jeremy Miner", "sessions": 3,
+             "focus": "Situation, Problem-Awareness, Solution-Awareness, and Consequence questions"},
+            {"name": "SPIN Selling Questions", "anchor": "Neil Rackham", "sessions": 2,
+             "focus": "Situation, Problem, Implication, and Need-Payoff question sequencing"},
+            {"name": "Sandler Pain Funnel", "anchor": "David Sandler", "sessions": 2,
+             "focus": "Drilling from surface pain to emotional core using layered questions"},
+            {"name": "Voss Calibrated Questions", "anchor": "Chris Voss", "sessions": 2,
+             "focus": "Mirroring, labeling, and 'How am I supposed to do that?' calibrated questions"},
+            {"name": "Gap Selling Discovery", "anchor": "Keenan", "sessions": 2,
+             "focus": "Current state vs desired future state — selling the gap"},
+        ],
         "skills_taught": [
             "Open vs closed vs calibrated questions — conversational control",
             "NEPQ sequence (Jeremy Miner) — Situation, Problem, Solution, Consequence",
@@ -101,6 +123,20 @@ TRAINING_MODULES = {
             "Ziglar's Feel-Felt-Found, Blount's Ledge Technique, Sandler's Negative "
             "Reverse, and behavioral psychology of resistance (Brehm's Reactance)."
         ),
+        "topics": [
+            {"name": "Belfort Straight Line Loop", "anchor": "Jordan Belfort", "sessions": 3,
+             "focus": "Acknowledge, empathize, redirect, ramp certainty, close — the loop that never ends"},
+            {"name": "Voss Tactical Empathy Defuse", "anchor": "Chris Voss", "sessions": 2,
+             "focus": "Label the emotion, no-oriented questions, and 'How am I supposed to do that?'"},
+            {"name": "Ziglar Feel-Felt-Found", "anchor": "Zig Ziglar", "sessions": 2,
+             "focus": "Genuine empathy framework — Feel their concern, others Felt the same, here's what they Found"},
+            {"name": "Miner NEPQ Consequence Redirect", "anchor": "Jeremy Miner", "sessions": 2,
+             "focus": "Let the prospect's own stated pain overcome their objection — consequence-based resolution"},
+            {"name": "Sandler Negative Reverse", "anchor": "David Sandler", "sessions": 2,
+             "focus": "'Maybe this isn't for you' — reverse psychology, Porcupine technique, and pattern interrupts"},
+            {"name": "Isolation & Root Cause Mapping", "anchor": "Belfort / Hopkins", "sessions": 2,
+             "focus": "Smokescreen vs true objection, Three-Test Protocol, and the three deal-killers"},
+        ],
         "skills_taught": [
             "Smokescreen vs true objection vs condition — classification",
             "Three-test isolation protocol — Truth, Singularity, Commitment",
@@ -136,6 +172,18 @@ TRAINING_MODULES = {
             "techniques, and active listening. Uncover the three discovery pillars: "
             "Goal, Why Behind the Goal, and Consequence."
         ),
+        "topics": [
+            {"name": "Voss Tactical Empathy Toolkit", "anchor": "Chris Voss", "sessions": 3,
+             "focus": "Mirroring, labeling, accusation audits, and the Late-Night FM DJ voice for deep rapport"},
+            {"name": "Carnegie Influence Principles", "anchor": "Dale Carnegie", "sessions": 2,
+             "focus": "Genuine interest, use their name, listen more than you talk, make them feel important"},
+            {"name": "Cialdini Liking & Reciprocity", "anchor": "Robert Cialdini", "sessions": 2,
+             "focus": "Similarity, genuine compliments, give value first — the psychology of instant connection"},
+            {"name": "Goal-Why-Consequence Discovery", "anchor": "Tracy / Miner", "sessions": 3,
+             "focus": "The three discovery pillars — uncover the goal, the WHY behind it, and the consequence of inaction"},
+            {"name": "NLP Rapport & Matching", "anchor": "Bandler / Grinder", "sessions": 2,
+             "focus": "Match energy, pace, vocabulary, and breathing — build unconscious rapport"},
+        ],
         "skills_taught": [
             "Tactical empathy (Voss) — understanding, not agreeing",
             "Mirroring (Voss) — repeat last 1-3 words, pause, let them elaborate",
@@ -170,6 +218,22 @@ TRAINING_MODULES = {
             "Sandler's upfront contracts, Cialdini's Consistency and Authority principles, "
             "compliance ladder psychology, and Nudge Theory (Thaler)."
         ),
+        "topics": [
+            {"name": "Wilde Interiority & Buying State", "anchor": "Eli Wilde", "sessions": 3,
+             "focus": "Superior interior frame, state-dependent decisions, and emotional engagement over logic"},
+            {"name": "Wilde Sleight of Mouth", "anchor": "Eli Wilde / Robert Dilts", "sessions": 3,
+             "focus": "Redefine, Consequence, Counter-example, Intent, Chunk Up/Down — instant reframes"},
+            {"name": "Belfort Frame Control", "anchor": "Jordan Belfort", "sessions": 2,
+             "focus": "Preframing sensitive requests, conviction projection, and the certainty principle"},
+            {"name": "Wilde Identity Shift & Irresistible Future", "anchor": "Eli Wilde", "sessions": 2,
+             "focus": "Help them see themselves as action-takers, paint a vivid protected future"},
+            {"name": "Sandler Upfront Contracts", "anchor": "David Sandler", "sessions": 2,
+             "focus": "Set mutual expectations in the first 60 seconds — eliminate surprises and resistance"},
+            {"name": "Hughes Identity Frames & 6-Axis", "anchor": "Chase Hughes", "sessions": 2,
+             "focus": "Shift self-concept through framing, Authority-Rapport-Reciprocity-Social Proof-Urgency-Commitment"},
+            {"name": "Cialdini Compliance Ladder", "anchor": "Robert Cialdini / Thaler", "sessions": 2,
+             "focus": "Consistency, commitment, authority projection, and nudge architecture for effortless compliance"},
+        ],
         "skills_taught": [
             "Preframing sensitive requests — banking, SSN, medical (Belfort)",
             "Pre-suasion (Wilde/Cialdini) — frame the conversation before the pitch begins",
@@ -217,6 +281,22 @@ TRAINING_MODULES = {
             "psychology of trust (Sapolsky), persuasion (Cialdini), and decision-making "
             "(Kahneman) to read prospects and adapt in real time."
         ),
+        "topics": [
+            {"name": "Hughes Behavioral Table", "anchor": "Chase Hughes", "sessions": 3,
+             "focus": "Reading compliance signals, resistance cues, and deception indicators in real time"},
+            {"name": "Hughes 6-Axis & FATE Model", "anchor": "Chase Hughes", "sessions": 3,
+             "focus": "Authority, Rapport, Reciprocity, Social Proof, Urgency, Commitment + Focus, Authority, Tribe, Emotion"},
+            {"name": "DISC Behavioral Adaptation", "anchor": "William Marston", "sessions": 2,
+             "focus": "Dominance, Influence, Steadiness, Conscientiousness — adapt your pitch to their personality"},
+            {"name": "Kahneman System 1 & System 2", "anchor": "Daniel Kahneman", "sessions": 2,
+             "focus": "Know which brain system you're speaking to — fast intuition vs slow deliberation"},
+            {"name": "Cialdini Applied Influence", "anchor": "Robert Cialdini", "sessions": 2,
+             "focus": "The 7 principles in action — reading which principle to deploy based on behavioral signals"},
+            {"name": "Hughes Authority Ladder", "anchor": "Chase Hughes", "sessions": 2,
+             "focus": "Building perceived authority step by step, compliance gaining sequence, and identity framing"},
+            {"name": "Sapolsky Neurochemistry of Trust", "anchor": "Robert Sapolsky", "sessions": 2,
+             "focus": "Oxytocin, cortisol, dopamine in sales — the biology of trust and how to trigger it ethically"},
+        ],
         "skills_taught": [
             "Chase Hughes Behavioral Table — reading compliance, resistance, and deception signals",
             "6-Axis Model of Influence (Hughes) — Authority, Rapport, Reciprocity, Social Proof, Urgency, Commitment",
@@ -254,6 +334,22 @@ TRAINING_MODULES = {
             "burning desire, and Carol Dweck's growth mindset. Transform fear, rejection, "
             "and self-doubt into fuel for relentless action."
         ),
+        "topics": [
+            {"name": "Cardone 10X Massive Action", "anchor": "Grant Cardone", "sessions": 3,
+             "focus": "10X your goals AND effort, the fourth degree of action, dominate don't compete"},
+            {"name": "Elliott Savage Sales Mindset", "anchor": "Andy Elliott", "sessions": 3,
+             "focus": "Killer instinct, wolf mentality, rejection as fuel, morning attack routine"},
+            {"name": "Robbins Peak State Management", "anchor": "Tony Robbins", "sessions": 2,
+             "focus": "Physiology drives psychology, incantations, the Triad (Focus, Language, Physiology)"},
+            {"name": "Goggins Mental Toughness", "anchor": "David Goggins", "sessions": 2,
+             "focus": "Callusing the mind, the 40% Rule, Accountability Mirror, voluntary discomfort"},
+            {"name": "Hill Autosuggestion & Desire", "anchor": "Napoleon Hill", "sessions": 2,
+             "focus": "Programming the subconscious, burning desire as the starting point, Mastermind Principle"},
+            {"name": "Dweck Growth Mindset", "anchor": "Carol Dweck", "sessions": 2,
+             "focus": "Effort creates mastery, failure is feedback, fixed vs growth mindset in sales"},
+            {"name": "Conviction & Call Reluctance", "anchor": "Elliott / Ziglar / Frankl", "sessions": 2,
+             "focus": "Overcoming fear of rejection, building unshakeable product conviction, meaning drives resilience"},
+        ],
         "skills_taught": [
             "Grant Cardone 10X Rule — 10X your goals AND 10X your effort",
             "Cardone's Massive Action — the fourth degree of action beyond normal",

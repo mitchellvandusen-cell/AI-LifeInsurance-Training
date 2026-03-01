@@ -533,6 +533,30 @@
         </div>
     </div>
 
+    <!-- ═══ Screen 0b: Topic Selection ═══ -->
+    <div class="screen screen-pre" id="screenTopics">
+        <div class="client-card" style="width:540px;max-height:90vh;display:flex;flex-direction:column;padding:1.75rem;">
+            <a onclick="showScreen('screenSelect')" class="back-link" style="flex-shrink:0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Back to Modules
+            </a>
+            <div class="card-header" style="margin-bottom:0.75rem;flex-shrink:0;">
+                <h2 id="topicsModuleTitle">Module Topics</h2>
+                <p id="topicsModuleDesc" style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">Choose a topic to train</p>
+            </div>
+
+            <div id="topicsProgress" style="flex-shrink:0;margin-bottom:0.75rem;"></div>
+
+            <div id="topicsList" style="display:flex;flex-direction:column;gap:0.5rem;overflow-y:auto;flex:1;min-height:0;padding-right:0.25rem;-webkit-overflow-scrolling:touch;"></div>
+
+            <div style="margin-top:1rem;flex-shrink:0;">
+                <button class="btn btn-secondary" style="width:100%;font-size:0.85rem;" onclick="selectTopicGeneral()">
+                    General Practice (No Specific Topic)
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ Screen 1: Pre-Session (client card — Full Sim) ═══ -->
     <div class="screen screen-pre" id="screenPre">
         <div class="client-card" id="clientCard">
@@ -555,8 +579,8 @@
 
     <!-- ═══ Screen 1b: Module Pre-Session ═══ -->
     <div class="screen screen-pre" id="screenModulePre">
-        <div class="client-card" style="width:480px;">
-            <a onclick="showScreen('screenSelect')" class="back-link">
+        <div class="client-card" style="width:480px;max-height:85vh;display:flex;flex-direction:column;">
+            <a onclick="showScreen(selectedTopicIndex !== null ? 'screenTopics' : 'screenSelect')" class="back-link" style="flex-shrink:0;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
                 Back
             </a>
@@ -564,8 +588,8 @@
                 <h2 id="moduleTitle">Module Training</h2>
                 <p id="moduleDesc">Focused skill practice with your AI coach</p>
             </div>
-            <div id="moduleSkills" style="margin-bottom:1rem;"></div>
-            <div class="start-btn-container">
+            <div id="moduleSkills" style="margin-bottom:1rem;overflow-y:auto;flex:1;min-height:0;-webkit-overflow-scrolling:touch;"></div>
+            <div class="start-btn-container" style="flex-shrink:0;">
                 <button class="btn btn-primary btn-lg" id="moduleStartBtn" onclick="startModuleTraining()">
                     Start Module
                 </button>
@@ -636,6 +660,9 @@
         let selectedModule = null;
         let scriptId = null;  // For script_practice mode
         let sessionCompleted = false;  // Set true when AI coach concludes
+        let selectedTopicIndex = null;  // Index into module's topics array
+        let cachedModData = null;  // Cache module data to avoid re-fetching
+        let cachedMasteryData = null;
 
         // ── Screen switching ─────────────────────────────────
         function showScreen(id) {
@@ -652,12 +679,16 @@
                     API.getModules(),
                     API.getModuleMastery().catch(() => ({})),
                 ]);
+                cachedModData = modData;
+                cachedMasteryData = masteryData;
                 const list = document.getElementById('moduleList');
                 list.innerHTML = (modData.modules || []).map(m => {
                     const mast = masteryData[m.key];
                     const level = mast ? mast.mastery_level : 0;
                     const count = mast ? mast.practice_count : 0;
                     const label = MODULE_MASTERY_LABELS[level] || 'Foundation';
+                    const topicCount = (m.topics || []).length;
+                    const topicBadge = topicCount > 0 ? `<span style="font-size:0.65rem;color:var(--accent-cyan);margin-left:0.5rem;">${topicCount} topics</span>` : '';
                     const masteryBar = count > 0 ? `
                         <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.35rem;">
                             <div class="mastery-bar" style="flex:1;"><div class="mastery-bar-fill level-${level}"></div></div>
@@ -666,7 +697,10 @@
                     ` : '';
                     return `
                     <div onclick="selectMode('${m.key}')" style="cursor:pointer;padding:0.6rem 0.85rem;border:1px solid var(--border-color);border-radius:var(--radius-sm);transition:all .2s;">
-                        <h4 style="font-size:0.85rem;margin-bottom:0.1rem;">${m.name}</h4>
+                        <div style="display:flex;align-items:center;justify-content:space-between;">
+                            <h4 style="font-size:0.85rem;margin-bottom:0.1rem;">${m.name}</h4>
+                            ${topicBadge}
+                        </div>
                         <p style="font-size:0.75rem;color:var(--text-muted);margin:0;line-height:1.3;">${m.description}</p>
                         ${masteryBar}
                     </div>
@@ -680,48 +714,145 @@
         // ── Mode selection ───────────────────────────────────
         async function selectMode(mode) {
             trainingMode = mode;
+            selectedTopicIndex = null;
             if (mode === 'full') {
                 showScreen('screenPre');
                 initFullSim();
             } else {
                 selectedModule = mode;
                 try {
-                    const [modData, masteryData] = await Promise.all([
-                        API.getModules(),
-                        API.getModuleMastery().catch(() => ({})),
-                    ]);
-                    const mod = (modData.modules || []).find(m => m.key === mode);
-                    if (mod) {
-                        document.getElementById('moduleTitle').textContent = mod.name;
-                        document.getElementById('moduleDesc').textContent = mod.description;
-
-                        const mast = masteryData[mode];
-                        const level = mast ? mast.mastery_level : 0;
-                        const count = mast ? mast.practice_count : 0;
-                        const label = MODULE_MASTERY_LABELS[level] || 'Foundation';
-                        const masteryCard = count > 0 ? `
-                            <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:0.65rem;margin-bottom:0.75rem;">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;">
-                                    <span style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Your Progress</span>
-                                    <span class="mastery-level-badge" style="font-size:0.7rem;">Level ${level} — ${label}</span>
-                                </div>
-                                <div class="mastery-bar-container">
-                                    <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
-                                    <span class="mastery-label">${level}/5</span>
-                                </div>
-                                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">${count} session${count !== 1 ? 's' : ''} completed</div>
-                            </div>
-                        ` : '';
-
-                        document.getElementById('moduleSkills').innerHTML = masteryCard + (mod.skills_taught || []).map(s =>
-                            `<div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">${s}</div>`
-                        ).join('');
+                    // Use cached data if available, otherwise fetch
+                    if (!cachedModData) {
+                        const [modData, masteryData] = await Promise.all([
+                            API.getModules(),
+                            API.getModuleMastery().catch(() => ({})),
+                        ]);
+                        cachedModData = modData;
+                        cachedMasteryData = masteryData;
                     }
-                    showScreen('screenModulePre');
+                    const mod = (cachedModData.modules || []).find(m => m.key === mode);
+                    if (!mod) return;
+
+                    // If module has topics, show topic selection screen
+                    const topics = mod.topics || [];
+                    if (topics.length > 0) {
+                        showTopicsScreen(mod, cachedMasteryData || {});
+                        return;
+                    }
+
+                    // No topics — go directly to pre-session
+                    showModulePreSession(mod, cachedMasteryData || {});
                 } catch (err) {
                     showToast(err.message, 'error');
                 }
             }
+        }
+
+        // ── Topics screen ────────────────────────────────────
+        function showTopicsScreen(mod, masteryData) {
+            document.getElementById('topicsModuleTitle').textContent = mod.name;
+            document.getElementById('topicsModuleDesc').textContent = mod.description;
+
+            // Module-level progress
+            const mast = masteryData[mod.key];
+            const level = mast ? mast.mastery_level : 0;
+            const count = mast ? mast.practice_count : 0;
+            const label = MODULE_MASTERY_LABELS[level] || 'Foundation';
+            const progressDiv = document.getElementById('topicsProgress');
+            progressDiv.innerHTML = `
+                <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:0.6rem 0.75rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem;">
+                        <span style="font-size:0.65rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Module Progress</span>
+                        <span style="font-size:0.65rem;color:var(--accent-cyan);">Lv ${level} — ${label}</span>
+                    </div>
+                    <div class="mastery-bar" style="height:4px;"><div class="mastery-bar-fill level-${level}"></div></div>
+                    <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.2rem;">${count} session${count !== 1 ? 's' : ''} completed</div>
+                </div>
+            `;
+
+            // Build topic cards
+            const topics = mod.topics || [];
+            const topicsList = document.getElementById('topicsList');
+            topicsList.innerHTML = topics.map((t, i) => {
+                const totalSessions = t.sessions || 3;
+                return `
+                <div onclick="selectTopic(${i})" style="cursor:pointer;padding:0.75rem 0.85rem;border:1px solid var(--border-color);border-radius:var(--radius-sm);transition:all .2s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem;">
+                        <h4 style="font-size:0.85rem;margin:0;">${t.name}</h4>
+                        <span style="font-size:0.6rem;color:var(--text-muted);white-space:nowrap;margin-left:0.5rem;">${totalSessions} sessions</span>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--accent-cyan);margin-bottom:0.15rem;font-weight:600;">${t.anchor}</div>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin:0;line-height:1.35;">${t.focus}</p>
+                </div>
+                `;
+            }).join('');
+
+            showScreen('screenTopics');
+        }
+
+        function selectTopic(index) {
+            selectedTopicIndex = index;
+            const mod = (cachedModData.modules || []).find(m => m.key === selectedModule);
+            if (!mod) return;
+            const topic = mod.topics[index];
+            showModulePreSession(mod, cachedMasteryData || {}, topic);
+        }
+
+        function selectTopicGeneral() {
+            selectedTopicIndex = null;
+            const mod = (cachedModData.modules || []).find(m => m.key === selectedModule);
+            if (!mod) return;
+            showModulePreSession(mod, cachedMasteryData || {});
+        }
+
+        // ── Module Pre-Session (shared) ─────────────────────
+        function showModulePreSession(mod, masteryData, topic = null) {
+            const titleEl = document.getElementById('moduleTitle');
+            const descEl = document.getElementById('moduleDesc');
+
+            if (topic) {
+                titleEl.textContent = topic.name;
+                descEl.innerHTML = `<span style="color:var(--accent-cyan);font-weight:600;">${topic.anchor}</span> — ${topic.focus}`;
+            } else {
+                titleEl.textContent = mod.name;
+                descEl.textContent = mod.description;
+            }
+
+            const mast = masteryData[mod.key];
+            const level = mast ? mast.mastery_level : 0;
+            const count = mast ? mast.practice_count : 0;
+            const label = MODULE_MASTERY_LABELS[level] || 'Foundation';
+            const masteryCard = count > 0 ? `
+                <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:0.65rem;margin-bottom:0.75rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;">
+                        <span style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Your Progress</span>
+                        <span class="mastery-level-badge" style="font-size:0.7rem;">Level ${level} — ${label}</span>
+                    </div>
+                    <div class="mastery-bar-container">
+                        <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
+                        <span class="mastery-label">${level}/5</span>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">${count} session${count !== 1 ? 's' : ''} completed</div>
+                </div>
+            ` : '';
+
+            // Show topic-specific focus or general skills
+            let skillsHtml = '';
+            if (topic) {
+                skillsHtml = `
+                    <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.4rem 0;border-bottom:1px solid var(--border-color);font-weight:600;">
+                        Session ${count + 1} of ${topic.sessions || 3} for this topic
+                    </div>
+                `;
+            }
+            skillsHtml += (mod.skills_taught || []).slice(0, topic ? 5 : undefined).map(s =>
+                `<div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">${s}</div>`
+            ).join('');
+
+            document.getElementById('moduleSkills').innerHTML = masteryCard + skillsHtml;
+            document.getElementById('moduleStartBtn').disabled = false;
+            document.getElementById('moduleStartBtn').textContent = topic ? `Start: ${topic.name}` : 'Start Module';
+            showScreen('screenModulePre');
         }
 
         // ── Initialize Full Sim ──────────────────────────────
@@ -752,7 +883,7 @@
 
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const data = await API.startModuleSession(selectedModule, null, scriptId);
+                const data = await API.startModuleSession(selectedModule, null, scriptId, selectedTopicIndex);
                 sessionId = data.session_id;
                 sessionCompleted = false;
 
@@ -771,10 +902,14 @@
                     const mLevel = m ? m.mastery_level : 0;
                     const mCount = m ? m.practice_count : 0;
                     const mLabel = MODULE_MASTERY_LABELS[mLevel] || 'Foundation';
+                    const topicLabel = data.topic ? `<div style="font-size:0.75rem;color:var(--accent-cyan);font-weight:600;margin-bottom:0.25rem;">${data.topic.anchor}</div>` : '';
+                    const sessionTitle = data.topic ? data.topic.name : data.module.name;
+                    const sessionDesc = data.topic ? data.topic.focus : data.module.description;
                     document.getElementById('sidebarFields').innerHTML = `
                         <div style="padding:1rem;text-align:center;">
-                            <h3 style="font-size:1rem;margin-bottom:0.5rem;">${data.module.name}</h3>
-                            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">${data.module.description}</p>
+                            <h3 style="font-size:1rem;margin-bottom:0.5rem;">${sessionTitle}</h3>
+                            ${topicLabel}
+                            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">${sessionDesc}</p>
                             <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:0.75rem;text-align:left;">
                                 <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.4rem;">Mastery Progress</div>
                                 <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
@@ -789,7 +924,7 @@
                         </div>
                     `;
                 }
-                document.getElementById('sessionClientName').textContent = data.module.name;
+                document.getElementById('sessionClientName').textContent = data.topic ? data.topic.name : data.module.name;
                 document.getElementById('stateBar').style.display = 'none'; // No state bar for modules
 
                 // Add tonality guide panel for tonality_mastery module
@@ -1523,7 +1658,7 @@
                 <div class="report-header" style="text-align:center;">
                     <h2>${heading}</h2>
                     <p style="font-size:1.25rem;color:var(--text-secondary);margin:1rem 0;">
-                        ${selectedModule ? selectedModule.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Training'} Session
+                        ${result.module_key ? result.module_key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Training'} Session
                     </p>
                     <p style="color:var(--text-muted);">Duration: ${formatDuration(result.duration_seconds || 0)}</p>
                     ${incompleteHtml}

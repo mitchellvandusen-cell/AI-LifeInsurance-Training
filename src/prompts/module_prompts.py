@@ -29,6 +29,36 @@ from __future__ import annotations
 import json
 
 
+def _build_topic_context(state: dict) -> str:
+    """If a specific topic was selected, build context that focuses the session."""
+    topic_name = state.get("topic_name")
+    if not topic_name:
+        return ""
+    anchor = state.get("topic_anchor", "")
+    focus = state.get("topic_focus", "")
+    practice_count = state.get("practice_count", 0)
+    total_sessions = state.get("topic_sessions", 3)
+
+    return f"""
+### TOPIC FOCUS FOR THIS SESSION
+
+**Topic:** {topic_name}
+**Expert Anchor:** {anchor}
+**Core Focus:** {focus}
+
+This is session {practice_count + 1} of {total_sessions} for this topic.
+{"This is their FIRST session on this topic — start from fundamentals, build the foundation." if practice_count == 0 else ""}
+{"They have some exposure to this topic — build on what they know, push them further." if practice_count == 1 else ""}
+{"They are in their final session — this should be assessment-heavy. Challenge them with advanced scenarios." if practice_count + 1 >= total_sessions else ""}
+
+Your entire lesson for this session MUST be anchored in {anchor}'s methodology and framework.
+Teach, demonstrate, and drill from {anchor}'s perspective. Reference their specific techniques,
+terminology, and principles. If the topic spans multiple experts (e.g., "Cialdini / Belfort"),
+blend both perspectives but keep the primary anchor's framework central.
+
+"""
+
+
 def build_module_prompt(module_key: str, session_state: dict | None = None) -> str:
     """Build the system prompt for a training module voice session."""
     builders = {
@@ -1065,7 +1095,7 @@ def _build_tonality_prompt(state: dict) -> str:
     return f"""{_coach_identity()}
 
 ## MODULE: TONALITY MASTERY — Guided Voice Course
-
+{_build_topic_context(state)}
 ### WHY THIS LESSON MATTERS (tell them this upfront)
 Albert Mehrabian's research shows that 38% of emotional communication is carried
 by TONE — and on a phone call with NO body language, that number is even higher.
@@ -1210,7 +1240,7 @@ def _build_question_prompt(state: dict) -> str:
     return f"""{_coach_identity()}
 
 ## MODULE: QUESTION MASTERY
-
+{_build_topic_context(state)}
 ### WHY THIS LESSON MATTERS (tell them this upfront)
 The quality of your questions determines the quality of information you get —
 and that determines whether you close. Jeremy Miner built NEPQ on one insight:
@@ -1353,7 +1383,7 @@ def _build_objection_prompt(state: dict) -> str:
     return f"""{_coach_identity()}
 
 ## MODULE: OBJECTION HANDLING MASTERY
-
+{_build_topic_context(state)}
 ### WHY THIS LESSON MATTERS (tell them this upfront)
 Objections are where 90% of agents lose the sale — not because the objections
 are hard, but because they were never taught how to handle them correctly. Most
@@ -1510,7 +1540,7 @@ def _build_rapport_prompt(state: dict) -> str:
     return f"""{_coach_identity()}
 
 ## MODULE: RAPPORT & DISCOVERY
-
+{_build_topic_context(state)}
 ### WHY THIS LESSON MATTERS (tell them this upfront)
 People do not buy from people they trust — they buy from people who make them
 FEEL understood. Chris Voss, the FBI's top hostage negotiator, says tactical
@@ -1645,7 +1675,7 @@ def _build_preframing_prompt(state: dict) -> str:
     return f"""{_coach_identity()}
 
 ## MODULE: PREFRAMING, REFRAMING & FRAME CONTROL
-
+{_build_topic_context(state)}
 ### WHY THIS LESSON MATTERS (tell them this upfront)
 The #1 moment agents lose the sale is NOT during objections — it is when they ask
 for banking info or a social security number WITHOUT setting it up first. The
@@ -1947,7 +1977,7 @@ def _build_behavioral_prompt(state: dict) -> str:
     return f"""{_coach_identity()}
 
 ## MODULE: BEHAVIORAL PROFILING & INFLUENCE
-
+{_build_topic_context(state)}
 ### WHY THIS LESSON MATTERS (tell them this upfront)
 Every prospect gives you signals — vocal patterns, word choices, pacing, hesitations,
 energy shifts — that tell you EXACTLY where they stand. Most agents are deaf to these
@@ -2203,7 +2233,7 @@ def _build_mindset_prompt(state: dict) -> str:
     return f"""{_coach_identity()}
 
 ## MODULE: MINDSET & CONFIDENCE MASTERY
-
+{_build_topic_context(state)}
 ### WHY THIS LESSON MATTERS (tell them this upfront)
 Every technique in this entire training program is WORTHLESS without the right mindset.
 An agent with mediocre technique but unshakeable confidence will outsell an agent with

@@ -162,10 +162,11 @@ const API = {
         return this.get('/api/modules/');
     },
 
-    async startModuleSession(moduleKey, voice = null, scriptId = null) {
+    async startModuleSession(moduleKey, voice = null, scriptId = null, topicIndex = null) {
         const body = { module_key: moduleKey };
         if (voice) body.voice = voice;
         if (scriptId) body.script_id = scriptId;
+        if (topicIndex !== null && topicIndex !== undefined) body.topic_index = topicIndex;
         return this.post('/api/modules/start', body);
     },
 

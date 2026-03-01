@@ -61,6 +61,7 @@ AVAILABLE_MODULES = {
         "name": mod["name"],
         "description": mod["description"],
         "skills_taught": mod["skills_taught"],
+        "topics": mod.get("topics", []),
     }
     for key, mod in TRAINING_MODULES.items()
     if key != "full_call_simulation"  # Full sim is the existing training flow
@@ -82,6 +83,7 @@ class StartModuleRequest(BaseModel):
     module_key: str
     voice: str | None = None
     script_id: str | None = None  # For script_practice module
+    topic_index: int | None = None  # Index into module's topics list
 
 
 @router.post("/start")
@@ -108,10 +110,25 @@ async def start_module_session(req: StartModuleRequest, request: Request):
 
     voice = req.voice or "Sal"
 
+    # Resolve topic if provided
+    topic_info = None
+    if req.topic_index is not None and req.module_key in AVAILABLE_MODULES:
+        topics = AVAILABLE_MODULES[req.module_key].get("topics", [])
+        if 0 <= req.topic_index < len(topics):
+            topic_info = topics[req.topic_index]
+
     # Load mastery data for adaptive difficulty
     session_state = {}
     mastery_data = None
     script = None
+
+    # Inject topic info into session state for prompt builder
+    if topic_info:
+        session_state["topic_name"] = topic_info["name"]
+        session_state["topic_anchor"] = topic_info["anchor"]
+        session_state["topic_focus"] = topic_info["focus"]
+        session_state["topic_sessions"] = topic_info["sessions"]
+        session_state["topic_index"] = req.topic_index
 
     if req.module_key == "script_practice" and req.script_id:
         # Script practice: load script content + script-specific mastery
@@ -171,6 +188,8 @@ async def start_module_session(req: StartModuleRequest, request: Request):
         "voice": voice,
         "mastery": mastery_data,
     }
+    if topic_info:
+        response["topic"] = topic_info
     if script:
         response["script_content"] = script["content"]
         response["script_name"] = script["name"]
@@ -386,7 +405,7 @@ async def end_module_session(session_id: str, request: Request):
         feedback_summary=(
             f"Completed {session['module_key']} training module"
             if session_qualified
-            else f"Ended early — {duration_seconds}s, {student_turns} turns (minimum: {MIN_DURATION}s, {MIN_STUDENT_TURNS} turns)"
+            else f"Ended early — {duration_seconds}s (coach did not complete full lesson)"
         ),
         billed_minutes=billed_minutes,
         cost_cents=cost_cents,
