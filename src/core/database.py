@@ -708,8 +708,9 @@ async def get_analytics(user_id: str, days: int = 30) -> list[dict]:
 
 
 async def compute_analytics_for_date(user_id: str, date: datetime) -> dict:
-    """Compute daily analytics from report cards for a specific date."""
+    """Compute daily analytics from report cards AND module sessions."""
     pool = await get_pool()
+    uid = uuid.UUID(user_id)
     target_date = date.date() if isinstance(date, datetime) else date
 
     reports = await pool.fetch(
@@ -717,14 +718,27 @@ async def compute_analytics_for_date(user_id: str, date: datetime) -> dict:
            FROM report_cards rc
            JOIN training_sessions ts ON rc.session_id = ts.id
            WHERE rc.user_id = $1 AND DATE(rc.created_at) = $2""",
-        uuid.UUID(user_id), target_date,
+        uid, target_date,
     )
 
-    if not reports:
-        return {}
+    # Also count completed module sessions for this date
+    module_stats = await pool.fetchrow(
+        """SELECT COUNT(*) AS cnt, COALESCE(SUM(duration_seconds), 0) AS total_secs
+           FROM module_sessions
+           WHERE user_id = $1 AND status = 'completed' AND DATE(started_at) = $2""",
+        uid, target_date,
+    )
+    module_count = module_stats["cnt"] if module_stats else 0
+    module_seconds = module_stats["total_secs"] if module_stats else 0
 
-    count = len(reports)
-    total_minutes = sum(r["duration_seconds"] or 0 for r in reports) / 60.0
+    report_count = len(reports)
+    count = report_count + module_count
+    total_minutes = (
+        sum(r["duration_seconds"] or 0 for r in reports) + module_seconds
+    ) / 60.0
+
+    if count == 0:
+        return {}
 
     # Aggregate scores from report cards
     # Map analytics DB column names → grading engine category keys
@@ -997,20 +1011,20 @@ async def create_module_session(
 async def end_module_session(
     session_id: str, duration_seconds: int, session_state: dict,
     feedback_summary: str, billed_minutes: int = 0, cost_cents: int = 0,
-    billed_from: str = "subscription",
+    billed_from: str = "subscription", status: str = "completed",
 ) -> dict:
     pool = await get_pool()
     await pool.execute(
         """UPDATE module_sessions
-           SET status = 'completed', ended_at = NOW(),
-               duration_seconds = $1, session_state = $2,
-               feedback_summary = $3, billed_minutes = $4,
-               cost_cents = $5, billed_from = $6
-           WHERE id = $7""",
-        duration_seconds, json.dumps(session_state), feedback_summary,
+           SET status = $1, ended_at = NOW(),
+               duration_seconds = $2, session_state = $3,
+               feedback_summary = $4, billed_minutes = $5,
+               cost_cents = $6, billed_from = $7
+           WHERE id = $8""",
+        status, duration_seconds, json.dumps(session_state), feedback_summary,
         billed_minutes, cost_cents, billed_from, uuid.UUID(session_id),
     )
-    return {"id": session_id, "status": "completed"}
+    return {"id": session_id, "status": status}
 
 
 async def get_module_sessions(user_id: str, module_key: str = None, limit: int = 50) -> list[dict]:

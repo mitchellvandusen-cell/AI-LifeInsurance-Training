@@ -396,6 +396,25 @@
         @media (max-width: 768px) {
             .session-sidebar { width: 220px; min-width: 220px; padding: 1rem; }
         }
+        @media (max-width: 640px) {
+            .screen-session { flex-direction: column; }
+            .session-sidebar {
+                width: 100%; min-width: auto; height: auto; max-height: 35vh;
+                border-right: none; border-bottom: 1px solid var(--border-color);
+                padding: 0.75rem 1rem;
+            }
+            .session-main { height: auto; min-height: 60vh; }
+            .voice-circle { width: 100px; height: 100px; }
+            .voice-circle-inner { font-size: 1.8rem; }
+            .transcript-area { height: 18vh; }
+        }
+        @media (max-width: 380px) {
+            .session-sidebar { max-height: 28vh; padding: 0.5rem 0.75rem; }
+            .session-sidebar .sidebar-title { margin-bottom: 0.5rem; }
+            .session-sidebar .sidebar-field { padding: 0.35rem 0; font-size: 0.8rem; }
+            .voice-circle { width: 80px; height: 80px; }
+            .voice-circle-inner { font-size: 1.5rem; }
+        }
 
         /* ── Tonality Guide Panel ─────────────────────────── */
         .tone-guide { margin-top: 1rem; }
@@ -1436,6 +1455,7 @@
         function showModuleComplete(result) {
             const overlay = document.getElementById('reportOverlay');
             const content = document.getElementById('reportContent');
+            const qualified = result.session_qualified !== false;
 
             let masteryHtml = '';
             if (result.mastery) {
@@ -1471,15 +1491,28 @@
                 `;
             }
 
+            let incompleteHtml = '';
+            if (!qualified && result.message) {
+                incompleteHtml = `
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-md);padding:1rem 1.25rem;margin:1rem auto;max-width:400px;">
+                        <p style="color:var(--accent-red);font-size:0.9rem;font-weight:600;margin:0 0 0.25rem;">Session Not Counted</p>
+                        <p style="color:var(--text-secondary);font-size:0.8rem;margin:0;">${result.message}</p>
+                    </div>
+                `;
+            }
+
+            const heading = qualified ? 'Module Complete' : 'Session Ended Early';
+
             content.innerHTML = `
                 <div class="report-header" style="text-align:center;">
-                    <h2>Module Complete</h2>
+                    <h2>${heading}</h2>
                     <p style="font-size:1.25rem;color:var(--text-secondary);margin:1rem 0;">
                         ${selectedModule ? selectedModule.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Training'} Session
                     </p>
                     <p style="color:var(--text-muted);">Duration: ${formatDuration(result.duration_seconds || 0)}</p>
+                    ${incompleteHtml}
                     ${masteryHtml}
-                    <div style="margin-top:2rem; display:flex; gap:1rem; justify-content:center;">
+                    <div style="margin-top:2rem; display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
                         <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
                         ${scriptId ? `<a href="/training?mode=script_practice&script_id=${scriptId}" class="btn btn-primary">Practice Again</a>` : `<button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>`}
                     </div>

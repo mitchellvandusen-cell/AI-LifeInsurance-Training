@@ -217,10 +217,14 @@ async def module_websocket(websocket: WebSocket, session_id: str):
     async def on_agent_transcript(text: str, turn: int):
         """When the student speaks — log for server-side processing."""
         print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
+        session.setdefault("student_turns", 0)
+        session["student_turns"] += 1
 
     async def on_client_transcript(text: str, turn: int):
         """When the AI coach speaks — log for server-side processing."""
         print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
+        session.setdefault("coach_turns", 0)
+        session["coach_turns"] += 1
 
     # Create voice session
     voice_session = VoiceSession(
@@ -335,7 +339,18 @@ async def end_module_session(session_id: str, request: Request):
     duration_seconds = int(time.time() - session["start_time"])
     billed_minutes = max(1, duration_seconds // 60)
 
-    # Billing
+    # ── Session completion validation ──────────────────────────
+    # A session only counts toward mastery if the agent actually engaged.
+    # Minimum: 2 minutes AND at least 3 student speaking turns.
+    MIN_DURATION = 120  # seconds
+    MIN_STUDENT_TURNS = 3
+    student_turns = session.get("student_turns", 0)
+    coach_turns = session.get("coach_turns", 0)
+    session_qualified = (
+        duration_seconds >= MIN_DURATION and student_turns >= MIN_STUDENT_TURNS
+    )
+
+    # Billing (always bill even incomplete sessions — they used voice time)
     remaining = await db.get_remaining_minutes(user["user_id"])
     billed_from = "subscription"
     cost_cents = 0
@@ -352,39 +367,67 @@ async def end_module_session(session_id: str, request: Request):
             f"Module training: {session['module_key']} ({billed_minutes} min)"
         )
 
+    # Determine session status
+    status = "completed" if session_qualified else "cancelled"
+
     # Save
     await db.end_module_session(
         session_id=session_id,
         duration_seconds=duration_seconds,
         session_state=session.get("session_state", {}),
-        feedback_summary=f"Completed {session['module_key']} training module",
+        feedback_summary=(
+            f"Completed {session['module_key']} training module"
+            if session_qualified
+            else f"Ended early — {duration_seconds}s, {student_turns} turns (minimum: {MIN_DURATION}s, {MIN_STUDENT_TURNS} turns)"
+        ),
         billed_minutes=billed_minutes,
         cost_cents=cost_cents,
         billed_from=billed_from,
+        status=status,
     )
 
-    # Increment mastery
+    # Only increment mastery for qualified sessions
     mastery_data = None
     state = session.get("session_state", {})
     module_key = session["module_key"]
 
-    if module_key == "script_practice" and state.get("script_id"):
-        mastery = await db.increment_script_mastery(
-            user["user_id"], state["script_id"]
-        )
-        mastery_data = {
-            "practice_count": mastery["practice_count"],
-            "mastery_level": mastery["mastery_level"],
-            "sessions_per_level": mastery.get("sessions_per_level", 10),
-        }
+    if session_qualified:
+        if module_key == "script_practice" and state.get("script_id"):
+            mastery = await db.increment_script_mastery(
+                user["user_id"], state["script_id"]
+            )
+            mastery_data = {
+                "practice_count": mastery["practice_count"],
+                "mastery_level": mastery["mastery_level"],
+                "sessions_per_level": mastery.get("sessions_per_level", 10),
+            }
+        else:
+            mastery = await db.increment_module_mastery(
+                user["user_id"], module_key
+            )
+            mastery_data = {
+                "practice_count": mastery["practice_count"],
+                "mastery_level": mastery["mastery_level"],
+            }
+
+        # Update daily analytics for KPI dashboard
+        from datetime import datetime, timezone
+        await db.compute_analytics_for_date(user["user_id"], datetime.now(timezone.utc))
     else:
-        mastery = await db.increment_module_mastery(
-            user["user_id"], module_key
-        )
-        mastery_data = {
-            "practice_count": mastery["practice_count"],
-            "mastery_level": mastery["mastery_level"],
-        }
+        # Return current mastery without incrementing
+        if module_key == "script_practice" and state.get("script_id"):
+            existing = await db.get_script_mastery(user["user_id"], state["script_id"])
+            mastery_data = {
+                "practice_count": existing["practice_count"] if existing else 0,
+                "mastery_level": existing["mastery_level"] if existing else 0,
+                "sessions_per_level": existing.get("sessions_per_level", 10) if existing else 10,
+            }
+        else:
+            existing = await db.get_module_mastery(user["user_id"], module_key)
+            mastery_data = {
+                "practice_count": existing["practice_count"] if existing else 0,
+                "mastery_level": existing["mastery_level"] if existing else 0,
+            }
 
     _active_module_sessions.pop(session_id, None)
 
@@ -394,7 +437,13 @@ async def end_module_session(session_id: str, request: Request):
         "duration_seconds": duration_seconds,
         "billed_minutes": billed_minutes,
         "mastery": mastery_data,
+        "session_qualified": session_qualified,
     }
+    if not session_qualified:
+        response["message"] = (
+            f"Session too short to count toward mastery. "
+            f"Train for at least {MIN_DURATION // 60} minutes with {MIN_STUDENT_TURNS}+ responses."
+        )
     return response
 
 

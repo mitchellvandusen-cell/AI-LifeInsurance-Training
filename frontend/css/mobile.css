@@ -373,6 +373,21 @@
         font-size: 0.8rem !important;
     }
 
+    /* ── Page headers (flex-between) ──────────────────────────── */
+    .flex-between {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem;
+    }
+    .flex-between .btn { width: 100%; }
+
+    /* ── Recordings page ────────────────────────────────────── */
+    .recording-card, .card {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
     /* ── Homework page ───────────────────────────────────────── */
     .assignment-card {
         padding: 1rem !important;
@@ -381,6 +396,16 @@
     /* ── Settings page ───────────────────────────────────────── */
     .settings-section {
         padding: 1rem !important;
+    }
+    .setting-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+    /* ── Module complete overlay ─────────────────────────────── */
+    .report-overlay .report-content {
+        padding: 1.5rem 1rem !important;
     }
 }
 
