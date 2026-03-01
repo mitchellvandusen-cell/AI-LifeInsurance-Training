@@ -352,16 +352,11 @@ async def end_module_session(session_id: str, request: Request):
     billed_minutes = max(1, duration_seconds // 60)
 
     # ── Session completion validation ──────────────────────────
-    # Primary: the AI coach naturally concluded the session (said closing phrase).
-    # Fallback: at least 10 minutes AND 3+ student speaking turns.
-    # Either path qualifies the session for mastery credit.
-    MIN_DURATION = 600  # 10 minutes
-    MIN_STUDENT_TURNS = 3
-    student_turns = session.get("student_turns", 0)
+    # Only qualified when the AI coach completes its full lesson arc
+    # (greeting → teach → drill → practice → analysis → closing phrase).
+    # No timer fallback — the coach decides when the agent is ready.
     coach_concluded = session.get("coach_concluded", False)
-    session_qualified = coach_concluded or (
-        duration_seconds >= MIN_DURATION and student_turns >= MIN_STUDENT_TURNS
-    )
+    session_qualified = coach_concluded
 
     # Billing (always bill even incomplete sessions — they used voice time)
     remaining = await db.get_remaining_minutes(user["user_id"])
@@ -454,8 +449,8 @@ async def end_module_session(session_id: str, request: Request):
     }
     if not session_qualified:
         response["message"] = (
-            "Session ended before your coach wrapped up. "
-            "Complete the full lesson or train for at least 10 minutes to earn mastery credit."
+            "Session ended before your coach completed the lesson. "
+            "Finish all drills and practice to earn mastery credit."
         )
     return response
 
