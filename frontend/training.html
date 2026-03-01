@@ -635,6 +635,7 @@
         let trainingMode = null;  // 'full' or module key
         let selectedModule = null;
         let scriptId = null;  // For script_practice mode
+        let sessionCompleted = false;  // Set true when AI coach concludes
 
         // ── Screen switching ─────────────────────────────────
         function showScreen(id) {
@@ -753,6 +754,7 @@
                 mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const data = await API.startModuleSession(selectedModule, null, scriptId);
                 sessionId = data.session_id;
+                sessionCompleted = false;
 
                 // Store mastery data if this is script practice
                 if (data.mastery) {
@@ -1169,6 +1171,20 @@
 
                 case 'state_update':
                     updateStateBar(data.data);
+                    break;
+
+                case 'session_complete':
+                    // AI coach has naturally concluded the session
+                    sessionCompleted = true;
+                    status.textContent = 'Session complete — great work!';
+                    circle.className = 'voice-circle';
+                    showToast('Your coach has wrapped up the session.', 'success');
+                    // Update the End Session button to show completion
+                    const endBtn = document.querySelector('[onclick="endTraining()"]');
+                    if (endBtn) {
+                        endBtn.textContent = 'View Results';
+                        endBtn.className = 'btn btn-primary btn-sm';
+                    }
                     break;
 
                 case 'error':

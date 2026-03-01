@@ -221,10 +221,22 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         session["student_turns"] += 1
 
     async def on_client_transcript(text: str, turn: int):
-        """When the AI coach speaks — log for server-side processing."""
+        """When the AI coach speaks — log and detect session closing."""
         print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
         session.setdefault("coach_turns", 0)
         session["coach_turns"] += 1
+
+        # Detect the coach's closing phrase signaling session is complete
+        if not session.get("coach_concluded") and "that is a wrap for today" in text.lower():
+            session["coach_concluded"] = True
+            print(f"[MODULE][{session_id}] Coach concluded session naturally")
+            try:
+                await websocket.send_json({
+                    "type": "session_complete",
+                    "message": "Your coach has wrapped up the session.",
+                })
+            except Exception:
+                pass
 
     # Create voice session
     voice_session = VoiceSession(
@@ -340,13 +352,14 @@ async def end_module_session(session_id: str, request: Request):
     billed_minutes = max(1, duration_seconds // 60)
 
     # ── Session completion validation ──────────────────────────
-    # A session only counts toward mastery if the agent actually engaged.
-    # Minimum: 2 minutes AND at least 3 student speaking turns.
-    MIN_DURATION = 120  # seconds
+    # Primary: the AI coach naturally concluded the session (said closing phrase).
+    # Fallback: at least 10 minutes AND 3+ student speaking turns.
+    # Either path qualifies the session for mastery credit.
+    MIN_DURATION = 600  # 10 minutes
     MIN_STUDENT_TURNS = 3
     student_turns = session.get("student_turns", 0)
-    coach_turns = session.get("coach_turns", 0)
-    session_qualified = (
+    coach_concluded = session.get("coach_concluded", False)
+    session_qualified = coach_concluded or (
         duration_seconds >= MIN_DURATION and student_turns >= MIN_STUDENT_TURNS
     )
 
@@ -441,8 +454,8 @@ async def end_module_session(session_id: str, request: Request):
     }
     if not session_qualified:
         response["message"] = (
-            f"Session too short to count toward mastery. "
-            f"Train for at least {MIN_DURATION // 60} minutes with {MIN_STUDENT_TURNS}+ responses."
+            "Session ended before your coach wrapped up. "
+            "Complete the full lesson or train for at least 10 minutes to earn mastery credit."
         )
     return response
 
