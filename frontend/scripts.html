@@ -107,7 +107,10 @@
                 <h1>Script Practice</h1>
                 <p>Upload or paste your sales script, then practice with an AI client until it sounds natural.</p>
             </div>
-            <button class="btn btn-primary" onclick="openPasteModal()">+ New Script</button>
+            <div style="display:flex;gap:0.5rem;">
+                <a href="/script-analyzer" class="btn btn-secondary" style="font-size:0.85rem;background:var(--gradient-accent);color:white;border:none;">Smart Analyzer</a>
+                <button class="btn btn-primary" onclick="openPasteModal()">+ New Script</button>
+            </div>
         </div>
 
         <!-- Upload Area -->
@@ -221,6 +224,7 @@
                                     </div>
                                 </div>
                                 <div class="script-actions">
+                                    <a href="/script-analyzer?id=${s.id}" class="btn btn-primary" style="font-size:0.85rem;padding:0.5rem 1rem;background:var(--gradient-accent);">Analyze</a>
                                     <a href="/training?mode=script_practice&script_id=${s.id}" class="btn btn-primary" style="font-size:0.85rem;padding:0.5rem 1rem;">Practice</a>
                                     <button class="btn btn-secondary" style="font-size:0.85rem;padding:0.5rem 0.75rem;" onclick="editScript('${s.id}')">Edit</button>
                                     <button class="btn btn-secondary" style="font-size:0.85rem;padding:0.5rem 0.75rem;color:var(--accent-red);" onclick="deleteScript('${s.id}', '${escapeHtml(s.name)}')">Delete</button>

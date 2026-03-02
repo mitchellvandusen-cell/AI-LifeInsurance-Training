@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Script Analyzer — InsuranceGrokBot Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/mobile.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        /* ── Analyzer Layout ─────────────────────────────────── */
+        .analyzer-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+        }
+        .analyzer-header h1 { font-size: 1.5rem; }
+        .analyzer-header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.15rem; }
+        .header-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+        /* ── Mode Tabs ───────────────────────────────────────── */
+        .mode-tabs {
+            display: flex; gap: 0.25rem; margin-bottom: 1.5rem;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); padding: 0.25rem; width: fit-content;
+        }
+        .mode-tab {
+            padding: 0.5rem 1rem; border-radius: var(--radius-sm);
+            font-size: 0.85rem; font-weight: 600; cursor: pointer;
+            color: var(--text-muted); background: transparent; border: none;
+            font-family: var(--font-sans); transition: all var(--transition);
+        }
+        .mode-tab:hover { color: var(--text-secondary); }
+        .mode-tab.active {
+            background: var(--accent-blue); color: white;
+        }
+
+        /* ── Paste Input View ────────────────────────────────── */
+        .paste-view { display: none; }
+        .paste-view.active { display: block; }
+        .paste-area {
+            width: 100%; min-height: 350px; padding: 1.25rem;
+            background: var(--bg-input); border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg); color: var(--text-primary);
+            font-family: var(--font-sans); font-size: 0.9rem; line-height: 1.7;
+            resize: vertical; outline: none; transition: border-color var(--transition);
+        }
+        .paste-area:focus { border-color: var(--accent-blue); border-style: solid; }
+        .paste-area::placeholder { color: var(--text-muted); }
+        .paste-actions {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 1rem;
+        }
+        .paste-actions .char-info { font-size: 0.8rem; color: var(--text-muted); }
+
+        /* ── Analyzed View ───────────────────────────────────── */
+        .analyzed-view { display: none; }
+        .analyzed-view.active { display: block; }
+
+        /* ── Section Outline (left rail) ─────────────────────── */
+        .analyzer-layout {
+            display: grid; grid-template-columns: 220px 1fr; gap: 1.5rem;
+        }
+        @media (max-width: 900px) {
+            .analyzer-layout { grid-template-columns: 1fr; }
+            .section-outline { display: none; }
+        }
+        .section-outline {
+            position: sticky; top: 1rem; align-self: start;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); padding: 1rem; max-height: 80vh;
+            overflow-y: auto;
+        }
+        .outline-title {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--text-muted); font-weight: 700; margin-bottom: 0.75rem;
+        }
+        .outline-item {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 0.5rem; border-radius: var(--radius-sm);
+            cursor: pointer; font-size: 0.8rem; color: var(--text-secondary);
+            transition: all var(--transition); margin-bottom: 0.15rem;
+        }
+        .outline-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .outline-item.active { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
+        .outline-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+
+        /* ── Script Flow ─────────────────────────────────────── */
+        .script-flow { display: flex; flex-direction: column; gap: 1rem; }
+
+        /* ── Section Block ───────────────────────────────────── */
+        .section-block {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg); overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .section-block.highlighted {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(79,70,229,0.15);
+        }
+
+        .section-header {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 1rem 1.25rem; cursor: pointer;
+            transition: background var(--transition);
+        }
+        .section-header:hover { background: var(--bg-card-hover); }
+
+        .section-color-bar {
+            width: 4px; height: 28px; border-radius: 2px; flex-shrink: 0;
+        }
+        .section-title {
+            font-size: 0.95rem; font-weight: 700; flex: 1;
+        }
+        .section-badge {
+            font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.6rem;
+            border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em;
+        }
+        .section-chevron {
+            width: 20px; height: 20px; color: var(--text-muted);
+            transition: transform 0.2s ease; flex-shrink: 0;
+        }
+        .section-block.open .section-chevron { transform: rotate(180deg); }
+
+        .section-body {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        .section-block.open .section-body { max-height: 5000px; }
+
+        .section-content { padding: 0 1.25rem 1.25rem 1.25rem; }
+
+        /* ── Speech Line ─────────────────────────────────────── */
+        .speech-line {
+            padding: 0.6rem 0.85rem; margin-bottom: 0.5rem;
+            border-radius: var(--radius-sm); font-size: 0.92rem;
+            line-height: 1.7; position: relative;
+            border-left: 3px solid transparent;
+        }
+        .speech-line.say {
+            background: rgba(79,70,229,0.06);
+            border-left-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+        .speech-line.instruction {
+            background: rgba(245,158,11,0.06);
+            border-left-color: var(--accent-amber);
+            color: var(--text-secondary);
+            font-size: 0.85rem; font-style: italic;
+        }
+        .speech-line.transition-arrow {
+            background: rgba(6,182,212,0.06);
+            border-left-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            font-size: 0.82rem; font-weight: 600;
+        }
+        .speech-line.action-step {
+            background: rgba(16,185,129,0.06);
+            border-left-color: var(--accent-green);
+            color: var(--text-secondary); font-size: 0.85rem;
+        }
+
+        /* Key phrase highlighting */
+        .key-phrase {
+            font-weight: 700; color: var(--text-primary);
+            background: rgba(79,70,229,0.1); padding: 0.05rem 0.25rem;
+            border-radius: 3px;
+        }
+
+        /* ── Branch Block (conditional paths) ────────────────── */
+        .branch-block {
+            margin: 0.75rem 0; border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); overflow: hidden;
+        }
+        .branch-header {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.65rem 1rem; cursor: pointer;
+            background: var(--bg-secondary);
+            transition: background var(--transition);
+            font-size: 0.85rem; font-weight: 600; color: var(--accent-amber);
+        }
+        .branch-header:hover { background: var(--bg-card-hover); }
+        .branch-icon {
+            font-size: 0.75rem; transition: transform 0.2s ease;
+            color: var(--text-muted);
+        }
+        .branch-block.open .branch-icon { transform: rotate(90deg); }
+        .branch-label { flex: 1; }
+        .branch-type-badge {
+            font-size: 0.65rem; padding: 0.15rem 0.5rem;
+            border-radius: 999px; font-weight: 600;
+        }
+        .branch-body {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .branch-block.open .branch-body { max-height: 3000px; }
+        .branch-content { padding: 0.75rem 1rem; }
+
+        /* ── Nested Objection Responses ──────────────────────── */
+        .objection-pair { margin-bottom: 0.75rem; }
+        .objection-trigger {
+            font-weight: 700; color: var(--accent-red); font-size: 0.85rem;
+            margin-bottom: 0.3rem; padding-left: 0.5rem;
+            border-left: 2px solid var(--accent-red);
+        }
+        .objection-response {
+            padding: 0.5rem 0.85rem; margin-left: 0.5rem;
+            background: rgba(79,70,229,0.06);
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-size: 0.9rem; line-height: 1.65;
+        }
+
+        /* ── Progressive / Focus Mode ────────────────────────── */
+        .focus-controls {
+            display: none; align-items: center; justify-content: center;
+            gap: 1rem; padding: 1rem; margin-bottom: 1rem;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+        }
+        .focus-controls.active { display: flex; }
+        .focus-counter {
+            font-size: 0.85rem; color: var(--text-muted); font-weight: 600;
+            min-width: 120px; text-align: center;
+        }
+
+        /* Recall mode (hide text, click to reveal) */
+        .recall-mode .speech-line.say {
+            cursor: pointer; position: relative;
+        }
+        .recall-mode .speech-line.say .speech-text {
+            filter: blur(6px); transition: filter 0.3s ease;
+            user-select: none;
+        }
+        .recall-mode .speech-line.say .speech-text.revealed {
+            filter: none; user-select: auto;
+        }
+        .recall-mode .speech-line.say::after {
+            content: 'Click to reveal'; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 0.75rem; color: var(--accent-blue); font-weight: 600;
+            pointer-events: none; opacity: 0.8;
+        }
+        .recall-mode .speech-line.say .speech-text.revealed + .reveal-hint,
+        .recall-mode .speech-line.say:has(.revealed)::after {
+            display: none; opacity: 0;
+        }
+
+        /* ── Legend ───────────────────────────────────────────── */
+        .legend {
+            display: flex; gap: 1.25rem; flex-wrap: wrap;
+            margin-bottom: 1.25rem; padding: 0.75rem 1rem;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); font-size: 0.75rem;
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+        .legend-color {
+            width: 14px; height: 3px; border-radius: 2px;
+        }
+
+        /* ── Section type colors ─────────────────────────────── */
+        .type-intro { background: var(--accent-blue); }
+        .type-questions { background: var(--accent-cyan); }
+        .type-objection { background: var(--accent-red); }
+        .type-transition { background: var(--accent-amber); }
+        .type-close { background: var(--accent-green); }
+        .type-action { background: var(--accent-purple); }
+        .type-generic { background: var(--text-muted); }
+
+        /* Badge colors */
+        .badge-intro { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
+        .badge-questions { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+        .badge-objection { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+        .badge-transition { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+        .badge-close { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+        .badge-action { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+        .badge-generic { background: rgba(106,106,138,0.15); color: var(--text-muted); }
+
+        /* ── Flow Connector ──────────────────────────────────── */
+        .flow-connector {
+            display: flex; align-items: center; justify-content: center;
+            padding: 0.15rem 0;
+        }
+        .flow-arrow {
+            width: 2px; height: 18px; background: var(--border-color);
+            position: relative;
+        }
+        .flow-arrow::after {
+            content: ''; position: absolute; bottom: -3px; left: -3px;
+            width: 8px; height: 8px; border-right: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+            transform: rotate(45deg);
+        }
+
+        /* ── Chunk separator (memory science: groups of 3-5) ── */
+        .chunk-separator {
+            border: none; border-top: 1px dashed var(--border-color);
+            margin: 0.75rem 0;
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><a href="/dashboard" class="nav-logo" style="font-size:1.1rem;"><span class="logo-accent">InsuranceGrokBot</span> Training</a></div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="/training" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>Start Training</a>
+            <a href="/analytics" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Analytics</a>
+            <a href="/report-cards" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Report Cards</a>
+            <a href="/homework" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Homework</a>
+            <a href="/scripts" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>Script Practice</a>
+            <a href="/recordings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Call Recordings</a>
+            <a href="/billing" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
+            <a href="/settings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <!-- Header -->
+        <div class="analyzer-header">
+            <div>
+                <h1 id="pageTitle">Smart Script Analyzer</h1>
+                <p id="pageSubtitle">Paste your script below and we'll make it easy to read and practice.</p>
+            </div>
+            <div class="header-actions">
+                <a href="/scripts" class="btn btn-ghost" style="font-size:0.85rem;">Back to Scripts</a>
+            </div>
+        </div>
+
+        <!-- Mode Tabs -->
+        <div class="mode-tabs" id="modeTabs">
+            <button class="mode-tab active" data-mode="read">Read Mode</button>
+            <button class="mode-tab" data-mode="focus">Focus Mode</button>
+            <button class="mode-tab" data-mode="recall">Recall Mode</button>
+        </div>
+
+        <!-- Paste View (shown when no script loaded yet) -->
+        <div class="paste-view active" id="pasteView">
+            <textarea class="paste-area" id="pasteInput" placeholder="Paste your entire sales script here...
+
+The analyzer will detect:
+  - Section headings (Intro, Frame, Objections, Close, etc.)
+  - Conditional branches (If driving, Aged Leads, New Leads, etc.)
+  - Objection responses
+  - Action steps and instructions
+  - Key transition points
+
+Then display it in a clean, easy-to-read practice format."></textarea>
+            <div class="paste-actions">
+                <span class="char-info" id="charInfo">0 characters</span>
+                <button class="btn btn-primary" onclick="analyzeScript()">Analyze Script</button>
+            </div>
+        </div>
+
+        <!-- Analyzed View -->
+        <div class="analyzed-view" id="analyzedView">
+            <!-- Legend -->
+            <div class="legend" id="legend">
+                <div class="legend-item"><div class="legend-color type-intro"></div><span>What to Say</span></div>
+                <div class="legend-item"><div class="legend-color type-transition"></div><span>Instructions</span></div>
+                <div class="legend-item"><div class="legend-color type-objection"></div><span>Objections</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:var(--accent-cyan)"></div><span>Transitions</span></div>
+                <div class="legend-item"><div class="legend-color type-action"></div><span>Action Steps</span></div>
+            </div>
+
+            <!-- Focus mode controls -->
+            <div class="focus-controls" id="focusControls">
+                <button class="btn btn-secondary btn-sm" id="focusPrev" onclick="focusStep(-1)">Previous</button>
+                <span class="focus-counter" id="focusCounter">Section 1 of 5</span>
+                <button class="btn btn-primary btn-sm" id="focusNext" onclick="focusStep(1)">Next</button>
+            </div>
+
+            <div class="analyzer-layout">
+                <!-- Section Outline -->
+                <div class="section-outline" id="sectionOutline"></div>
+
+                <!-- Script Flow -->
+                <div class="script-flow" id="scriptFlow"></div>
+            </div>
+
+            <!-- Re-analyze button -->
+            <div style="text-align:center; margin-top:2rem;">
+                <button class="btn btn-ghost" onclick="showPasteView()">Paste a Different Script</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/mobile-nav.js"></script>
+    <script>
+        initMobileNav('scripts');
+        if (!requireAuth()) {}
+
+        // ════════════════════════════════════════════════════════════
+        // State
+        // ════════════════════════════════════════════════════════════
+        let parsedSections = [];
+        let currentMode = 'read';
+        let focusIndex = 0;
+
+        // ════════════════════════════════════════════════════════════
+        // Section Type Detection
+        // ════════════════════════════════════════════════════════════
+        const SECTION_PATTERNS = [
+            { type: 'intro',      keywords: ['intro', 'opening', 'greeting', 'hey firstname', 'new leads', 'aged leads', 'facebook lead', 'average data', 'speed to lead'], label: 'Intro' },
+            { type: 'questions',  keywords: ['key questions', 'questions', 'qualifying', 'discovery', 'medical', 'health questions', 'underwriting'], label: 'Questions' },
+            { type: 'objection',  keywords: ['objection', 'not interested', 'already got', 'call me back', 'dont remember', "don't remember", 'rebuttal', 'pushback'], label: 'Objection' },
+            { type: 'transition', keywords: ['frame', 'framing', 'preframe', 'tie down', 'transition', 'booking', 'appointment', 'bridge'], label: 'Transition' },
+            { type: 'close',      keywords: ['close', 'closing', 'presentation', 'pitch', 'commitment', 'after you set'], label: 'Close' },
+            { type: 'action',     keywords: ['action', 'steps', 'checklist', 'to do', 'follow up', 'follow-up', 'send', 'put into calendar'], label: 'Action Steps' },
+        ];
+
+        const SECTION_COLORS = {
+            intro: 'var(--accent-blue)',
+            questions: 'var(--accent-cyan)',
+            objection: 'var(--accent-red)',
+            transition: 'var(--accent-amber)',
+            close: 'var(--accent-green)',
+            action: 'var(--accent-purple)',
+            generic: 'var(--text-muted)',
+        };
+
+        // ════════════════════════════════════════════════════════════
+        // Script Parser
+        // ════════════════════════════════════════════════════════════
+        function parseScript(rawText) {
+            const lines = rawText.split('\n');
+            const sections = [];
+            let currentSection = null;
+            let currentBranch = null;
+            let lineBuffer = [];
+
+            function flushBuffer() {
+                if (!lineBuffer.length) return;
+                const target = currentBranch ? currentBranch.lines : (currentSection ? currentSection.lines : null);
+                if (target) {
+                    lineBuffer.forEach(l => target.push(l));
+                }
+                lineBuffer = [];
+            }
+
+            function closeBranch() {
+                if (currentBranch && currentSection) {
+                    flushBuffer();
+                    currentSection.branches.push(currentBranch);
+                    currentBranch = null;
+                }
+            }
+
+            function closeSection() {
+                closeBranch();
+                flushBuffer();
+                if (currentSection && (currentSection.lines.length || currentSection.branches.length)) {
+                    sections.push(currentSection);
+                }
+                currentSection = null;
+            }
+
+            function detectSectionType(text) {
+                const lower = text.toLowerCase();
+                for (const pat of SECTION_PATTERNS) {
+                    if (pat.keywords.some(kw => lower.includes(kw))) {
+                        return pat.type;
+                    }
+                }
+                return 'generic';
+            }
+
+            function isHeading(line, nextLine) {
+                const trimmed = line.trim();
+                if (!trimmed) return false;
+                // Short lines that look like headings
+                if (trimmed.length < 80 && !trimmed.endsWith('?') && !trimmed.endsWith('.') && !trimmed.endsWith(',')) {
+                    // Starts with caps, or is a known heading pattern
+                    if (/^[A-Z][A-Za-z\s\/{}&()*\-—:]+$/.test(trimmed) && trimmed.length < 50) return true;
+                    // Lines ending with heading markers
+                    if (trimmed.match(/^(#{1,3}|={3,}|-{3,})/)) return true;
+                }
+                // Lines with curly braces describing lead type
+                if (/\{[^}]+\}/.test(trimmed) && trimmed.length < 100) return true;
+                return false;
+            }
+
+            function isBranchStart(line) {
+                const trimmed = line.trim();
+                // Lines starting with * that describe a condition/scenario
+                if (/^\*\s+/.test(trimmed)) {
+                    const content = trimmed.replace(/^\*\s+/, '');
+                    // Check if it's a conditional/scenario marker (not just a bullet in a list)
+                    if (/^(if |when |booking |key questions|objection|not interested|already got|call me back)/i.test(content)) {
+                        return true;
+                    }
+                    // Short descriptive lines starting with * are likely branches
+                    if (content.length < 80 && !content.endsWith('?')) return true;
+                }
+                return false;
+            }
+
+            function classifyLine(line) {
+                const trimmed = line.trim();
+                if (!trimmed) return null;
+
+                // Transition arrows
+                if (trimmed.includes('→') || trimmed.includes('->')) {
+                    return { type: 'transition-arrow', text: trimmed };
+                }
+                // Numbered action steps
+                if (/^\d+[\.\)]\s+/.test(trimmed)) {
+                    return { type: 'action-step', text: trimmed };
+                }
+                // Objection triggers (starts with common objection keywords)
+                if (/^(not interested|dont remember|don't remember|call me back|already got|i'?m not|no thanks|not right now)/i.test(trimmed)) {
+                    return { type: 'objection-trigger', text: trimmed };
+                }
+                // Instruction lines (describing what to do, not what to say)
+                if (/^(go ahead|put into|send |confirm |check |note:|important:|tip:|remember:)/i.test(trimmed)) {
+                    return { type: 'instruction', text: trimmed };
+                }
+                // Lines in parentheses or starting with ( are stage directions
+                if (/^\(.*\)$/.test(trimmed)) {
+                    return { type: 'instruction', text: trimmed };
+                }
+                // Everything else is speech (what to say)
+                return { type: 'say', text: trimmed };
+            }
+
+            // Parse line by line
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+                const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
+
+                // Skip empty lines
+                if (!trimmed) {
+                    // Multiple empty lines can indicate section break
+                    if (i + 1 < lines.length && !lines[i + 1].trim() && currentSection && !currentBranch) {
+                        // Double blank line = potential section break, but don't force close
+                    }
+                    continue;
+                }
+
+                // Check if it's a heading → new section
+                if (isHeading(trimmed, nextLine)) {
+                    closeSection();
+                    const type = detectSectionType(trimmed);
+                    currentSection = {
+                        title: trimmed.replace(/^[#=\-*\s]+/, '').replace(/[#=\-]+$/, '').trim(),
+                        type: type,
+                        lines: [],
+                        branches: [],
+                    };
+                    continue;
+                }
+
+                // Check if it's a branch start
+                if (isBranchStart(line)) {
+                    closeBranch();
+                    if (!currentSection) {
+                        currentSection = {
+                            title: 'Script',
+                            type: 'generic',
+                            lines: [],
+                            branches: [],
+                        };
+                    }
+                    flushBuffer();
+                    const branchText = trimmed.replace(/^\*\s+/, '');
+                    const branchType = detectSectionType(branchText);
+                    currentBranch = {
+                        label: branchText,
+                        type: branchType,
+                        lines: [],
+                    };
+                    continue;
+                }
+
+                // Start a default section if none exists
+                if (!currentSection) {
+                    const type = detectSectionType(trimmed);
+                    currentSection = {
+                        title: type === 'generic' ? 'Script' : SECTION_PATTERNS.find(p => p.type === type)?.label || 'Script',
+                        type: type,
+                        lines: [],
+                        branches: [],
+                    };
+                }
+
+                // Classify the line and add it
+                const classified = classifyLine(line);
+                if (classified) {
+                    lineBuffer.push(classified);
+                }
+            }
+
+            // Flush remaining
+            closeSection();
+
+            // Post-process: merge very small sections, detect objection pairs
+            return postProcessSections(sections);
+        }
+
+        function postProcessSections(sections) {
+            const processed = [];
+
+            for (const section of sections) {
+                // Within branches, detect objection trigger/response pairs
+                for (const branch of section.branches) {
+                    branch.lines = detectObjectionPairs(branch.lines);
+                }
+                section.lines = detectObjectionPairs(section.lines);
+
+                // Chunk long line sequences (memory science: groups of 3-5)
+                section.lines = chunkLines(section.lines);
+
+                for (const branch of section.branches) {
+                    branch.lines = chunkLines(branch.lines);
+                }
+
+                processed.push(section);
+            }
+
+            return processed;
+        }
+
+        function detectObjectionPairs(lines) {
+            const result = [];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.type === 'objection-trigger' && i + 1 < lines.length) {
+                    // Look for the response that follows
+                    const responses = [];
+                    let j = i + 1;
+                    while (j < lines.length && lines[j].type !== 'objection-trigger' && lines[j].type !== 'chunk-separator') {
+                        responses.push(lines[j]);
+                        j++;
+                    }
+                    if (responses.length) {
+                        result.push({
+                            type: 'objection-pair',
+                            trigger: line.text,
+                            responses: responses,
+                        });
+                        i = j - 1;
+                        continue;
+                    }
+                }
+                result.push(line);
+            }
+            return result;
+        }
+
+        function chunkLines(lines) {
+            // Insert chunk separators every 4-5 "say" lines (Miller's Law)
+            const result = [];
+            let sayCount = 0;
+            for (const line of lines) {
+                if (line.type === 'say') {
+                    sayCount++;
+                    if (sayCount > 4) {
+                        result.push({ type: 'chunk-separator' });
+                        sayCount = 1;
+                    }
+                }
+                result.push(line);
+            }
+            return result;
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // Key Phrase Highlighter
+        // ════════════════════════════════════════════════════════════
+        function highlightKeyPhrases(text) {
+            let safe = escapeHtml(text);
+
+            // Highlight quoted speech patterns
+            safe = safe.replace(/&quot;([^&]+)&quot;/g, '<span class="key-phrase">"$1"</span>');
+            safe = safe.replace(/"([^"]+)"/g, '<span class="key-phrase">"$1"</span>');
+
+            // Highlight transition arrows
+            safe = safe.replace(/(→|->)/g, '<span style="color:var(--accent-cyan);font-weight:700;">$1</span>');
+
+            // Highlight placeholder variables
+            safe = safe.replace(/(firstname|agent name|agentname|\[.*?\]|____+)/gi,
+                '<span style="color:var(--accent-amber);font-weight:600;font-style:italic;">$1</span>');
+
+            // Highlight question marks (key moments)
+            safe = safe.replace(/(\?)/g, '<span style="color:var(--accent-cyan);font-weight:700;">?</span>');
+
+            return safe;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // Renderer
+        // ════════════════════════════════════════════════════════════
+        function renderAnalyzedScript(sections) {
+            parsedSections = sections;
+            const flowEl = document.getElementById('scriptFlow');
+            const outlineEl = document.getElementById('sectionOutline');
+
+            // Build outline
+            let outlineHtml = '<div class="outline-title">Sections</div>';
+            sections.forEach((section, idx) => {
+                const color = SECTION_COLORS[section.type] || SECTION_COLORS.generic;
+                outlineHtml += `
+                    <div class="outline-item" data-section="${idx}" onclick="scrollToSection(${idx})">
+                        <div class="outline-dot" style="background:${color};"></div>
+                        <span>${escapeHtml(section.title)}</span>
+                    </div>
+                `;
+            });
+            outlineEl.innerHTML = outlineHtml;
+
+            // Build flow
+            let flowHtml = '';
+            sections.forEach((section, idx) => {
+                const color = SECTION_COLORS[section.type] || SECTION_COLORS.generic;
+                const badgeClass = 'badge-' + section.type;
+                const typeLabel = SECTION_PATTERNS.find(p => p.type === section.type)?.label || 'Section';
+
+                flowHtml += `
+                    <div class="section-block open" id="section-${idx}" data-index="${idx}">
+                        <div class="section-header" onclick="toggleSection(${idx})">
+                            <div class="section-color-bar" style="background:${color};"></div>
+                            <span class="section-title">${escapeHtml(section.title)}</span>
+                            <span class="section-badge ${badgeClass}">${typeLabel}</span>
+                            <svg class="section-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+                        </div>
+                        <div class="section-body">
+                            <div class="section-content">
+                                ${renderLines(section.lines)}
+                                ${renderBranches(section.branches)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Flow connector between sections
+                if (idx < sections.length - 1) {
+                    flowHtml += `
+                        <div class="flow-connector">
+                            <div class="flow-arrow"></div>
+                        </div>
+                    `;
+                }
+            });
+
+            flowEl.innerHTML = flowHtml;
+
+            // Switch views
+            document.getElementById('pasteView').classList.remove('active');
+            document.getElementById('analyzedView').classList.add('active');
+            document.getElementById('pageSubtitle').textContent =
+                `${sections.length} sections detected. Use the modes above to practice.`;
+        }
+
+        function renderLines(lines) {
+            return lines.map(line => {
+                if (line.type === 'chunk-separator') {
+                    return '<hr class="chunk-separator">';
+                }
+                if (line.type === 'objection-pair') {
+                    return `
+                        <div class="objection-pair">
+                            <div class="objection-trigger">${escapeHtml(line.trigger)}</div>
+                            <div class="objection-response">
+                                ${line.responses.map(r =>
+                                    `<span class="speech-text">${highlightKeyPhrases(r.text)}</span>`
+                                ).join('<br>')}
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="speech-line ${line.type}">
+                        <span class="speech-text">${highlightKeyPhrases(line.text)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderBranches(branches) {
+            if (!branches.length) return '';
+            return branches.map(branch => {
+                const color = SECTION_COLORS[branch.type] || SECTION_COLORS.generic;
+                const badgeClass = 'badge-' + branch.type;
+                const typeLabel = SECTION_PATTERNS.find(p => p.type === branch.type)?.label || 'Branch';
+                return `
+                    <div class="branch-block">
+                        <div class="branch-header" onclick="toggleBranch(this)">
+                            <span class="branch-icon">&#9654;</span>
+                            <span class="branch-label">${escapeHtml(branch.label)}</span>
+                            <span class="branch-type-badge ${badgeClass}">${typeLabel}</span>
+                        </div>
+                        <div class="branch-body">
+                            <div class="branch-content">
+                                ${renderLines(branch.lines)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // Interactions
+        // ════════════════════════════════════════════════════════════
+        function toggleSection(idx) {
+            const el = document.getElementById(`section-${idx}`);
+            el.classList.toggle('open');
+        }
+
+        function toggleBranch(headerEl) {
+            headerEl.parentElement.classList.toggle('open');
+        }
+
+        function scrollToSection(idx) {
+            const el = document.getElementById(`section-${idx}`);
+            if (!el) return;
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Highlight briefly
+            el.classList.add('highlighted');
+            setTimeout(() => el.classList.remove('highlighted'), 2000);
+            // Update outline active state
+            document.querySelectorAll('.outline-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`.outline-item[data-section="${idx}"]`)?.classList.add('active');
+            // Open the section if closed
+            if (!el.classList.contains('open')) el.classList.add('open');
+        }
+
+        // ── Mode Switching ──────────────────────────────────────
+        document.querySelectorAll('.mode-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentMode = tab.dataset.mode;
+                applyMode(currentMode);
+            });
+        });
+
+        function applyMode(mode) {
+            const flow = document.getElementById('scriptFlow');
+            const controls = document.getElementById('focusControls');
+
+            // Reset
+            flow.classList.remove('recall-mode');
+            controls.classList.remove('active');
+            document.querySelectorAll('.section-block').forEach(s => {
+                s.classList.add('open');
+                s.style.display = '';
+            });
+            document.querySelectorAll('.speech-text').forEach(el => el.classList.remove('revealed'));
+
+            if (mode === 'focus') {
+                // Focus mode: show one section at a time
+                controls.classList.add('active');
+                focusIndex = 0;
+                updateFocus();
+            } else if (mode === 'recall') {
+                // Recall mode: blur speech text, click to reveal
+                flow.classList.add('recall-mode');
+                document.querySelectorAll('.speech-line.say').forEach(line => {
+                    line.addEventListener('click', revealLine);
+                });
+            }
+        }
+
+        function revealLine(e) {
+            const speechText = e.currentTarget.querySelector('.speech-text');
+            if (speechText) speechText.classList.toggle('revealed');
+        }
+
+        // ── Focus Mode ──────────────────────────────────────────
+        function updateFocus() {
+            const blocks = document.querySelectorAll('.section-block');
+            blocks.forEach((block, idx) => {
+                if (idx === focusIndex) {
+                    block.style.display = '';
+                    block.classList.add('open');
+                    block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    block.style.display = 'none';
+                }
+            });
+            const counter = document.getElementById('focusCounter');
+            counter.textContent = `Section ${focusIndex + 1} of ${blocks.length}`;
+            document.getElementById('focusPrev').disabled = focusIndex === 0;
+            document.getElementById('focusNext').disabled = focusIndex >= blocks.length - 1;
+
+            // Update outline
+            document.querySelectorAll('.outline-item').forEach((item, idx) => {
+                item.classList.toggle('active', idx === focusIndex);
+            });
+        }
+
+        function focusStep(delta) {
+            const blocks = document.querySelectorAll('.section-block');
+            focusIndex = Math.max(0, Math.min(blocks.length - 1, focusIndex + delta));
+            updateFocus();
+        }
+
+        // ── Analyze Action ──────────────────────────────────────
+        function analyzeScript() {
+            const text = document.getElementById('pasteInput').value.trim();
+            if (!text) {
+                showToast('Paste your script first.', 'error');
+                return;
+            }
+            const sections = parseScript(text);
+            if (!sections.length) {
+                showToast('Could not detect any sections. Try adding headings to your script.', 'error');
+                return;
+            }
+            renderAnalyzedScript(sections);
+        }
+
+        function showPasteView() {
+            document.getElementById('analyzedView').classList.remove('active');
+            document.getElementById('pasteView').classList.add('active');
+            document.getElementById('pageSubtitle').textContent =
+                'Paste your script below and we\'ll make it easy to read and practice.';
+        }
+
+        // ── Char counter ────────────────────────────────────────
+        document.getElementById('pasteInput').addEventListener('input', function() {
+            document.getElementById('charInfo').textContent = this.value.length.toLocaleString() + ' characters';
+        });
+
+        // ── Load from saved script if ?id= param ────────────────
+        async function loadFromParam() {
+            const params = new URLSearchParams(window.location.search);
+            const scriptId = params.get('id');
+            if (!scriptId) return;
+
+            try {
+                const script = await API.getScript(scriptId);
+                document.getElementById('pageTitle').textContent = script.name || 'Smart Script Analyzer';
+                document.getElementById('pasteInput').value = script.content || '';
+                // Auto-analyze
+                if (script.content) {
+                    const sections = parseScript(script.content);
+                    if (sections.length) {
+                        renderAnalyzedScript(sections);
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading script:', err);
+                showToast('Could not load script: ' + err.message, 'error');
+            }
+        }
+
+        // ── Keyboard shortcuts ──────────────────────────────────
+        document.addEventListener('keydown', (e) => {
+            if (currentMode === 'focus') {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    focusStep(1);
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    focusStep(-1);
+                }
+            }
+        });
+
+        // ── Init ────────────────────────────────────────────────
+        loadFromParam();
+    </script>
+</body>
+</html>
