@@ -321,6 +321,17 @@ async def init_schema():
         );
         CREATE INDEX IF NOT EXISTS idx_module_mastery_user ON module_mastery(user_id);
 
+        -- MASTERY PLANS (Road to Mastery progress tracking)
+        CREATE TABLE IF NOT EXISTS mastery_plans (
+            id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            user_id         UUID NOT NULL UNIQUE,
+            started_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            current_day     INTEGER NOT NULL DEFAULT 1,
+            completed_activities JSONB NOT NULL DEFAULT '[]'::jsonb,
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_mastery_plans_user ON mastery_plans(user_id);
+
         -- UPDATED_AT TRIGGER FUNCTION
         CREATE OR REPLACE FUNCTION update_updated_at()
         RETURNS TRIGGER AS $$
@@ -338,6 +349,7 @@ async def init_schema():
         ("trg_user_scripts_updated", "user_scripts"),
         ("trg_script_mastery_updated", "script_mastery"),
         ("trg_module_mastery_updated", "module_mastery"),
+        ("trg_mastery_plans_updated", "mastery_plans"),
     ]
     for trig_name, table_name in triggers:
         exists = await pool.fetchval(
@@ -1377,3 +1389,55 @@ async def increment_module_mastery(user_id: str, module_key: str) -> dict:
         )
     result["mastery_level"] = new_level
     return result
+
+
+# ══════════════════════════════════════════════════════════════
+# MASTERY PLAN OPERATIONS (Road to Mastery)
+# ══════════════════════════════════════════════════════════════
+
+async def get_mastery_plan(user_id: str) -> Optional[dict]:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM mastery_plans WHERE user_id = $1",
+        uuid.UUID(user_id),
+    )
+    if not row:
+        return None
+    result = _row_to_dict(row)
+    if isinstance(result.get("completed_activities"), str):
+        result["completed_activities"] = json.loads(result["completed_activities"])
+    return result
+
+
+async def create_mastery_plan(user_id: str) -> dict:
+    pool = await get_pool()
+    plan_id = uuid.uuid4()
+    await pool.execute(
+        """INSERT INTO mastery_plans (id, user_id, current_day, completed_activities, started_at)
+           VALUES ($1, $2, 1, '[]'::jsonb, NOW())
+           ON CONFLICT (user_id) DO UPDATE
+           SET current_day = 1, completed_activities = '[]'::jsonb, started_at = NOW()
+           """,
+        plan_id, uuid.UUID(user_id),
+    )
+    return await get_mastery_plan(user_id)
+
+
+async def complete_plan_activity(user_id: str, day: int, activity_index: int) -> dict:
+    pool = await get_pool()
+    now = datetime.now(timezone.utc).isoformat()
+    entry = json.dumps({"day": day, "activity_index": activity_index, "completed_at": now})
+
+    # Add to completed_activities array and update current_day
+    await pool.execute(
+        """UPDATE mastery_plans
+           SET completed_activities = completed_activities || $1::jsonb,
+               current_day = GREATEST(current_day, $2)
+           WHERE user_id = $3""",
+        f'[{entry}]', day, uuid.UUID(user_id),
+    )
+    return await get_mastery_plan(user_id)
+
+
+async def reset_mastery_plan(user_id: str) -> dict:
+    return await create_mastery_plan(user_id)

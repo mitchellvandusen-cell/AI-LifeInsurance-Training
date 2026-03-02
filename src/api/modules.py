@@ -19,6 +19,7 @@ from src.core import database as db
 from src.engine.homework_engine import HomeworkEngine
 from src.engine.persona_generator import PersonaGenerator, analyze_script_for_persona
 from src.knowledge.sales_mastery import TRAINING_MODULES
+from src.knowledge.mastery_curriculum import CURRICULUM, PHASES, TOTAL_DAYS, TOTAL_ACTIVITIES
 from src.prompts.module_prompts import build_module_prompt
 from src.services.voice import VoiceSession
 
@@ -781,3 +782,86 @@ def _extract_docx_text(raw_bytes: bytes) -> str:
     except Exception as e:
         logger.error(f"[SCRIPT] DOCX extraction error: {e}")
         raise HTTPException(status_code=400, detail="Failed to extract text from DOCX.")
+
+
+# ══════════════════════════════════════════════════════════════
+# Road to Mastery — Curriculum & Progress API
+# ══════════════════════════════════════════════════════════════
+
+@router.get("/mastery-plan")
+async def get_mastery_plan(request: Request):
+    """Get the Road to Mastery curriculum and user's progress."""
+    user = get_current_user(request)
+    user_id = user["user_id"]
+
+    plan = await db.get_mastery_plan(user_id)
+
+    return {
+        "curriculum": CURRICULUM,
+        "phases": PHASES,
+        "total_days": TOTAL_DAYS,
+        "total_activities": TOTAL_ACTIVITIES,
+        "plan": plan,
+    }
+
+
+class StartPlanRequest(BaseModel):
+    reset: bool = False
+
+
+@router.post("/mastery-plan/start")
+async def start_mastery_plan(req: StartPlanRequest, request: Request):
+    """Start or reset the Road to Mastery plan."""
+    user = get_current_user(request)
+    user_id = user["user_id"]
+
+    existing = await db.get_mastery_plan(user_id)
+    if existing and not req.reset:
+        return {"plan": existing, "message": "Plan already exists"}
+
+    plan = await db.create_mastery_plan(user_id)
+    return {"plan": plan, "message": "Plan started"}
+
+
+class CompleteActivityRequest(BaseModel):
+    day: int
+    activity_index: int
+
+
+@router.post("/mastery-plan/complete")
+async def complete_plan_activity(req: CompleteActivityRequest, request: Request):
+    """Mark a specific activity as completed."""
+    user = get_current_user(request)
+    user_id = user["user_id"]
+
+    plan = await db.get_mastery_plan(user_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="No active mastery plan. Start one first.")
+
+    # Validate day and activity_index
+    day_data = next((d for d in CURRICULUM if d["day"] == req.day), None)
+    if not day_data:
+        raise HTTPException(status_code=400, detail=f"Invalid day: {req.day}")
+    if req.activity_index < 0 or req.activity_index >= len(day_data["activities"]):
+        raise HTTPException(status_code=400, detail=f"Invalid activity index: {req.activity_index}")
+
+    # Check if already completed
+    completed = plan.get("completed_activities", [])
+    already_done = any(
+        c["day"] == req.day and c["activity_index"] == req.activity_index
+        for c in completed
+    )
+    if already_done:
+        return {"plan": plan, "message": "Activity already completed"}
+
+    plan = await db.complete_plan_activity(user_id, req.day, req.activity_index)
+    return {"plan": plan, "message": "Activity completed"}
+
+
+@router.post("/mastery-plan/reset")
+async def reset_mastery_plan(request: Request):
+    """Reset the Road to Mastery plan to day 1."""
+    user = get_current_user(request)
+    user_id = user["user_id"]
+    plan = await db.reset_mastery_plan(user_id)
+    return {"plan": plan, "message": "Plan reset"}

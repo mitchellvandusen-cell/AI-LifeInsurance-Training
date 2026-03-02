@@ -519,9 +519,17 @@
                 <p>Full call simulation or focused skill modules</p>
             </div>
 
-            <div onclick="selectMode('full')" style="cursor:pointer;padding:0.85rem 1rem;margin-bottom:0.75rem;border:2px solid var(--accent-blue);border-radius:var(--radius-md);transition:all .2s;background:rgba(79,70,229,0.05);">
+            <div onclick="selectMode('full')" style="cursor:pointer;padding:0.85rem 1rem;margin-bottom:0.5rem;border:2px solid var(--accent-blue);border-radius:var(--radius-md);transition:all .2s;background:rgba(79,70,229,0.05);">
                 <h3 style="font-size:1rem;margin-bottom:0.15rem;">Full Call Simulation</h3>
                 <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Complete end-to-end call with an AI prospect. All skills graded.</p>
+            </div>
+
+            <div onclick="window.location.href='/road-to-mastery'" style="cursor:pointer;padding:0.85rem 1rem;margin-bottom:0.75rem;border:2px solid var(--accent-green);border-radius:var(--radius-md);transition:all .2s;background:rgba(16,185,129,0.05);">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <h3 style="font-size:1rem;margin-bottom:0.15rem;">Road to Mastery</h3>
+                    <span style="font-size:0.65rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:8px;background:rgba(16,185,129,0.15);color:var(--accent-green);">35 Days</span>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Structured day-by-day program. Zero to top 1% closer.</p>
             </div>
 
             <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin:0.75rem 0 0.5rem;">Focused Skill Modules</div>
@@ -1145,6 +1153,33 @@
                 return;
             }
 
+            // Road to Mastery auto-launch: ?mode=MODULE_KEY&rtm=1[&topic=N]
+            if (mode && params.get('rtm') === '1') {
+                await loadModules();
+                if (mode === 'full') {
+                    selectMode('full');
+                } else {
+                    selectedModule = mode;
+                    trainingMode = mode;
+                    const topicParam = params.get('topic');
+                    if (topicParam !== null) {
+                        selectedTopicIndex = parseInt(topicParam, 10);
+                    }
+                    // Go directly to module pre-session
+                    const mod = (cachedModData?.modules || []).find(m => m.key === mode);
+                    if (mod) {
+                        if (selectedTopicIndex !== null) {
+                            showModulePreSession(mod, cachedMasteryData || {}, mod.topics?.[selectedTopicIndex]);
+                        } else {
+                            showModulePreSession(mod, cachedMasteryData || {});
+                        }
+                    } else {
+                        selectMode(mode);
+                    }
+                }
+                return;
+            }
+
             loadModules();
         }
 
@@ -1603,10 +1638,26 @@
             }
         }
 
+        // ── Road to Mastery: mark activity complete ────────
+        async function completeRtmActivity() {
+            try {
+                const raw = sessionStorage.getItem('rtm_activity');
+                if (!raw) return;
+                const act = JSON.parse(raw);
+                await API.completePlanActivity(act.day, act.activity_index);
+                sessionStorage.removeItem('rtm_activity');
+            } catch (e) {
+                console.error('RTM completion error:', e);
+            }
+        }
+
         function showModuleComplete(result) {
             const overlay = document.getElementById('reportOverlay');
             const content = document.getElementById('reportContent');
             const qualified = result.session_qualified !== false;
+
+            // Mark RTM activity complete if this came from Road to Mastery
+            if (qualified) completeRtmActivity();
 
             let masteryHtml = '';
             if (result.mastery) {
@@ -1664,7 +1715,9 @@
                     ${incompleteHtml}
                     ${masteryHtml}
                     <div style="margin-top:2rem; display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
-                        <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                        ${sessionStorage.getItem('rtm_activity') || new URLSearchParams(window.location.search).get('rtm') === '1'
+                            ? `<a href="/road-to-mastery" class="btn btn-primary">Back to Plan</a>`
+                            : `<a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>`}
                         ${scriptId ? `<a href="/training?mode=script_practice&script_id=${scriptId}" class="btn btn-primary">Practice Again</a>` : `<button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>`}
                     </div>
                 </div>
@@ -1677,6 +1730,9 @@
             const report = result.report;
             const overlay = document.getElementById('reportOverlay');
             const content = document.getElementById('reportContent');
+
+            // Mark RTM activity complete if this came from Road to Mastery
+            completeRtmActivity();
 
             // Grading engine uses overall_grade, not letter_grade
             const grade = report.overall_grade || report.letter_grade || 'F';
@@ -1719,8 +1775,10 @@
                     <div class="grade-big ${gradeClass(grade)}" style="font-size:5rem;font-weight:900;margin:1rem 0;">${grade}</div>
                     <p style="font-size:1.25rem;color:var(--text-secondary);">Overall Score: <strong>${score}/100</strong></p>
                     <p style="color:var(--text-muted);">Duration: ${formatDuration(result.duration_seconds)} | Style: ${style} | Close Probability: ${closeProb}%</p>
-                    <div style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:center;">
-                        <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                    <div style="margin-top:1.5rem; display:flex; gap:1rem; justify-content:center; flex-wrap:wrap;">
+                        ${new URLSearchParams(window.location.search).get('rtm') === '1'
+                            ? `<a href="/road-to-mastery" class="btn btn-primary">Back to Plan</a>`
+                            : `<a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>`}
                         <a href="${reportLink}" class="btn btn-secondary">View Full Report</a>
                         <button class="btn btn-primary" onclick="window.location.href='/training'">Train Again</button>
                     </div>

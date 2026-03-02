@@ -214,6 +214,20 @@ const API = {
     async getModuleMastery() {
         return this.get('/api/modules/mastery');
     },
+
+    // ── Road to Mastery ──────────────────────────────────────
+    async getMasteryPlan() {
+        return this.get('/api/modules/mastery-plan');
+    },
+    async startMasteryPlan(reset = false) {
+        return this.post('/api/modules/mastery-plan/start', { reset });
+    },
+    async completePlanActivity(day, activityIndex) {
+        return this.post('/api/modules/mastery-plan/complete', { day, activity_index: activityIndex });
+    },
+    async resetMasteryPlan() {
+        return this.post('/api/modules/mastery-plan/reset');
+    },
     async uploadScriptFile(file, name = '') {
         const formData = new FormData();
         formData.append('file', file);
