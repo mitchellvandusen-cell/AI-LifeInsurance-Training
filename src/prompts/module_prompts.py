@@ -2609,6 +2609,65 @@ If they try to practice without a script, gently redirect them to upload one fir
     mastery_level = state.get("mastery_level", 0)
     level_label = _mastery_level_label(mastery_level)
 
+    # Build matched persona context (if available from script analysis)
+    persona_context = ""
+    persona_data = state.get("matched_persona")
+    script_analysis = state.get("script_analysis")
+    if persona_data:
+        product_labels = {
+            "final_expense": "Final Expense / Burial Insurance",
+            "term_life": "Term Life Insurance",
+            "iul": "Indexed Universal Life (IUL)",
+            "whole_life": "Whole Life Insurance",
+            "mortgage_protection": "Mortgage Protection",
+            "general_life": "General Life Insurance",
+        }
+        product_label = product_labels.get(
+            script_analysis.get("product_type", "") if script_analysis else "",
+            "Life Insurance"
+        )
+        lead_label = {
+            "new": "a brand new lead (speed-to-lead, first contact)",
+            "aged": "an aged lead (was contacted before, may or may not remember)",
+            "facebook": "a Facebook/social media lead (put info in online, expecting calls)",
+            "unknown": "a standard lead",
+        }.get(script_analysis.get("lead_type", "unknown") if script_analysis else "unknown",
+              "a standard lead")
+
+        persona_context = f"""
+## MATCHED CLIENT PERSONA
+The script has been analyzed and you are playing a client who matches this script's
+target market. This is a {product_label} script. The lead type is {lead_label}.
+
+**Your Character:**
+- Name: {persona_data.get('name', 'the client')}
+- Age: {persona_data.get('age', 55)}
+- Occupation: {persona_data.get('occupation', 'Retired')}
+- Marital Status: {persona_data.get('marital_status', 'Married')}
+- Dependents: {persona_data.get('dependents', 0)}
+- Health: {', '.join(persona_data.get('health_conditions', [])) or 'Generally healthy'}
+- Medications: {', '.join(persona_data.get('medications', [])) or 'None'}
+- Tobacco: {'Yes' if persona_data.get('tobacco_use') else 'No'}
+- Income: ~${persona_data.get('annual_income', 40000):,}/year
+- Why they inquired: {persona_data.get('reason_for_inquiry', 'Saw an ad')}
+- Existing coverage: {persona_data.get('existing_coverage') or 'None'}
+- Pain points: {', '.join(persona_data.get('pain_points', []))}
+
+**Your Behavioral Profile:**
+- Skepticism: {persona_data.get('skepticism_level', 50):.0f}/100
+- Trust level: {persona_data.get('baseline_trust', 40):.0f}/100
+- Budget sensitivity: {persona_data.get('budget_sensitivity', 50):.0f}/100
+- Talkativeness: {persona_data.get('talkativeness', 50):.0f}/100
+- Will test frame: {'Yes' if persona_data.get('will_test_frame_control') else 'No'}
+- Personality: {persona_data.get('personality_notes', '')}
+
+IMPORTANT: Stay in character as this person. When the agent says "firstname" or
+uses a placeholder name, respond as {persona_data.get('name', 'the client').split()[0]}.
+Give answers consistent with your profile — your age, health, occupation, and
+situation should all be realistic for someone who would receive this type of script.
+When they ask medical questions, answer based on your health profile above.
+"""
+
     # Build level-specific coaching instructions
     if mastery_level == 0:
         level_instructions = """## LEVEL 0 — FULL READ
@@ -2767,11 +2826,14 @@ practiced this specific script.
 {script_content[:8000]}
 ```
 
+{persona_context}
+
 ## YOUR ROLE
 You play a client prospect whose difficulty adapts to their mastery level.
 At low levels you're easy-going and cooperative. As they level up, you become
 more realistic — adding natural interruptions, slight skepticism, and real-world
 responses that test their adaptability.
+{"If a matched persona is provided above, stay in character as that person throughout." if persona_context else ""}
 
 {level_instructions}
 

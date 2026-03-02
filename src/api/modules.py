@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from src.api.middleware import get_current_user, get_ws_user
 from src.core import database as db
 from src.engine.homework_engine import HomeworkEngine
+from src.engine.persona_generator import PersonaGenerator, analyze_script_for_persona
 from src.knowledge.sales_mastery import TRAINING_MODULES
 from src.prompts.module_prompts import build_module_prompt
 from src.services.voice import VoiceSession
@@ -145,6 +146,44 @@ async def start_module_session(req: StartModuleRequest, request: Request):
         sessions_per_level = mastery.get("sessions_per_level", 10) if mastery else 10
         session_state["practice_count"] = practice_count
         session_state["mastery_level"] = mastery_level
+
+        # Analyze script and generate a matched client persona
+        script_analysis = analyze_script_for_persona(script["content"])
+        session_state["script_analysis"] = script_analysis
+
+        gen = PersonaGenerator()
+        matched_persona = gen.generate_for_script(
+            script["content"],
+            mastery_level=mastery_level,
+            practice_count=practice_count,
+        )
+        # Serialize persona for prompt injection
+        session_state["matched_persona"] = {
+            "name": matched_persona.name,
+            "age": matched_persona.age,
+            "gender": matched_persona.gender,
+            "occupation": matched_persona.occupation,
+            "marital_status": matched_persona.marital_status,
+            "dependents": matched_persona.dependents,
+            "annual_income": matched_persona.annual_income,
+            "health_conditions": matched_persona.health_conditions,
+            "medications": matched_persona.medications,
+            "tobacco_use": matched_persona.tobacco_use,
+            "existing_coverage": matched_persona.existing_coverage,
+            "reason_for_inquiry": matched_persona.reason_for_inquiry,
+            "pain_points": matched_persona.pain_points,
+            "personality_notes": matched_persona.personality_notes,
+            "skepticism_level": matched_persona.skepticism_level,
+            "baseline_trust": matched_persona.baseline_trust,
+            "budget_sensitivity": matched_persona.budget_sensitivity,
+            "talkativeness": matched_persona.talkativeness,
+            "will_test_frame_control": matched_persona.will_test_frame_control,
+        }
+        print(f"[SCRIPT] Analyzed: product={script_analysis['product_type']}, "
+              f"archetype={script_analysis['archetype_name']}, "
+              f"lead={script_analysis['lead_type']}, "
+              f"persona={matched_persona.name} (age {matched_persona.age})")
+
         mastery_data = {
             "practice_count": practice_count,
             "mastery_level": mastery_level,
@@ -193,6 +232,16 @@ async def start_module_session(req: StartModuleRequest, request: Request):
     if script:
         response["script_content"] = script["content"]
         response["script_name"] = script["name"]
+        # Include matched persona info so the UI can show who they're practicing with
+        if session_state.get("matched_persona"):
+            persona_info = session_state["matched_persona"]
+            response["matched_client"] = {
+                "name": persona_info["name"],
+                "age": persona_info["age"],
+                "occupation": persona_info["occupation"],
+                "product_type": session_state.get("script_analysis", {}).get("product_type", "general_life"),
+                "lead_type": session_state.get("script_analysis", {}).get("lead_type", "unknown"),
+            }
     return response
 
 
