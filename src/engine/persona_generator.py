@@ -211,6 +211,126 @@ LAST_NAMES = [
 MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed"]
 
 
+# ── Script-to-Persona Matching ─────────────────────────────────────────
+# Analyzes script content to determine the ideal client archetype.
+
+# Product type detection keywords → archetype mapping
+SCRIPT_PRODUCT_SIGNALS = [
+    {
+        "product": "final_expense",
+        "keywords": ["final expense", "final expenses", "funeral", "burial",
+                      "cremation", "end of life", "passing away", "funeral costs",
+                      "burial costs", "leave behind", "not be a burden",
+                      "fixed income", "ages 50", "ages 60", "whole life",
+                      "guaranteed issue", "simplified issue", "no medical exam",
+                      "graded benefit", "senior", "cover funeral"],
+        "archetypes": ["The Retired Grandparent", "The Recently Widowed"],
+        "fallback_archetype": "The Retired Grandparent",
+    },
+    {
+        "product": "term_life",
+        "keywords": ["term life", "term policy", "20 year", "30 year", "term insurance",
+                      "mortgage protection", "income replacement", "breadwinner",
+                      "family protection", "kids", "children", "young family",
+                      "affordable coverage", "convertible term"],
+        "archetypes": ["The Concerned Parent", "The Young Invincible", "The Reluctant Spouse"],
+        "fallback_archetype": "The Concerned Parent",
+    },
+    {
+        "product": "iul",
+        "keywords": ["indexed universal", "iul", "cash value", "living benefits",
+                      "accumulation", "retirement supplement", "tax free",
+                      "tax-free", "market upside", "floor protection",
+                      "s&p 500", "index", "wealth building"],
+        "archetypes": ["The Skeptical Professional", "The Busy Executive", "The Informed Shopper"],
+        "fallback_archetype": "The Skeptical Professional",
+    },
+    {
+        "product": "whole_life",
+        "keywords": ["whole life", "permanent coverage", "cash value", "legacy",
+                      "estate planning", "wealth transfer", "dividends",
+                      "guaranteed death benefit", "permanent insurance"],
+        "archetypes": ["The Busy Executive", "The Skeptical Professional", "The Retired Grandparent"],
+        "fallback_archetype": "The Skeptical Professional",
+    },
+    {
+        "product": "mortgage_protection",
+        "keywords": ["mortgage protection", "mortgage", "home loan", "house payment",
+                      "pay off the house", "pay off the mortgage", "homeowner"],
+        "archetypes": ["The Concerned Parent", "The Reluctant Spouse"],
+        "fallback_archetype": "The Concerned Parent",
+    },
+    {
+        "product": "general_life",
+        "keywords": ["life insurance", "coverage", "policy", "rates", "carriers",
+                      "underwriting", "field underwriter", "shop the rates",
+                      "top carriers"],
+        "archetypes": ["The Concerned Parent", "The Retired Grandparent",
+                       "The Informed Shopper", "The Skeptical Professional"],
+        "fallback_archetype": "The Concerned Parent",
+    },
+]
+
+# Lead type detection → adjusts persona context
+LEAD_TYPE_SIGNALS = {
+    "aged": ["aged lead", "weeks ago", "months ago", "didn't get updated",
+             "did you end up finding", "remember this", "what ended up happening"],
+    "new": ["speed to lead", "just had a second", "request you put in",
+            "just received", "new lead", "within 5 min", "exclusive lead"],
+    "facebook": ["facebook", "fb lead", "facebook lead", "put in some info online",
+                 "probably facebook", "saw something online"],
+}
+
+
+def analyze_script_for_persona(script_content: str) -> dict:
+    """
+    Analyze script content to determine the best client persona match.
+
+    Returns a dict with:
+      - product_type: detected insurance product
+      - archetype_name: best matching archetype name
+      - lead_type: 'new', 'aged', 'facebook', or 'unknown'
+      - confidence: how confident the match is (number of keyword hits)
+      - persona_brief: short description for prompt injection
+    """
+    lower = script_content.lower()
+
+    # Detect product type — score each product, prefer specific over generic
+    best_product = None
+    best_score = 0
+    best_archetypes = []
+    fallback = "The Concerned Parent"
+
+    for signal in SCRIPT_PRODUCT_SIGNALS:
+        score = sum(1 for kw in signal["keywords"] if kw in lower)
+        # Penalize the generic catch-all so specific products win ties
+        if signal["product"] == "general_life":
+            score = max(0, score - 2)
+        if score > best_score:
+            best_score = score
+            best_product = signal["product"]
+            best_archetypes = signal["archetypes"]
+            fallback = signal["fallback_archetype"]
+
+    # Detect lead type
+    lead_type = "unknown"
+    for ltype, keywords in LEAD_TYPE_SIGNALS.items():
+        if any(kw in lower for kw in keywords):
+            lead_type = ltype
+            break
+
+    # Pick archetype — use mastery level to rotate through options
+    archetype_name = fallback if not best_archetypes else best_archetypes[0]
+
+    return {
+        "product_type": best_product or "general_life",
+        "archetype_name": archetype_name,
+        "archetype_pool": best_archetypes or [archetype_name],
+        "lead_type": lead_type,
+        "confidence": best_score,
+    }
+
+
 class PersonaGenerator:
     """Generates randomized but coherent AI client personas."""
 
@@ -335,6 +455,42 @@ class PersonaGenerator:
             will_test_frame_control=archetype["will_test_frame"],
             frame_test_frequency=random.uniform(0.1, 0.4) if archetype["will_test_frame"] else 0.05,
         )
+
+    def generate_for_script(self, script_content: str, mastery_level: int = 0,
+                            practice_count: int = 0) -> ClientPersona:
+        """
+        Generate a persona that matches the script's product type and target market.
+        Uses mastery_level to rotate through progressively harder archetypes.
+        """
+        analysis = analyze_script_for_persona(script_content)
+        pool = analysis["archetype_pool"]
+
+        # At lower mastery (0-2), use the easiest/most natural archetype for the product
+        # At higher mastery (3-5), rotate to harder archetypes from the pool
+        if mastery_level <= 2:
+            archetype_name = pool[0]
+        else:
+            # Rotate through the pool based on practice count for variety
+            idx = practice_count % len(pool)
+            archetype_name = pool[idx]
+
+        persona = self.generate(archetype_name=archetype_name)
+
+        # Override persona attributes based on mastery level for difficulty scaling
+        if mastery_level <= 1:
+            # Easy: warmer, more trusting, less resistant
+            persona.baseline_trust = min(80, persona.baseline_trust + 20)
+            persona.skepticism_level = max(10, persona.skepticism_level - 20)
+            persona.face_profile.amount_of_resistance = max(10, persona.face_profile.amount_of_resistance - 15)
+            persona.will_test_frame_control = False
+        elif mastery_level >= 4:
+            # Hard: more skeptical, tests frame, higher resistance
+            persona.skepticism_level = min(95, persona.skepticism_level + 15)
+            persona.baseline_trust = max(15, persona.baseline_trust - 10)
+            persona.face_profile.amount_of_resistance = min(90, persona.face_profile.amount_of_resistance + 10)
+            persona.will_test_frame_control = True
+
+        return persona
 
     def get_archetype_names(self) -> list[str]:
         return [a["name"] for a in ARCHETYPES]
