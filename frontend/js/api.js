@@ -199,8 +199,8 @@ const API = {
     async getScript(scriptId) {
         return this.get(`/api/modules/scripts/${scriptId}`);
     },
-    async saveScript(name, content) {
-        return this.post('/api/modules/scripts', { name, content });
+    async saveScript(name, content, script_type = '') {
+        return this.post('/api/modules/scripts', { name, content, script_type });
     },
     async updateScript(scriptId, data) {
         return this.request('PUT', `/api/modules/scripts/${scriptId}`, data);

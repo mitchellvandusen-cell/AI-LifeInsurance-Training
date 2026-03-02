@@ -132,6 +132,15 @@
             <div class="modal">
                 <h2 id="modalTitle">New Script</h2>
                 <input type="text" id="scriptName" placeholder="Script name (e.g., Final Expense Script v2)">
+                <select id="scriptType" style="width:100%;padding:0.65rem 0.75rem;margin-bottom:0.75rem;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-primary);font-size:0.9rem;cursor:pointer;">
+                    <option value="">Script Type (helps AI match the right client)</option>
+                    <option value="final_expense">Final Expense (FEX)</option>
+                    <option value="mortgage_protection">Mortgage Protection</option>
+                    <option value="term_life">Term Life / Income Replacement</option>
+                    <option value="iul">IUL / Indexed Universal Life</option>
+                    <option value="whole_life">Whole Life</option>
+                    <option value="general_life">General Life Insurance</option>
+                </select>
                 <textarea id="scriptContent" placeholder="Paste your script here..."></textarea>
                 <div class="char-count" id="charCount">0 / 100,000 characters</div>
                 <div class="modal-actions">
@@ -212,11 +221,20 @@
                         </div>
                     ` : '';
 
+                    const typeLabels = {
+                        final_expense: 'FEX', mortgage_protection: 'Mortgage',
+                        term_life: 'Term Life', iul: 'IUL',
+                        whole_life: 'Whole Life', general_life: 'General',
+                    };
+                    const typeBadge = s.script_type && typeLabels[s.script_type]
+                        ? `<span style="font-size:0.65rem;font-weight:600;padding:0.1rem 0.4rem;border-radius:8px;background:rgba(79,70,229,0.15);color:var(--accent-blue);margin-left:0.5rem;">${typeLabels[s.script_type]}</span>`
+                        : '';
+
                     return `
                         <div class="script-card" style="flex-direction:column;align-items:stretch;">
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <div class="script-info">
-                                    <h3>${escapeHtml(s.name)}</h3>
+                                    <h3>${escapeHtml(s.name)}${typeBadge}</h3>
                                     <div class="meta">
                                         ${(s.char_count || 0).toLocaleString()} characters
                                         | ${s.source === 'paste' ? 'Pasted' : 'Uploaded'}
@@ -249,6 +267,7 @@
             editingScriptId = null;
             document.getElementById('modalTitle').textContent = 'New Script';
             document.getElementById('scriptName').value = '';
+            document.getElementById('scriptType').value = '';
             document.getElementById('scriptContent').value = '';
             document.getElementById('charCount').textContent = '0 / 100,000 characters';
             document.getElementById('charCount').className = 'char-count';
@@ -267,6 +286,7 @@
                 editingScriptId = scriptId;
                 document.getElementById('modalTitle').textContent = 'Edit Script';
                 document.getElementById('scriptName').value = script.name || '';
+                document.getElementById('scriptType').value = script.script_type || '';
                 document.getElementById('scriptContent').value = script.content || '';
                 const count = (script.content || '').length;
                 document.getElementById('charCount').textContent = `${count.toLocaleString()} / 100,000 characters`;
@@ -280,6 +300,7 @@
         async function saveScript() {
             const name = document.getElementById('scriptName').value.trim();
             const content = document.getElementById('scriptContent').value;
+            const script_type = document.getElementById('scriptType').value;
 
             if (!name) { showToast('Please enter a script name.', 'error'); return; }
             if (!content.trim()) { showToast('Script content is empty.', 'error'); return; }
@@ -290,10 +311,10 @@
 
             try {
                 if (editingScriptId) {
-                    await API.updateScript(editingScriptId, { name, content });
+                    await API.updateScript(editingScriptId, { name, content, script_type });
                     showToast('Script updated!');
                 } else {
-                    await API.saveScript(name, content);
+                    await API.saveScript(name, content, script_type);
                     showToast('Script saved!');
                 }
                 closeModal();
