@@ -347,6 +347,218 @@
             line-height: 1.5;
         }
 
+        /* ── Script Practice: Flipped Layout ───────────── */
+        /* When in script practice mode, sidebar hides and we show
+           a split: transcript-left panel + script-right panel */
+        .script-practice-layout {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            width: 100%;
+        }
+        .script-practice-layout .sp-left {
+            width: 340px;
+            min-width: 280px;
+            max-width: 400px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+        }
+        .script-practice-layout .sp-left .sp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .script-practice-layout .sp-left .sp-header h3 { font-size: 0.9rem; }
+        .script-practice-layout .sp-left .sp-voice {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+        .script-practice-layout .sp-left .sp-voice .voice-circle {
+            width: 48px; height: 48px; border-width: 2px;
+        }
+        .script-practice-layout .sp-left .sp-voice .voice-circle-inner { font-size: 1.2rem; }
+        .script-practice-layout .sp-left .sp-transcript {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem 1rem;
+        }
+        .script-practice-layout .sp-left .sp-transcript .transcript-header {
+            font-size: 0.7rem;
+            margin-bottom: 0.5rem;
+        }
+        .script-practice-layout .sp-right {
+            flex: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .script-practice-layout .sp-right .sp-script-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .script-practice-layout .sp-right .sp-script-header h3 {
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .script-practice-layout .sp-right .sp-script-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+        }
+        /* Formatted script flow inside the right panel */
+        .sp-script-flow { display: flex; flex-direction: column; gap: 0.75rem; }
+        .sp-section-block {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg); overflow: hidden;
+        }
+        .sp-section-header {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sp-section-color-bar {
+            width: 4px; height: 24px; border-radius: 2px; flex-shrink: 0;
+        }
+        .sp-section-title {
+            font-size: 0.85rem; font-weight: 700; flex: 1;
+        }
+        .sp-section-badge {
+            font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.5rem;
+            border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em;
+        }
+        .sp-section-content { padding: 0.75rem 1rem; }
+        .sp-speech-line {
+            padding: 0.5rem 0.75rem; margin-bottom: 0.4rem;
+            border-radius: var(--radius-sm); font-size: 0.9rem;
+            line-height: 1.7; border-left: 3px solid transparent;
+        }
+        .sp-speech-line.say {
+            background: rgba(79,70,229,0.06);
+            border-left-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+        .sp-speech-line.compliance {
+            background: rgba(79,70,229,0.06);
+            border-left-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+        .sp-speech-line.instruction, .sp-speech-line.coaching-note {
+            background: rgba(245,158,11,0.06);
+            border-left-color: var(--accent-amber);
+            color: var(--text-secondary);
+            font-size: 0.82rem; font-style: italic;
+        }
+        .sp-speech-line.context-note {
+            background: rgba(106,106,138,0.06);
+            border-left-color: var(--text-muted);
+            color: var(--text-muted);
+            font-size: 0.82rem; font-style: italic;
+        }
+        .sp-speech-line.transition-arrow {
+            background: rgba(6,182,212,0.06);
+            border-left-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .sp-speech-line.action-step {
+            background: rgba(16,185,129,0.06);
+            border-left-color: var(--accent-green);
+            color: var(--text-secondary); font-size: 0.82rem;
+        }
+        .sp-key-phrase {
+            font-weight: 700; color: var(--text-primary);
+            background: rgba(79,70,229,0.1); padding: 0.05rem 0.2rem;
+            border-radius: 3px;
+        }
+        .sp-branch-block {
+            margin: 0.5rem 0; border: 1px solid var(--border-color);
+            border-radius: var(--radius-md); overflow: hidden;
+        }
+        .sp-branch-header {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 0.75rem; cursor: pointer;
+            background: var(--bg-secondary);
+            font-size: 0.8rem; font-weight: 600; color: var(--accent-amber);
+        }
+        .sp-branch-header:hover { background: var(--bg-card-hover); }
+        .sp-branch-icon {
+            font-size: 0.7rem; transition: transform 0.2s ease;
+            color: var(--text-muted);
+        }
+        .sp-branch-block.open .sp-branch-icon { transform: rotate(90deg); }
+        .sp-branch-body {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .sp-branch-block.open .sp-branch-body { max-height: 3000px; }
+        .sp-branch-content { padding: 0.5rem 0.75rem; }
+        .sp-objection-pair { margin-bottom: 0.5rem; }
+        .sp-objection-trigger {
+            font-weight: 700; color: var(--accent-red); font-size: 0.8rem;
+            margin-bottom: 0.25rem; padding-left: 0.5rem;
+            border-left: 2px solid var(--accent-red);
+        }
+        .sp-objection-response {
+            padding: 0.4rem 0.75rem; margin-left: 0.5rem;
+            background: rgba(79,70,229,0.06);
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-size: 0.85rem; line-height: 1.6;
+        }
+        .sp-chunk-separator {
+            border: none; border-top: 1px dashed var(--border-color);
+            margin: 0.5rem 0;
+        }
+        /* Badge colors for script practice */
+        .sp-badge-intro { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
+        .sp-badge-questions { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+        .sp-badge-objection { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+        .sp-badge-transition { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+        .sp-badge-close { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+        .sp-badge-action { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+        .sp-badge-generic { background: rgba(106,106,138,0.15); color: var(--text-muted); }
+        /* Blanked words in formatted script */
+        .sp-speech-line .blank-word {
+            display: inline-block;
+            min-width: 2em;
+            border-bottom: 2px solid var(--accent-blue);
+            margin: 0 0.1em;
+            color: transparent;
+            user-select: none;
+        }
+        /* Active section highlight for auto-scroll */
+        .sp-section-block.sp-active {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 12px rgba(79,70,229,0.12);
+        }
+        @media (max-width: 768px) {
+            .script-practice-layout { flex-direction: column; }
+            .script-practice-layout .sp-left {
+                width: 100%; min-width: auto; max-width: none;
+                height: auto; max-height: 35vh;
+                border-right: none; border-bottom: 1px solid var(--border-color);
+            }
+            .script-practice-layout .sp-right { height: auto; min-height: 60vh; }
+        }
+
         /* ── Report Overlay ──────────────────────────────── */
         .report-overlay {
             display: none;
@@ -962,109 +1174,354 @@
         const MASTERY_LABELS = ['Full Read', 'Light Recall', 'Building Memory', 'Deep Recall', 'Near Mastery', 'Full Mastery'];
         const BLANK_PERCENTAGES = [0, 0.10, 0.25, 0.40, 0.60, 0.80];
 
+        // ── Script Parser (ported from script-analyzer) ─────
+        const SP_SECTION_PATTERNS = [
+            { type: 'intro',      keywords: ['intro', 'opening', 'greeting', 'hey firstname', 'new lead', 'aged lead', 'facebook lead', 'average data', 'speed to lead', 'fresh lead', 'old lead', 'warm lead', 'cold lead', 'hot lead'], label: 'Intro' },
+            { type: 'questions',  keywords: ['key questions', 'questions', 'qualifying', 'discovery', 'medical', 'health questions', 'underwriting', 'situation questions'], label: 'Questions' },
+            { type: 'objection',  keywords: ['objection', 'not interested', 'already got', 'call me back', 'dont remember', "don't remember", 'rebuttal', 'pushback'], label: 'Objection' },
+            { type: 'transition', keywords: ['frame', 'framing', 'preframe', 'tie down', 'transition', 'booking', 'appointment', 'bridge'], label: 'Transition' },
+            { type: 'close',      keywords: ['close', 'closing', 'presentation', 'pitch', 'commitment', 'after you set', 'after the call', 'after call', 'post call', 'post-call', 'postcall'], label: 'Close' },
+            { type: 'action',     keywords: ['action', 'steps', 'checklist', 'to do', 'follow up', 'follow-up', 'notes to self', 'reminders'], label: 'Action Steps' },
+        ];
+        const SP_SECTION_COLORS = {
+            intro: 'var(--accent-blue)', questions: 'var(--accent-cyan)',
+            objection: 'var(--accent-red)', transition: 'var(--accent-amber)',
+            close: 'var(--accent-green)', action: 'var(--accent-purple)',
+            generic: 'var(--text-muted)',
+        };
+
+        function spScoreDialogue(text) {
+            const signals = [
+                /\b(you|your|you're|youre)\b/i,
+                /\b(I'm|Im|I am|I'll|Ill|I will|my name is|my name's)\b/i,
+                /\b(we|we're|we'll|our|us)\b/i,
+                /\b(right|correct|sound good|fair enough|sound fair|makes sense)\b/i,
+                /[?]$/, /\b(hey|hi|hello|good morning|good afternoon)\b/i,
+                /\b(great|perfect|awesome|wonderful|excellent|fantastic|ok|okay|alright)\b/i,
+                /\b(so|now|well|actually|basically|literally|pretty)\b/i,
+            ];
+            let score = 0;
+            for (const re of signals) { if (re.test(text)) score++; }
+            return score;
+        }
+
+        function spParseScript(rawText) {
+            const lines = rawText.split('\n');
+            const tokens = [];
+            for (let i = 0; i < lines.length; i++) {
+                const raw = lines[i];
+                const trimmed = raw.trim();
+                if (!trimmed) { tokens.push({ kind: 'blank', index: i }); continue; }
+                if (/^[-=~*_]{3,}$/.test(trimmed)) { tokens.push({ kind: 'separator', index: i }); continue; }
+
+                let content = trimmed;
+                let isHeading = false;
+                if (/^\*{3}[^*]+\*{3}$/.test(trimmed)) { content = trimmed.replace(/^\*{3}/, '').replace(/\*{3}$/, '').trim(); isHeading = true; }
+                else if (/^\*{2}[^*]+\*{2}$/.test(trimmed)) { content = trimmed.replace(/^\*{2}/, '').replace(/\*{2}$/, '').trim(); isHeading = true; }
+                else if (/^#{1,4}\s+/.test(trimmed)) { content = trimmed.replace(/^#{1,4}\s+/, '').trim(); isHeading = true; }
+                else if (/^={3,}.+={3,}$/.test(trimmed)) { content = trimmed.replace(/^=+/, '').replace(/=+$/, '').trim(); isHeading = true; }
+                else if (/^[~*]{2,}.+[~*]{2,}$/.test(trimmed) && trimmed.length < 80) { content = trimmed.replace(/^[~*\s]+/, '').replace(/[~*\s]+$/, '').trim(); isHeading = true; }
+                else if (/^\*{2}\s+.+\s+\*{2}$/.test(trimmed)) { content = trimmed.replace(/^\*{2}\s*/, '').replace(/\s*\*{2}$/, '').trim(); isHeading = true; }
+                else if (/^[A-Z][A-Z\s\/{}&()*\-—:!#]+$/.test(trimmed) && trimmed.length >= 3 && trimmed.length < 60 && !trimmed.endsWith('?') && !/^\d/.test(trimmed)) { content = trimmed; isHeading = true; }
+
+                if (!isHeading && content.length < 60 && !content.endsWith('?') && !content.endsWith('.') &&
+                    !/^\d+[\.\)]\s+/.test(trimmed) && !/^[-–—•·]\s+/.test(trimmed)) {
+                    if (spScoreDialogue(content) <= 1) {
+                        const lower = content.toLowerCase();
+                        if (SP_SECTION_PATTERNS.some(pat => pat.keywords.some(kw => lower.includes(kw)))) isHeading = true;
+                    }
+                }
+                if (isHeading && content.length > 80) isHeading = false;
+                if (isHeading && content.endsWith('?')) isHeading = false;
+
+                let isBranchLabel = false, branchText = '', branchResponse = '';
+                const dashStripped = trimmed.replace(/^[-–—•·]\s+/, '');
+                const boldStripped = dashStripped.replace(/^\*{1,3}/, '').replace(/\*{1,3}$/, '').trim();
+                if (/^if\s+/i.test(boldStripped) && boldStripped.length < 60 && !boldStripped.endsWith('?') && !boldStripped.endsWith('.') && spScoreDialogue(boldStripped) <= 1) {
+                    isBranchLabel = true; branchText = boldStripped;
+                }
+                if (!isBranchLabel && /^if\s+(they|he|she|client|prospect|the)\s/i.test(boldStripped) && boldStripped.length < 80) {
+                    const colonMatch = boldStripped.match(/^(if\s+.+?):\s*(.+)$/i);
+                    if (colonMatch) { isBranchLabel = true; branchText = colonMatch[1].trim(); branchResponse = colonMatch[2].trim(); }
+                    else { isBranchLabel = true; branchText = boldStripped; }
+                }
+                if (!isBranchLabel && /^\*\s+/i.test(trimmed)) {
+                    const starContent = trimmed.replace(/^\*\s+/, '');
+                    if (/^(if |when |booking |key questions|objection|not interested|already got|call me back)/i.test(starContent)) { isBranchLabel = true; branchText = starContent; }
+                    else if (starContent.length < 80 && !starContent.endsWith('?')) { isBranchLabel = true; branchText = starContent; }
+                }
+                if (isBranchLabel) isHeading = false;
+
+                tokens.push({
+                    kind: 'content', index: i, raw, trimmed, content,
+                    isHeading, isBranchLabel, branchText, branchResponse,
+                    isDashed: /^[-–—]\s+/.test(trimmed), isBulleted: /^[•·]\s+/.test(trimmed),
+                    isNumbered: /^\d+[\.\)]\s+/.test(trimmed),
+                });
+            }
+
+            // PASS 2 — Classify
+            for (const tok of tokens) {
+                if (tok.kind !== 'content' || tok.isHeading || tok.isBranchLabel) continue;
+                const t = tok.trimmed;
+                if (t.includes('→') || t.includes('->')) { tok.lineType = 'transition-arrow'; continue; }
+                const objMatch = t.match(/^(.+?)\s*[-–—]{1,3}\s+(.+)$/);
+                if (objMatch) {
+                    const trigger = objMatch[1].trim().toLowerCase();
+                    const objKw = ['not interested','already have','already got','call me back','too expensive','no thanks','not right now','my spouse','my wife','my husband','im driving',"i'm driving",'dont remember',"don't remember",'im busy',"i'm busy"];
+                    if (objKw.some(kw => trigger.includes(kw))) { tok.lineType = 'objection-inline'; tok.objTrigger = objMatch[1].trim(); tok.objResponse = objMatch[2].trim(); continue; }
+                }
+                if (tok.isNumbered) { const after = t.replace(/^\d+[\.\)]\s+/, ''); tok.lineType = spScoreDialogue(after) >= 3 ? 'say' : 'action-step'; continue; }
+                if (/go\s*ahead\s*and\s*grab/i.test(t) || /pen\s*and\s*paper/i.test(t) || /let\s*me\s*know\s*when\s*(you'?re|your)\s*ready/i.test(t)) { tok.lineType = 'compliance'; continue; }
+                if (/^(note|remember|tip|hint|important|key|goal|notes)\s*[:\s]/i.test(t) || /^(this is not|this is NOT|this isn't)/i.test(t) || /^key\s+things?\s+to\s+remember/i.test(t)) { tok.lineType = 'coaching-note'; continue; }
+                if (/^\(.*\)$/.test(t) || /^\[.*\]$/.test(t)) { tok.lineType = 'context-note'; continue; }
+                const ds = spScoreDialogue(t);
+                if (ds >= 2) { tok.lineType = 'say'; }
+                else if (tok.isDashed && t.length < 40 && !t.endsWith('?')) { const inner = t.replace(/^[-–—]\s+/, ''); tok.lineType = (inner.endsWith('?') || spScoreDialogue(inner) >= 1) ? 'say' : 'context-note'; }
+                else if (t.length > 30 && /[a-z]/.test(t)) { tok.lineType = 'say'; }
+                else if (t.length < 30 && !t.endsWith('?') && !t.endsWith('.') && ds === 0) { tok.lineType = 'context-note'; }
+                else { tok.lineType = 'say'; }
+            }
+
+            // PASS 3 — Contextual refinement
+            const contentTokens = tokens.filter(t => t.kind === 'content');
+            for (let start = 0; start < contentTokens.length; start += 10) {
+                const win = contentTokens.slice(start, start + 20);
+                if (win.length < 3) continue;
+                let sayCount = 0;
+                for (const t of win) { if (t.lineType === 'say' || t.lineType === 'compliance') sayCount++; }
+                if (sayCount / win.length > 0.5) {
+                    for (let j = 1; j < win.length - 1; j++) {
+                        const tok = win[j];
+                        if (tok.lineType !== 'context-note' && tok.lineType !== 'coaching-note') continue;
+                        const prev = win[j-1], next = win[j+1];
+                        if ((prev.lineType === 'say' || prev.lineType === 'compliance') &&
+                            (next.lineType === 'say' || next.lineType === 'compliance') &&
+                            spScoreDialogue(tok.trimmed) >= 2) { tok.lineType = 'say'; }
+                    }
+                }
+            }
+
+            // PASS 4 — Assemble sections
+            const sections = [];
+            let curSec = null, curBranch = null;
+            function closeBr() { if (curBranch && curSec) { curSec.branches.push(curBranch); curBranch = null; } }
+            function closeSec() { closeBr(); if (curSec && (curSec.lines.length || curSec.branches.length)) sections.push(curSec); curSec = null; }
+            function detectType(text) { const l = text.toLowerCase(); for (const p of SP_SECTION_PATTERNS) { if (p.keywords.some(kw => l.includes(kw))) return p.type; } return 'generic'; }
+            function addLn(obj) { const tgt = curBranch ? curBranch.lines : (curSec ? curSec.lines : null); if (tgt) tgt.push(obj); }
+
+            for (const tok of tokens) {
+                if (tok.kind === 'blank') continue;
+                if (tok.kind === 'separator') { if (curSec) closeSec(); continue; }
+                if (tok.isHeading) { closeSec(); curSec = { title: tok.content, type: detectType(tok.content), lines: [], branches: [], fromHeading: true }; continue; }
+                if (tok.isBranchLabel) { closeBr(); if (!curSec) curSec = { title: 'Script', type: 'generic', lines: [], branches: [], fromHeading: false }; curBranch = { label: tok.branchText || tok.content, type: curSec.type, lines: [] }; if (tok.branchResponse) curBranch.lines.push({ type: 'say', text: tok.branchResponse }); continue; }
+                if (!curSec) { const t = detectType(tok.trimmed); curSec = { title: t === 'generic' ? 'Script' : (SP_SECTION_PATTERNS.find(p => p.type === t)?.label || 'Script'), type: t, lines: [], branches: [], fromHeading: false }; }
+                if (tok.lineType === 'objection-inline') { addLn({ type: 'objection-pair', trigger: tok.objTrigger, responses: [{ type: 'say', text: tok.objResponse }] }); }
+                else { addLn({ type: tok.lineType || 'say', text: tok.trimmed }); }
+            }
+            closeSec();
+
+            // PASS 5 — Post-process
+            for (const sec of sections) {
+                for (const br of sec.branches) { br.lines = spChunkLines(spDetectObjPairs(br.lines)); }
+                sec.lines = spChunkLines(spDetectObjPairs(sec.lines));
+            }
+            return sections;
+        }
+
+        function spDetectObjPairs(lines) {
+            const result = [];
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].type === 'objection-trigger' && i + 1 < lines.length) {
+                    const responses = []; let j = i + 1;
+                    while (j < lines.length && lines[j].type !== 'objection-trigger' && lines[j].type !== 'chunk-separator') { responses.push(lines[j]); j++; }
+                    if (responses.length) { result.push({ type: 'objection-pair', trigger: lines[i].text, responses }); i = j - 1; continue; }
+                }
+                result.push(lines[i]);
+            }
+            return result;
+        }
+
+        function spChunkLines(lines) {
+            const result = []; let sayCount = 0;
+            for (const line of lines) {
+                if (line.type === 'say') { sayCount++; if (sayCount > 4) { result.push({ type: 'chunk-separator' }); sayCount = 1; } }
+                result.push(line);
+            }
+            return result;
+        }
+
+        function spHighlight(text) {
+            let safe = escapeHTML(text);
+            safe = safe.replace(/&quot;([^&]+)&quot;/g, '<span class="sp-key-phrase">"$1"</span>');
+            safe = safe.replace(/"([^"]+)"/g, '<span class="sp-key-phrase">"$1"</span>');
+            safe = safe.replace(/(→|->)/g, '<span style="color:var(--accent-cyan);font-weight:700;">$1</span>');
+            safe = safe.replace(/(firstname|agent name|agentname|\[.*?\]|____+)/gi, '<span style="color:var(--accent-amber);font-weight:600;font-style:italic;">$1</span>');
+            safe = safe.replace(/(\?)/g, '<span style="color:var(--accent-cyan);font-weight:700;">?</span>');
+            return safe;
+        }
+
+        function spBlankifyText(text, blankRatio) {
+            if (blankRatio === 0) return spHighlight(text);
+            const words = text.split(/(\s+)/);
+            const wordIndices = [];
+            words.forEach((w, i) => { if (w.trim().length > 0) wordIndices.push(i); });
+            const blankCount = Math.round(wordIndices.length * blankRatio);
+            const blanked = new Set();
+            if (blankCount > 0 && wordIndices.length > 2) {
+                const mid = wordIndices.slice(1, -1);
+                mid.sort((a, b) => simpleHash(words[a]) - simpleHash(words[b]));
+                for (let i = 0; i < Math.min(blankCount, mid.length); i++) blanked.add(mid[i]);
+                if (blankCount > mid.length) { const r = blankCount - mid.length; if (r >= 1) blanked.add(wordIndices[wordIndices.length - 1]); if (r >= 2) blanked.add(wordIndices[0]); }
+            } else if (blankCount > 0) {
+                for (let i = 0; i < Math.min(blankCount, wordIndices.length); i++) blanked.add(wordIndices[i]);
+            }
+            return words.map((w, i) => {
+                if (blanked.has(i)) { const width = Math.max(2, w.length * 0.6); return `<span class="blank-word" style="min-width:${width}em;" title="Fill from memory">${escapeHTML(w)}</span>`; }
+                return escapeHTML(w);
+            }).join('');
+        }
+
+        function spRenderLines(lines, blankRatio) {
+            return lines.map(line => {
+                if (line.type === 'chunk-separator') return '<hr class="sp-chunk-separator">';
+                if (line.type === 'objection-pair') {
+                    return `<div class="sp-objection-pair">
+                        <div class="sp-objection-trigger">${escapeHTML(line.trigger)}</div>
+                        <div class="sp-objection-response">${line.responses.map(r =>
+                            `<span>${r.type === 'say' || r.type === 'compliance' ? spBlankifyText(r.text, blankRatio) : spHighlight(r.text)}</span>`
+                        ).join('<br>')}</div></div>`;
+                }
+                const isSay = line.type === 'say' || line.type === 'compliance';
+                const content = isSay ? spBlankifyText(line.text, blankRatio) : spHighlight(line.text);
+                return `<div class="sp-speech-line ${line.type}"><span>${content}</span></div>`;
+            }).join('');
+        }
+
+        function spRenderBranches(branches, blankRatio) {
+            if (!branches.length) return '';
+            return branches.map(br => {
+                const badgeClass = 'sp-badge-' + br.type;
+                const typeLabel = SP_SECTION_PATTERNS.find(p => p.type === br.type)?.label || 'Branch';
+                return `<div class="sp-branch-block open">
+                    <div class="sp-branch-header" onclick="this.parentElement.classList.toggle('open')">
+                        <span class="sp-branch-icon">&#9654;</span>
+                        <span style="flex:1;">${escapeHTML(br.label)}</span>
+                        <span class="sp-section-badge ${badgeClass}">${typeLabel}</span>
+                    </div>
+                    <div class="sp-branch-body"><div class="sp-branch-content">${spRenderLines(br.lines, blankRatio)}</div></div>
+                </div>`;
+            }).join('');
+        }
+
+        function spRenderSections(sections, blankRatio) {
+            return sections.map((sec, idx) => {
+                const color = SP_SECTION_COLORS[sec.type] || SP_SECTION_COLORS.generic;
+                const badgeClass = 'sp-badge-' + sec.type;
+                const typeLabel = SP_SECTION_PATTERNS.find(p => p.type === sec.type)?.label || 'Section';
+                return `<div class="sp-section-block" id="sp-section-${idx}">
+                    <div class="sp-section-header">
+                        <div class="sp-section-color-bar" style="background:${color};"></div>
+                        <span class="sp-section-title">${escapeHTML(sec.title)}</span>
+                        <span class="sp-section-badge ${badgeClass}">${typeLabel}</span>
+                    </div>
+                    <div class="sp-section-content">
+                        ${spRenderLines(sec.lines, blankRatio)}
+                        ${spRenderBranches(sec.branches, blankRatio)}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ── Build Script Practice Layout (flipped) ──────────
         function buildScriptPanel(data) {
-            const sidebar = document.getElementById('sidebarFields');
             const level = data.mastery.mastery_level;
             const count = data.mastery.practice_count;
             const label = MASTERY_LABELS[level] || 'Full Read';
+            const blankRatio = BLANK_PERCENTAGES[level];
 
-            sidebar.innerHTML = '';
-            sidebar.className = 'script-panel';
+            // Parse the script with the smart analyzer
+            const sections = spParseScript(data.script_content);
 
-            // Header with mastery progress
-            const header = document.createElement('div');
-            header.className = 'script-panel-header';
-            header.innerHTML = `
-                <h3 title="${escapeHTML(data.script_name)}">${escapeHTML(data.script_name)}</h3>
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <span class="mastery-level-badge">Level ${level} — ${label}</span>
-                    <span style="font-size:0.7rem;color:var(--text-muted);">${count} sessions</span>
+            // Hide the default sidebar and session-main, replace with custom layout
+            const sessionScreen = document.getElementById('screenSession');
+            document.getElementById('sessionSidebar').style.display = 'none';
+            // Remove old session-main if present and rebuild
+            const oldMain = sessionScreen.querySelector('.session-main');
+            if (oldMain) oldMain.style.display = 'none';
+
+            // Build the new split layout
+            const layout = document.createElement('div');
+            layout.className = 'script-practice-layout';
+            layout.id = 'scriptPracticeLayout';
+
+            // LEFT: voice + transcript
+            layout.innerHTML = `
+                <div class="sp-left">
+                    <div class="sp-header">
+                        <div class="recording-indicator">
+                            <div class="recording-dot"></div>
+                            <span>LIVE</span>
+                        </div>
+                        <h3 id="spSessionName">Script Practice</h3>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <span class="session-timer" id="spTimer">00:00</span>
+                            <button class="btn btn-danger btn-sm" onclick="endTraining()">End</button>
+                        </div>
+                    </div>
+                    <div class="sp-voice">
+                        <div class="voice-circle" id="spVoiceCircle">
+                            <div class="voice-circle-inner">🎙</div>
+                        </div>
+                        <div style="flex:1;">
+                            <div class="voice-status" id="spVoiceStatus" style="margin-bottom:0;font-size:0.75rem;">Connecting...</div>
+                            <div class="visualizer" id="spVisualizer" style="margin-top:0.4rem;height:24px;"></div>
+                        </div>
+                    </div>
+                    <div class="sp-transcript" id="spTranscriptArea">
+                        <div class="transcript-header">Live Transcription</div>
+                        <div id="spTranscriptContent"></div>
+                    </div>
                 </div>
-                <div class="mastery-bar-container">
-                    <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
-                    <span class="mastery-label">${level}/5</span>
+                <div class="sp-right">
+                    <div class="sp-script-header">
+                        <h3 title="${escapeHTML(data.script_name)}">${escapeHTML(data.script_name)}</h3>
+                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                            <span class="mastery-level-badge">Lv ${level} — ${label}</span>
+                            <div class="mastery-bar-container" style="width:80px;">
+                                <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
+                            </div>
+                            <span style="font-size:0.7rem;color:var(--text-muted);">${count} sessions</span>
+                        </div>
+                    </div>
+                    <div class="sp-script-body" id="spScriptBody">
+                        <div class="sp-script-flow">
+                            ${spRenderSections(sections, blankRatio)}
+                        </div>
+                    </div>
                 </div>
             `;
-            sidebar.appendChild(header);
 
-            // Script content area with progressive blanking
-            const contentArea = document.createElement('div');
+            sessionScreen.appendChild(layout);
 
-            contentArea.className = 'script-content-area';
-            contentArea.innerHTML = blankifyScript(data.script_content, BLANK_PERCENTAGES[level]);
-
-            sidebar.appendChild(contentArea);
+            // Wire up alternative element IDs for the script practice layout
+            // so handleVoiceEvent, addTranscript, etc. find the right elements
+            window._spMode = true;
         }
 
-        function blankifyScript(text, blankRatio) {
-            if (blankRatio === 0) return escapeHTML(text).replace(/\n/g, '<br>');
-
-            // Use a seeded approach so blanks are consistent within a session
-            // but different words get blanked. Prioritize blanking middle-of-sentence
-            // words (not first/last words of lines) for better context retention.
-            const lines = text.split('\n');
-            const result = [];
-
-            for (const line of lines) {
-                if (!line.trim()) {
-                    result.push('<br>');
-                    continue;
-                }
-
-                const words = line.split(/(\s+)/);
-                const wordIndices = [];
-
-                // Identify actual word positions (not whitespace)
-                words.forEach((w, i) => {
-                    if (w.trim().length > 0) wordIndices.push(i);
-                });
-
-                // Determine which words to blank — prefer middle words, keep
-                // first and last words of each line visible longer
-                const blankCount = Math.round(wordIndices.length * blankRatio);
-                const blanked = new Set();
-
-                if (blankCount > 0 && wordIndices.length > 2) {
-                    // Start blanking from the middle, expand outward
-                    const middleIndices = wordIndices.slice(1, -1);
-                    // Shuffle deterministically based on word content
-                    middleIndices.sort((a, b) => {
-                        const hashA = simpleHash(words[a]);
-                        const hashB = simpleHash(words[b]);
-                        return hashA - hashB;
-                    });
-
-                    for (let i = 0; i < Math.min(blankCount, middleIndices.length); i++) {
-                        blanked.add(middleIndices[i]);
-                    }
-
-                    // If we need more blanks than middle words, blank edges too
-                    if (blankCount > middleIndices.length) {
-                        const remaining = blankCount - middleIndices.length;
-                        if (remaining >= 1) blanked.add(wordIndices[wordIndices.length - 1]);
-                        if (remaining >= 2) blanked.add(wordIndices[0]);
-                    }
-                } else if (blankCount > 0 && wordIndices.length <= 2) {
-                    // Very short line — blank based on ratio
-                    for (let i = 0; i < Math.min(blankCount, wordIndices.length); i++) {
-                        blanked.add(wordIndices[i]);
-                    }
-                }
-
-                const lineHtml = words.map((w, i) => {
-                    if (blanked.has(i)) {
-                        // Create a blank that's roughly the width of the word
-                        const width = Math.max(2, w.length * 0.6);
-                        return `<span class="blank-word" style="min-width:${width}em;" title="Fill from memory">${escapeHTML(w)}</span>`;
-                    }
-                    return escapeHTML(w);
-                }).join('');
-
-                result.push(lineHtml);
+        // Override element getters when in script practice mode
+        const _origGetById = document.getElementById.bind(document);
+        document.getElementById = function(id) {
+            if (window._spMode) {
+                if (id === 'voiceCircle') return _origGetById('spVoiceCircle') || _origGetById(id);
+                if (id === 'voiceStatus') return _origGetById('spVoiceStatus') || _origGetById(id);
+                if (id === 'transcriptArea') return _origGetById('spTranscriptArea') || _origGetById(id);
+                if (id === 'transcriptContent') return _origGetById('spTranscriptContent') || _origGetById(id);
+                if (id === 'visualizer') return _origGetById('spVisualizer') || _origGetById(id);
+                if (id === 'timer') return _origGetById('spTimer') || _origGetById(id);
             }
-
-            return result.join('<br>');
-        }
+            return _origGetById(id);
+        };
 
         function simpleHash(str) {
             let hash = 0;
@@ -1077,18 +1534,25 @@
         }
 
         // ── Connect Module Voice WS ──────────────────────────
+        let wsReconnectAttempts = 0;
+        const WS_MAX_RECONNECT = 5;
+        let wsReconnectTimer = null;
+        let wsIntentionallyClosed = false;
+
         function connectModuleVoice() {
             // Close any existing WebSocket to prevent duplicate voice agents
             if (ws) {
                 try { ws.close(); } catch (e) {}
                 ws = null;
             }
+            wsIntentionallyClosed = false;
 
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${location.host}/api/modules/ws/${sessionId}`;
 
             ws = new WebSocket(wsUrl);
             ws.onopen = () => {
+                wsReconnectAttempts = 0;
                 ws.send(JSON.stringify({ type: 'auth', token: API.token }));
                 // Start mic capture immediately so student can respond after coach greeting
                 startAudioCapture();
@@ -1098,9 +1562,23 @@
                 handleVoiceEvent(data);
             };
             ws.onclose = () => {
-                document.getElementById('voiceStatus').textContent = 'Disconnected';
+                if (wsIntentionallyClosed) {
+                    document.getElementById('voiceStatus').textContent = 'Disconnected';
+                    return;
+                }
+                // Auto-reconnect
+                if (wsReconnectAttempts < WS_MAX_RECONNECT && sessionId) {
+                    wsReconnectAttempts++;
+                    const delay = Math.min(wsReconnectAttempts * 2, 10) * 1000;
+                    document.getElementById('voiceStatus').textContent =
+                        `Connection lost — reconnecting (${wsReconnectAttempts}/${WS_MAX_RECONNECT})...`;
+                    wsReconnectTimer = setTimeout(() => connectModuleVoice(), delay);
+                } else {
+                    document.getElementById('voiceStatus').textContent = 'Disconnected';
+                    showToast('Connection lost. Please end session and try again.', 'error');
+                }
             };
-            ws.onerror = () => showToast('Voice connection error', 'error');
+            ws.onerror = () => {};
         }
 
         // ── Initialize: load mode selection ──────────────────
@@ -1312,9 +1790,14 @@
                         voiceState = 'responding';
                         circle.className = 'voice-circle responding';
                         status.textContent = (trainingMode && trainingMode !== 'full') ? 'Coach is thinking...' : 'Client is thinking...';
+                    } else if (data.status === 'reconnecting') {
+                        voiceState = 'idle';
+                        circle.className = 'voice-circle processing';
+                        status.textContent = 'Reconnecting to voice service...';
                     } else if (data.status === 'connected' || data.status === 'ready') {
                         voiceState = 'idle';
                         circle.className = 'voice-circle';
+                        wsReconnectAttempts = 0; // Reset reconnect counter on successful connect
                         // For modules, coach speaks first; for full sim, agent speaks first
                         if (trainingMode && trainingMode !== 'full') {
                             status.textContent = 'Connected — coach is starting the lesson...';
@@ -1582,6 +2065,18 @@
             if (!sessionId) return;
 
             clearInterval(timerInterval);
+            if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
+            wsIntentionallyClosed = true;
+
+            // Clean up script practice layout
+            if (window._spMode) {
+                window._spMode = false;
+                const spLayout = document.getElementById('scriptPracticeLayout');
+                if (spLayout) spLayout.remove();
+                document.getElementById('sessionSidebar').style.display = '';
+                const oldMain = document.querySelector('.session-main');
+                if (oldMain) oldMain.style.display = '';
+            }
 
             // Close WebSocket
             if (ws) {

@@ -86,11 +86,11 @@ class VoiceSession:
                     uri=XAI_WS_URL,
                     additional_headers={"Authorization": f"Bearer {XAI_API_KEY}"},
                     max_size=None,       # No limit on message size for audio
-                    ping_interval=20,    # Send ping every 20s to keep connection alive
-                    ping_timeout=10,     # Wait 10s for pong before considering dead
-                    close_timeout=5,
+                    ping_interval=15,    # Send ping every 15s to keep connection alive
+                    ping_timeout=20,     # Wait 20s for pong (generous to avoid false drops)
+                    close_timeout=10,
                 ),
-                timeout=15,
+                timeout=20,
             )
             self.connected = True
             logger.info("[%s] Connected to xAI Voice API", self.session_id)
@@ -100,13 +100,35 @@ class VoiceSession:
             return True
 
         except asyncio.TimeoutError:
-            logger.error("[%s] xAI connection timed out (15s)", self.session_id)
+            logger.error("[%s] xAI connection timed out (20s)", self.session_id)
             self.connected = False
             return False
         except Exception as e:
             logger.error("[%s] Failed to connect to xAI: %s", self.session_id, e, exc_info=True)
             self.connected = False
             return False
+
+    async def reconnect(self) -> bool:
+        """Reconnect to xAI after a connection drop. Retries up to 3 times."""
+        for attempt in range(1, 4):
+            logger.warning("[%s] Reconnecting to xAI (attempt %d/3)...", self.session_id, attempt)
+            self.connected = False
+            if self.xai_ws:
+                try:
+                    await self.xai_ws.close()
+                except Exception:
+                    pass
+                self.xai_ws = None
+
+            await asyncio.sleep(min(attempt * 2, 6))  # 2s, 4s, 6s backoff
+
+            success = await self.connect()
+            if success:
+                logger.info("[%s] Reconnected to xAI on attempt %d", self.session_id, attempt)
+                return True
+
+        logger.error("[%s] Failed to reconnect to xAI after 3 attempts", self.session_id)
+        return False
 
     async def _configure_session(self):
         """Send session.update with training system prompt and voice config."""
@@ -331,14 +353,35 @@ class VoiceSession:
 
         except websockets.exceptions.ConnectionClosed as e:
             logger.warning("[%s] xAI connection closed: code=%s, reason=%s", self.session_id, e.code, e.reason)
-            # Signal to browser that the voice backend dropped
+            # Attempt auto-reconnect instead of giving up
             try:
                 await send_to_browser({
-                    "type": "error",
-                    "message": "Voice connection lost. Please end the session and try again.",
+                    "type": "status",
+                    "status": "reconnecting",
                 })
             except Exception:
                 pass
+            reconnected = await self.reconnect()
+            if reconnected:
+                logger.info("[%s] Resuming receive_events after reconnect", self.session_id)
+                try:
+                    await send_to_browser({
+                        "type": "status",
+                        "status": "ready",
+                    })
+                except Exception:
+                    pass
+                # Recursively resume listening on the new connection
+                await self.receive_events(send_to_browser)
+                return
+            else:
+                try:
+                    await send_to_browser({
+                        "type": "error",
+                        "message": "Voice connection lost. Please end the session and try again.",
+                    })
+                except Exception:
+                    pass
         except Exception as e:
             logger.error("[%s] Error in receive loop: %s", self.session_id, e, exc_info=True)
         finally:
