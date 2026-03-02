@@ -154,6 +154,33 @@
             color: var(--text-secondary);
             font-size: 0.85rem; font-style: italic;
         }
+        .speech-line.coaching-note {
+            background: rgba(139,92,246,0.06);
+            border-left-color: var(--accent-purple);
+            color: var(--text-muted);
+            font-size: 0.82rem; font-style: italic;
+        }
+        .speech-line.coaching-note::before {
+            content: 'TIP'; font-size: 0.6rem; font-weight: 800;
+            background: rgba(139,92,246,0.15); color: var(--accent-purple);
+            padding: 0.1rem 0.35rem; border-radius: 3px;
+            margin-right: 0.5rem; vertical-align: middle;
+            letter-spacing: 0.05em;
+        }
+        .speech-line.context-note {
+            background: rgba(106,106,138,0.04);
+            border-left-color: var(--text-muted);
+            color: var(--text-muted);
+            font-size: 0.82rem; font-style: italic;
+            opacity: 0.7;
+        }
+        .speech-line.context-note::before {
+            content: 'CONTEXT'; font-size: 0.55rem; font-weight: 800;
+            background: rgba(106,106,138,0.12); color: var(--text-muted);
+            padding: 0.1rem 0.35rem; border-radius: 3px;
+            margin-right: 0.5rem; vertical-align: middle;
+            letter-spacing: 0.05em;
+        }
         .speech-line.transition-arrow {
             background: rgba(6,182,212,0.06);
             border-left-color: var(--accent-cyan);
@@ -164,6 +191,18 @@
             background: rgba(16,185,129,0.06);
             border-left-color: var(--accent-green);
             color: var(--text-secondary); font-size: 0.85rem;
+        }
+        .speech-line.compliance {
+            background: rgba(16,185,129,0.06);
+            border-left-color: var(--accent-green);
+            color: var(--text-primary);
+        }
+        .speech-line.compliance::before {
+            content: 'COMPLIANCE'; font-size: 0.55rem; font-weight: 800;
+            background: rgba(16,185,129,0.15); color: var(--accent-green);
+            padding: 0.1rem 0.35rem; border-radius: 3px;
+            margin-right: 0.5rem; vertical-align: middle;
+            letter-spacing: 0.05em;
         }
 
         /* Key phrase highlighting */
@@ -267,21 +306,33 @@
 
         /* ── Section type colors ─────────────────────────────── */
         .type-intro { background: var(--accent-blue); }
-        .type-questions { background: var(--accent-cyan); }
+        .type-qualifying { background: var(--accent-cyan); }
+        .type-pitch { background: var(--accent-blue); }
         .type-objection { background: var(--accent-red); }
-        .type-transition { background: var(--accent-amber); }
+        .type-frame { background: var(--accent-amber); }
+        .type-compliance { background: var(--accent-green); }
         .type-close { background: var(--accent-green); }
-        .type-action { background: var(--accent-purple); }
+        .type-postcall { background: var(--accent-purple); }
         .type-generic { background: var(--text-muted); }
+        /* Legacy */
+        .type-questions { background: var(--accent-cyan); }
+        .type-transition { background: var(--accent-amber); }
+        .type-action { background: var(--accent-purple); }
 
         /* Badge colors */
         .badge-intro { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
-        .badge-questions { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+        .badge-qualifying { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+        .badge-pitch { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
         .badge-objection { background: rgba(239,68,68,0.15); color: var(--accent-red); }
-        .badge-transition { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+        .badge-frame { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+        .badge-compliance { background: rgba(16,185,129,0.15); color: var(--accent-green); }
         .badge-close { background: rgba(16,185,129,0.15); color: var(--accent-green); }
-        .badge-action { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+        .badge-postcall { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
         .badge-generic { background: rgba(106,106,138,0.15); color: var(--text-muted); }
+        /* Legacy aliases */
+        .badge-questions { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+        .badge-transition { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+        .badge-action { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
 
         /* ── Flow Connector ──────────────────────────────────── */
         .flow-connector {
@@ -363,11 +414,13 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         <div class="analyzed-view" id="analyzedView">
             <!-- Legend -->
             <div class="legend" id="legend">
-                <div class="legend-item"><div class="legend-color type-intro"></div><span>What to Say</span></div>
-                <div class="legend-item"><div class="legend-color type-transition"></div><span>Instructions</span></div>
+                <div class="legend-item"><div class="legend-color type-intro"></div><span>Dialogue</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:var(--accent-green)"></div><span>Compliance</span></div>
                 <div class="legend-item"><div class="legend-color type-objection"></div><span>Objections</span></div>
-                <div class="legend-item"><div class="legend-color" style="background:var(--accent-cyan)"></div><span>Transitions</span></div>
-                <div class="legend-item"><div class="legend-color type-action"></div><span>Action Steps</span></div>
+                <div class="legend-item"><div class="legend-color type-transition"></div><span>Instructions</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:var(--accent-purple)"></div><span>Coaching Tips</span></div>
+                <div class="legend-item"><div class="legend-color type-generic"></div><span>Context</span></div>
+                <div class="legend-item"><div class="legend-color type-action"></div><span>Post-Call</span></div>
             </div>
 
             <!-- Focus mode controls -->
@@ -406,227 +459,636 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         let focusIndex = 0;
 
         // ════════════════════════════════════════════════════════════
-        // Section Type Detection
+        // ENTERPRISE SCRIPT ANALYZER — Multi-Pass Contextual Engine
         // ════════════════════════════════════════════════════════════
-        const SECTION_PATTERNS = [
-            { type: 'intro',      keywords: ['intro', 'opening', 'greeting', 'hey firstname', 'new leads', 'aged leads', 'facebook lead', 'average data', 'speed to lead'], label: 'Intro' },
-            { type: 'questions',  keywords: ['key questions', 'questions', 'qualifying', 'discovery', 'medical', 'health questions', 'underwriting'], label: 'Questions' },
-            { type: 'objection',  keywords: ['objection', 'not interested', 'already got', 'call me back', 'dont remember', "don't remember", 'rebuttal', 'pushback'], label: 'Objection' },
-            { type: 'transition', keywords: ['frame', 'framing', 'preframe', 'tie down', 'transition', 'booking', 'appointment', 'bridge'], label: 'Transition' },
-            { type: 'close',      keywords: ['close', 'closing', 'presentation', 'pitch', 'commitment', 'after you set'], label: 'Close' },
-            { type: 'action',     keywords: ['action', 'steps', 'checklist', 'to do', 'follow up', 'follow-up', 'send', 'put into calendar'], label: 'Action Steps' },
-        ];
 
-        const SECTION_COLORS = {
-            intro: 'var(--accent-blue)',
-            questions: 'var(--accent-cyan)',
-            objection: 'var(--accent-red)',
-            transition: 'var(--accent-amber)',
-            close: 'var(--accent-green)',
-            action: 'var(--accent-purple)',
-            generic: 'var(--text-muted)',
+        // ── Section type definitions ──────────────────────────────
+        const SECTION_TYPES = {
+            intro:      { label: 'Intro',             color: 'var(--accent-blue)' },
+            qualifying: { label: 'Qualifying',        color: 'var(--accent-cyan)' },
+            pitch:      { label: 'Value Proposition',  color: 'var(--accent-blue)' },
+            objection:  { label: 'Objection Handling', color: 'var(--accent-red)' },
+            frame:      { label: 'Frame / Preframe',   color: 'var(--accent-amber)' },
+            compliance: { label: 'Compliance',         color: 'var(--accent-green)' },
+            close:      { label: 'Close',              color: 'var(--accent-green)' },
+            postcall:   { label: 'Post-Call',          color: 'var(--accent-purple)' },
+            generic:    { label: 'Section',            color: 'var(--text-muted)' },
         };
 
-        // ════════════════════════════════════════════════════════════
-        // Script Parser
-        // ════════════════════════════════════════════════════════════
-        function parseScript(rawText) {
-            const lines = rawText.split('\n');
-            const sections = [];
-            let currentSection = null;
-            let currentBranch = null;
-            let lineBuffer = [];
+        const SECTION_COLORS = {};
+        for (const [k, v] of Object.entries(SECTION_TYPES)) SECTION_COLORS[k] = v.color;
 
-            function flushBuffer() {
-                if (!lineBuffer.length) return;
-                const target = currentBranch ? currentBranch.lines : (currentSection ? currentSection.lines : null);
-                if (target) {
-                    lineBuffer.forEach(l => target.push(l));
+        // ── Heading detection signals ─────────────────────────────
+        // These map heading text → section type
+        const HEADING_SIGNALS = [
+            // Intro patterns
+            { re: /intro|opening|greeting/i, type: 'intro' },
+            { re: /new\s*lead|speed\s*to\s*lead|under\s*(5|2|10)\s*min/i, type: 'intro' },
+            { re: /aged\s*lead|over\s*\d+\s*(hour|day|week|month)/i, type: 'intro' },
+            { re: /facebook\s*lead|fb\s*lead|social\s*media/i, type: 'intro' },
+            { re: /average\s*data/i, type: 'intro' },
+            // Qualifying / questions
+            { re: /key\s*questions|qualifying|discovery|medical|health\s*questions|underwriting/i, type: 'qualifying' },
+            // Objections
+            { re: /objection|rebuttal|pushback|common\s*responses/i, type: 'objection' },
+            { re: /^not\s*interested$/i, type: 'objection' },
+            { re: /^objection\s*handl/i, type: 'objection' },
+            { re: /^common\s*(objection|response|pushback)/i, type: 'objection' },
+            // Frame
+            { re: /frame|framing|pre-?frame|identity|customiz/i, type: 'frame' },
+            { re: /tie\s*down|transition|bridge|booking|appointment|set\s*the\s*(call|appt)/i, type: 'frame' },
+            // Close
+            { re: /close|closing|presentation|pitch|commitment|wrap\s*up/i, type: 'close' },
+            { re: /after\s*(you\s*)?set|after\s*the\s*call|post[\s-]?call/i, type: 'postcall' },
+            // Post-call
+            { re: /action\s*steps|checklist|to[\s-]*do|follow[\s-]*up/i, type: 'postcall' },
+            // Value prop / pitch
+            { re: /value\s*prop|pitch|benefit|why\s*us/i, type: 'pitch' },
+        ];
+
+        // ── Coaching / context note patterns ──────────────────────
+        // Lines that are ADVICE TO THE AGENT, not spoken to the client
+        const COACHING_PATTERNS = [
+            /^key\s*things?\s*to\s*remember/i,
+            /^remember\s*:/i,
+            /^(pro\s*)?tip\s*:/i,
+            /^note\s*:/i,
+            /^important\s*:/i,
+            /^the\s*(key|goal|point|idea|trick)\s*(here\s*)?(is|:)/i,
+            /^(why|how)\s*this\s*works/i,
+            /^(always|never|make\s*sure)\s+(to\s+)?/i,
+            /^(this|that)\s+(is|helps|allows|makes|gives|creates|ensures|builds)/i,
+            /^(you\s+)?(want|need|should|must|have)\s+to\s+/i,
+            /^(your|the)\s+(goal|objective|aim|purpose)\s/i,
+            /^(don'?t|do\s*not)\s+(forget|skip|miss|rush|over)/i,
+            /^customiz/i,
+            /^\^+/,  // Lines starting with ^ (annotation marks)
+            /^\*\*?(key|important|note|tip|remember)\b/i,
+        ];
+
+        // ── Context/knowledge patterns ────────────────────────────
+        // Lines that explain the script or give background, not spoken aloud
+        const CONTEXT_PATTERNS = [
+            /^(this|these)\s+(script|approach|technique|method)/i,
+            /^(use|using)\s+(this|these|the)\s+(when|for|if|script)/i,
+            /^(works?\s+best|best\s+for|designed\s+for|meant\s+for)/i,
+            /^(lead\s*type|script\s*type|scenario)\s*:/i,
+            /^(purpose|overview|description|summary)\s*:/i,
+            /^\((works?|use|for|when|if)\s/i,
+        ];
+
+        // ── Compliance sentence patterns ──────────────────────────
+        // Spoken to the client, but compliance-related (pen/paper, recording, etc.)
+        const COMPLIANCE_PATTERNS = [
+            /grab\s*(a\s*)?(pen|pencil)\s*(and|&)\s*(paper|something\s*to\s*write)/i,
+            /go\s*ahead\s*and\s*grab/i,
+            /let\s*me\s*know\s*when\s*you'?re?\s*ready/i,
+            /this\s*call\s*(is|may\s*be)\s*(being\s*)?recorded/i,
+            /for\s*quality\s*(and|&)\s*training/i,
+            /are\s*you\s*the\s*(policy\s*)?owner/i,
+            /do\s*(you|i)\s*have\s*(your|the)\s*(consent|permission)/i,
+            /pen\s*and\s*paper/i,
+        ];
+
+        // ── Objection trigger patterns ────────────────────────────
+        const OBJECTION_TRIGGER_PATTERNS = [
+            /^(not\s*interested|n[oi]t?\s*right\s*now|no\s*thanks?|i'?m\s*good)/i,
+            /^(don'?t\s*remember|didn'?t\s*(ask|request|sign|fill))/i,
+            /^(call\s*me\s*back|send\s*me\s*(info|an?\s*email))/i,
+            /^(already\s*(got|have)\s*(it|one|some|coverage|a\s*polic))/i,
+            /^(i'?m\s*not\s*(looking|interested|in\s*the\s*market))/i,
+            /^(i\s*already\s*(have|got)\s*(coverage|a\s*polic|insurance|some))/i,
+            /^(how\s*much\s*(is|does|will)\s*(this|it)\s*cost)/i,
+            /^(what\s*(company|are\s*you\s*with))/i,
+            /^(is\s*this\s*(a\s*)?scam)/i,
+            /^(i\s*need\s*to\s*talk\s*to\s*my\s*(spouse|wife|husband))/i,
+            /^(my\s*(spouse|wife|husband)\s*handles)/i,
+            /^(i\s*can'?t\s*afford)/i,
+            /^(take\s*me\s*off|remove\s*me|stop\s*calling)/i,
+            /^(let\s*me\s*think\s*(about|on)\s*it)/i,
+            /^(i'?ll\s*(think|get\s*back|call\s*you))/i,
+        ];
+
+        // ── Post-call / workflow patterns ─────────────────────────
+        const POSTCALL_PATTERNS = [
+            /^put\s*(it\s*)?(into|in)\s*(calendar|crm|system)/i,
+            /^send\s*(the\s*)?(client|them|email|text|sms)/i,
+            /^(update|log|record|note)\s*(the\s*)?(crm|system|notes|call)/i,
+            /^(set|create|schedule)\s*(a\s*)?(follow[\s-]?up|reminder|callback)/i,
+            /^(upload|attach|save)\s*(the\s*)?(recording|file|doc)/i,
+            /^(submit|file|process)\s*(the\s*)?(app|application)/i,
+            /^confirm\s*(the\s*)?(appointment|appt|booking)/i,
+        ];
+
+        // ── Transition / stage direction patterns ─────────────────
+        const TRANSITION_PATTERNS = [
+            /→|->|=>/,
+            /^then\s*(transition|move|go|switch|pivot)\s*(to|into|onto)/i,
+            /^\[transition/i,
+        ];
+
+        // ── Dialogue detection heuristics ─────────────────────────
+        // Strong signals that a line is SPOKEN TO THE CLIENT
+        const DIALOGUE_SIGNALS = [
+            /\bfirstname\b/i,            // Placeholder for client name
+            /\bagent\s*name\b/i,          // Placeholder for agent name
+            /^(hey|hi|hello|good\s*(morning|afternoon|evening))\b/i,
+            /\b(sir|ma'?am|mr\.|mrs\.|ms\.)\b/i,
+            /\?$/,                         // Ends with question mark
+            /^(so\s+|well\s+|okay\s+|great\s+|perfect\s+|awesome\s+|alright\s+)/i,
+            /^(my\s+name\s+is|i'?m\s+just\s+(a|the)\s+)/i,
+            /^(the\s+reason\s+i'?m\s+call)/i,
+            /^(we\s+(shop|check|look|compare|work|partner))/i,
+            /^(what\s+i'?m?\s+(going\s+to|gonna)\s+do)/i,
+            /^(i\s+(just\s+)?want\s+(to|you))/i,
+            /^(do\s+you\s+(have|know|remember))/i,
+            /^(are\s+you\s+(looking|the|still|interested))/i,
+            /^(would\s+(it|you)\s+be)/i,
+            /^(not\s+a\s+problem|no\s+worries|i\s+understand|i\s+hear\s+you)/i,
+            /^(the\s+process|basically|so\s+basically)/i,
+            /^(were\s+you|have\s+you|did\s+you|how\s+(long|much|old))/i,
+            /\b(your\s+(situation|family|health|mortgage|coverage|spouse|wife|husband|kids))\b/i,
+            /\b(give\s+me|tell\s+me|let\s+me)\b/i,
+            /\b(I\s+apologize|sorry\s+to|sorry\s+about)\b/i,
+        ];
+
+        // ════════════════════════════════════════════════════════════
+        // PASS 1 — Structural Tokenization
+        // ════════════════════════════════════════════════════════════
+        function tokenizeLines(rawText) {
+            const rawLines = rawText.split('\n');
+            const tokens = [];
+
+            for (let i = 0; i < rawLines.length; i++) {
+                const raw = rawLines[i];
+                const trimmed = raw.trim();
+
+                // Empty line
+                if (!trimmed) {
+                    tokens.push({ idx: i, raw, trimmed, empty: true });
+                    continue;
                 }
-                lineBuffer = [];
+
+                // Detect formatting
+                const isBold = /^\*{2,3}[^*]+\*{2,3}$/.test(trimmed) || /^__[^_]+__$/.test(trimmed);
+                const isMarkdownHeading = /^#{1,4}\s+/.test(trimmed);
+                const isSeparatorLine = /^[-=_*]{3,}\s*$/.test(trimmed);
+                const isNumbered = /^\d+[\.\)]\s+/.test(trimmed);
+                const isDash = /^[-–—]\s+/.test(trimmed) && trimmed.length < 120;
+                const isBullet = /^[•·*]\s+/.test(trimmed) && !isBold;
+                const hasBraces = /\{[^}]+\}/.test(trimmed);
+                const isWrappedParens = /^\(.*\)$/.test(trimmed);
+                const startsWithStar = /^\*\s+/.test(trimmed) && !isBold;
+
+                // Clean content (strip formatting markers)
+                let content = trimmed;
+                if (isMarkdownHeading) content = content.replace(/^#{1,4}\s+/, '');
+                if (isBold) content = content.replace(/^\*{2,3}/, '').replace(/\*{2,3}$/, '')
+                                              .replace(/^__/, '').replace(/__$/, '');
+                content = content.trim();
+
+                tokens.push({
+                    idx: i, raw, trimmed, empty: false,
+                    content,
+                    isBold, isMarkdownHeading, isSeparatorLine, isNumbered,
+                    isDash, isBullet, hasBraces, isWrappedParens, startsWithStar,
+                    isShort: content.length < 70,
+                    isMedium: content.length < 120,
+                });
+            }
+            return tokens;
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // PASS 2 — Intent Classification (per-line, no context yet)
+        // ════════════════════════════════════════════════════════════
+        function classifyTokens(tokens) {
+            const classified = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tok = tokens[i];
+                if (tok.empty) {
+                    classified.push({ ...tok, intent: 'blank' });
+                    continue;
+                }
+                if (tok.isSeparatorLine) {
+                    classified.push({ ...tok, intent: 'separator' });
+                    continue;
+                }
+
+                const c = tok.content;
+                const lower = c.toLowerCase();
+
+                // ── 1. Heading detection ────────────────────────
+                if (isLikelyHeading(tok, tokens, i)) {
+                    const sectionType = detectSectionType(c);
+                    classified.push({ ...tok, intent: 'heading', sectionType });
+                    continue;
+                }
+
+                // ── 2. Coaching / agent-tip notes ───────────────
+                if (COACHING_PATTERNS.some(re => re.test(c))) {
+                    // But check: is this actually dialogue?
+                    const dialogueScore = scoreDialogue(c);
+                    if (dialogueScore < 2) {
+                        classified.push({ ...tok, intent: 'coaching-note' });
+                        continue;
+                    }
+                }
+
+                // ── 3. Context / knowledge notes ────────────────
+                if (CONTEXT_PATTERNS.some(re => re.test(c))) {
+                    classified.push({ ...tok, intent: 'context-note' });
+                    continue;
+                }
+
+                // ── 4. Wrapped in parens → stage direction ──────
+                if (tok.isWrappedParens) {
+                    classified.push({ ...tok, intent: 'context-note' });
+                    continue;
+                }
+
+                // ── 5. Transition arrows ────────────────────────
+                if (TRANSITION_PATTERNS.some(re => re.test(c))) {
+                    classified.push({ ...tok, intent: 'transition-arrow' });
+                    continue;
+                }
+
+                // ── 6. Objection trigger detection ──────────────
+                // "Not interested - " or "Already got it -" patterns
+                const objSplit = c.match(/^(.+?)\s*[-–—]\s+(.+)$/);
+                if (objSplit && OBJECTION_TRIGGER_PATTERNS.some(re => re.test(objSplit[1].trim()))) {
+                    // Single line: trigger + response
+                    classified.push({
+                        ...tok, intent: 'objection-inline',
+                        trigger: objSplit[1].trim(),
+                        response: objSplit[2].trim(),
+                    });
+                    continue;
+                }
+                if (OBJECTION_TRIGGER_PATTERNS.some(re => re.test(c))) {
+                    classified.push({ ...tok, intent: 'objection-trigger' });
+                    continue;
+                }
+
+                // ── 7. Post-call workflow ────────────────────────
+                if (tok.isNumbered && POSTCALL_PATTERNS.some(re => re.test(c.replace(/^\d+[\.\)]\s+/, '')))) {
+                    classified.push({ ...tok, intent: 'postcall-step' });
+                    continue;
+                }
+
+                // ── 8. Compliance lines (spoken, but compliance) ─
+                if (COMPLIANCE_PATTERNS.some(re => re.test(c))) {
+                    classified.push({ ...tok, intent: 'compliance' });
+                    continue;
+                }
+
+                // ── 9. Dialogue vs instruction scoring ──────────
+                const dialogueScore = scoreDialogue(c);
+
+                if (dialogueScore >= 2) {
+                    classified.push({ ...tok, intent: 'say', dialogueScore });
+                } else if (tok.isDash && tok.isShort) {
+                    // Short dashed lines are often labels or notes
+                    classified.push({ ...tok, intent: 'context-note' });
+                } else if (tok.isNumbered) {
+                    // Numbered lines not caught as postcall — classify based on content
+                    if (dialogueScore >= 1) {
+                        classified.push({ ...tok, intent: 'say', dialogueScore });
+                    } else {
+                        classified.push({ ...tok, intent: 'instruction' });
+                    }
+                } else {
+                    // Default: if it's conversational-length text, likely dialogue
+                    if (c.length > 30 && /[a-z]/.test(c) && !/^[A-Z][A-Z\s]+$/.test(c)) {
+                        classified.push({ ...tok, intent: 'say', dialogueScore });
+                    } else if (c.length < 30 && !c.endsWith('?') && !c.endsWith('.')) {
+                        classified.push({ ...tok, intent: 'context-note' });
+                    } else {
+                        classified.push({ ...tok, intent: 'say', dialogueScore });
+                    }
+                }
+            }
+            return classified;
+        }
+
+        // Score how "dialogue-like" a line is (0 = not dialogue, 3+ = definitely dialogue)
+        function scoreDialogue(text) {
+            let score = 0;
+            for (const re of DIALOGUE_SIGNALS) {
+                if (re.test(text)) score++;
+            }
+            // Penalty for coaching-style language
+            if (/^(always|never|make\s*sure|remember|the\s*(key|goal|point))/i.test(text)) score -= 1;
+            // Bonus for conversational sentence starters
+            if (/^(so|well|okay|great|perfect|awesome|absolutely|hey|hi)/i.test(text)) score++;
+            // Bonus for direct address
+            if (/\b(you|your|you're|you've)\b/i.test(text)) score++;
+            // Penalty for meta/instructional language
+            if (/\b(script|technique|approach|methodology|framework)\b/i.test(text)) score -= 1;
+            return score;
+        }
+
+        // ── Heading heuristics ────────────────────────────────────
+        function isLikelyHeading(tok, tokens, i) {
+            const c = tok.content;
+            const lower = c.toLowerCase();
+
+            // NEVER treat numbered lines as headings
+            if (tok.isNumbered) return false;
+
+            // Explicit markdown headings
+            if (tok.isMarkdownHeading) return true;
+
+            // Bold short lines that match known heading patterns
+            if (tok.isBold && tok.isShort) {
+                if (HEADING_SIGNALS.some(h => h.re.test(c))) return true;
+                // Bold short lines followed by non-empty content are likely headings
+                const next = findNextNonEmpty(tokens, i);
+                if (next && !next.isBold) return true;
             }
 
+            // ALL CAPS short lines
+            if (/^[A-Z][A-Z\s\/{}&()*\-—:.]+$/.test(c) && c.length < 60 && c.length > 2) {
+                return true;
+            }
+
+            // Lines with braces that describe lead types/scenarios
+            if (tok.hasBraces && tok.isMedium) return true;
+
+            // Star-prefixed short lines that look like category labels
+            if (tok.startsWithStar && tok.isShort) {
+                const starContent = c.replace(/^\*\s+/, '');
+                if (HEADING_SIGNALS.some(h => h.re.test(starContent))) return true;
+                // If it looks like a label (doesn't end with conversational punctuation)
+                if (!starContent.endsWith('?') && !starContent.endsWith('.') && starContent.length < 60) {
+                    if (OBJECTION_TRIGGER_PATTERNS.some(re => re.test(starContent))) return false; // it's an objection, not heading
+                    return true;
+                }
+            }
+
+            // Known heading phrases (exact or near-exact)
+            if (tok.isShort && !c.endsWith('?')) {
+                if (HEADING_SIGNALS.some(h => h.re.test(c))) return true;
+            }
+
+            return false;
+        }
+
+        function findNextNonEmpty(tokens, fromIdx) {
+            for (let j = fromIdx + 1; j < tokens.length; j++) {
+                if (!tokens[j].empty && !tokens[j].isSeparatorLine) return tokens[j];
+            }
+            return null;
+        }
+
+        function detectSectionType(text) {
+            const lower = text.toLowerCase();
+            for (const sig of HEADING_SIGNALS) {
+                if (sig.re.test(lower)) return sig.type;
+            }
+            return 'generic';
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // PASS 3 — Contextual Refinement
+        // ════════════════════════════════════════════════════════════
+        function refineClassifications(classified) {
+            const refined = [...classified];
+
+            // Track what section we're in for context
+            let currentSectionType = 'intro';
+            let inPostCallZone = false;
+
+            for (let i = 0; i < refined.length; i++) {
+                const item = refined[i];
+                if (item.intent === 'blank' || item.intent === 'separator') continue;
+
+                if (item.intent === 'heading') {
+                    currentSectionType = item.sectionType;
+                    inPostCallZone = (currentSectionType === 'postcall');
+                    continue;
+                }
+
+                // ── Contextual fixes ────────────────────────
+
+                // 1. ALL numbered items in a postcall zone are postcall steps
+                if (inPostCallZone && item.isNumbered) {
+                    refined[i] = { ...item, intent: 'postcall-step' };
+                    continue;
+                }
+
+                // 2. Numbered items in non-postcall zone with dialogue content → dialogue
+                if (!inPostCallZone && item.isNumbered && item.intent === 'instruction') {
+                    if (item.dialogueScore >= 1 || DIALOGUE_SIGNALS.some(re => re.test(item.content))) {
+                        refined[i] = { ...item, intent: 'say' };
+                    }
+                }
+
+                // 3. "coaching-note" that's actually surrounded by dialogue → likely dialogue
+                if (item.intent === 'coaching-note') {
+                    const prev = findPrevIntent(refined, i);
+                    const next = findNextIntent(refined, i);
+                    if (prev === 'say' && next === 'say') {
+                        // Double-check: does it really sound like dialogue?
+                        const ds = scoreDialogue(item.content);
+                        if (ds >= 2) {
+                            refined[i] = { ...item, intent: 'say' };
+                        }
+                    }
+                }
+
+                // 4. Instruction lines that start with dialogue patterns → dialogue
+                if (item.intent === 'instruction') {
+                    const ds = scoreDialogue(item.content);
+                    if (ds >= 3) {
+                        refined[i] = { ...item, intent: 'say' };
+                    }
+                }
+
+                // 5. Short "context-note" that's actually a question → dialogue
+                if (item.intent === 'context-note' && item.content.endsWith('?')) {
+                    const ds = scoreDialogue(item.content);
+                    if (ds >= 1) {
+                        refined[i] = { ...item, intent: 'say' };
+                    }
+                }
+            }
+
+            return refined;
+        }
+
+        function findPrevIntent(classified, fromIdx) {
+            for (let j = fromIdx - 1; j >= 0; j--) {
+                if (classified[j].intent !== 'blank' && classified[j].intent !== 'separator') {
+                    return classified[j].intent;
+                }
+            }
+            return null;
+        }
+
+        function findNextIntent(classified, fromIdx) {
+            for (let j = fromIdx + 1; j < classified.length; j++) {
+                if (classified[j].intent !== 'blank' && classified[j].intent !== 'separator') {
+                    return classified[j].intent;
+                }
+            }
+            return null;
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // PASS 4 — Section Assembly
+        // ════════════════════════════════════════════════════════════
+        function assembleSections(refined) {
+            const sections = [];
+            let current = null;
+            let currentBranch = null;
+
             function closeBranch() {
-                if (currentBranch && currentSection) {
-                    flushBuffer();
-                    currentSection.branches.push(currentBranch);
+                if (currentBranch && current) {
+                    current.branches.push(currentBranch);
                     currentBranch = null;
                 }
             }
 
             function closeSection() {
                 closeBranch();
-                flushBuffer();
-                if (currentSection && (currentSection.lines.length || currentSection.branches.length)) {
-                    sections.push(currentSection);
+                if (current && (current.lines.length || current.branches.length)) {
+                    sections.push(current);
                 }
-                currentSection = null;
+                current = null;
             }
 
-            function detectSectionType(text) {
-                const lower = text.toLowerCase();
-                for (const pat of SECTION_PATTERNS) {
-                    if (pat.keywords.some(kw => lower.includes(kw))) {
-                        return pat.type;
-                    }
-                }
-                return 'generic';
+            function addLine(lineObj) {
+                const target = currentBranch ? currentBranch.lines : (current ? current.lines : null);
+                if (target) target.push(lineObj);
             }
 
-            function isHeading(line, nextLine) {
-                const trimmed = line.trim();
-                if (!trimmed) return false;
-                // Short lines that look like headings
-                if (trimmed.length < 80 && !trimmed.endsWith('?') && !trimmed.endsWith('.') && !trimmed.endsWith(',')) {
-                    // Starts with caps, or is a known heading pattern
-                    if (/^[A-Z][A-Za-z\s\/{}&()*\-—:]+$/.test(trimmed) && trimmed.length < 50) return true;
-                    // Lines ending with heading markers
-                    if (trimmed.match(/^(#{1,3}|={3,}|-{3,})/)) return true;
-                }
-                // Lines with curly braces describing lead type
-                if (/\{[^}]+\}/.test(trimmed) && trimmed.length < 100) return true;
-                return false;
-            }
+            for (let i = 0; i < refined.length; i++) {
+                const item = refined[i];
 
-            function isBranchStart(line) {
-                const trimmed = line.trim();
-                // Lines starting with * that describe a condition/scenario
-                if (/^\*\s+/.test(trimmed)) {
-                    const content = trimmed.replace(/^\*\s+/, '');
-                    // Check if it's a conditional/scenario marker (not just a bullet in a list)
-                    if (/^(if |when |booking |key questions|objection|not interested|already got|call me back)/i.test(content)) {
-                        return true;
-                    }
-                    // Short descriptive lines starting with * are likely branches
-                    if (content.length < 80 && !content.endsWith('?')) return true;
-                }
-                return false;
-            }
+                // Skip blanks and separators
+                if (item.intent === 'blank' || item.intent === 'separator') continue;
 
-            function classifyLine(line) {
-                const trimmed = line.trim();
-                if (!trimmed) return null;
-
-                // Transition arrows
-                if (trimmed.includes('→') || trimmed.includes('->')) {
-                    return { type: 'transition-arrow', text: trimmed };
-                }
-                // Numbered action steps
-                if (/^\d+[\.\)]\s+/.test(trimmed)) {
-                    return { type: 'action-step', text: trimmed };
-                }
-                // Objection triggers (starts with common objection keywords)
-                if (/^(not interested|dont remember|don't remember|call me back|already got|i'?m not|no thanks|not right now)/i.test(trimmed)) {
-                    return { type: 'objection-trigger', text: trimmed };
-                }
-                // Instruction lines (describing what to do, not what to say)
-                if (/^(go ahead|put into|send |confirm |check |note:|important:|tip:|remember:)/i.test(trimmed)) {
-                    return { type: 'instruction', text: trimmed };
-                }
-                // Lines in parentheses or starting with ( are stage directions
-                if (/^\(.*\)$/.test(trimmed)) {
-                    return { type: 'instruction', text: trimmed };
-                }
-                // Everything else is speech (what to say)
-                return { type: 'say', text: trimmed };
-            }
-
-            // Parse line by line
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const trimmed = line.trim();
-                const nextLine = i + 1 < lines.length ? lines[i + 1] : '';
-
-                // Skip empty lines
-                if (!trimmed) {
-                    // Multiple empty lines can indicate section break
-                    if (i + 1 < lines.length && !lines[i + 1].trim() && currentSection && !currentBranch) {
-                        // Double blank line = potential section break, but don't force close
-                    }
-                    continue;
-                }
-
-                // Check if it's a heading → new section
-                if (isHeading(trimmed, nextLine)) {
+                // ── Heading → new section ────────────────────
+                if (item.intent === 'heading') {
                     closeSection();
-                    const type = detectSectionType(trimmed);
-                    currentSection = {
-                        title: trimmed.replace(/^[#=\-*\s]+/, '').replace(/[#=\-]+$/, '').trim(),
-                        type: type,
+                    current = {
+                        title: item.content.replace(/^[#=\-*\s]+/, '').replace(/[#=\-*]+$/, '').trim(),
+                        type: item.sectionType,
                         lines: [],
                         branches: [],
                     };
                     continue;
                 }
 
-                // Check if it's a branch start
-                if (isBranchStart(line)) {
-                    closeBranch();
-                    if (!currentSection) {
-                        currentSection = {
-                            title: 'Script',
-                            type: 'generic',
+                // ── Branch start (star-prefixed conditional) ──
+                // Re-check: items tagged as heading that were actually star branches
+                // are already handled. Check for inline objection branch patterns:
+                if (item.intent === 'objection-trigger' || item.intent === 'objection-inline') {
+                    // If we're not in an objection section, start one as a branch
+                    if (current && current.type !== 'objection') {
+                        closeBranch();
+                        currentBranch = {
+                            label: item.intent === 'objection-inline' ? item.trigger : item.content,
+                            type: 'objection',
                             lines: [],
-                            branches: [],
                         };
+                        if (item.intent === 'objection-inline') {
+                            currentBranch.lines.push({ type: 'say', text: item.response });
+                        }
+                        continue;
                     }
-                    flushBuffer();
-                    const branchText = trimmed.replace(/^\*\s+/, '');
-                    const branchType = detectSectionType(branchText);
-                    currentBranch = {
-                        label: branchText,
-                        type: branchType,
-                        lines: [],
-                    };
-                    continue;
                 }
 
-                // Start a default section if none exists
-                if (!currentSection) {
-                    const type = detectSectionType(trimmed);
-                    currentSection = {
-                        title: type === 'generic' ? 'Script' : SECTION_PATTERNS.find(p => p.type === type)?.label || 'Script',
-                        type: type,
+                // Ensure a section exists
+                if (!current) {
+                    // Auto-create intro section if we start with dialogue
+                    let autoType = 'intro';
+                    if (item.intent === 'postcall-step') autoType = 'postcall';
+                    current = {
+                        title: SECTION_TYPES[autoType].label,
+                        type: autoType,
                         lines: [],
                         branches: [],
                     };
                 }
 
-                // Classify the line and add it
-                const classified = classifyLine(line);
-                if (classified) {
-                    lineBuffer.push(classified);
+                // ── Map intent → line type for rendering ─────
+                switch (item.intent) {
+                    case 'say':
+                        addLine({ type: 'say', text: item.content });
+                        break;
+                    case 'compliance':
+                        addLine({ type: 'compliance', text: item.content });
+                        break;
+                    case 'coaching-note':
+                        addLine({ type: 'coaching-note', text: item.content });
+                        break;
+                    case 'context-note':
+                        addLine({ type: 'context-note', text: item.content });
+                        break;
+                    case 'instruction':
+                        addLine({ type: 'instruction', text: item.content });
+                        break;
+                    case 'transition-arrow':
+                        addLine({ type: 'transition-arrow', text: item.content });
+                        break;
+                    case 'postcall-step':
+                        addLine({ type: 'action-step', text: item.content });
+                        break;
+                    case 'objection-trigger':
+                        addLine({ type: 'objection-trigger', text: item.content });
+                        break;
+                    case 'objection-inline':
+                        addLine({
+                            type: 'objection-pair',
+                            trigger: item.trigger,
+                            responses: [{ type: 'say', text: item.response }],
+                        });
+                        break;
+                    default:
+                        addLine({ type: 'say', text: item.content });
                 }
             }
-
-            // Flush remaining
             closeSection();
-
-            // Post-process: merge very small sections, detect objection pairs
-            return postProcessSections(sections);
+            return sections;
         }
 
+        // ════════════════════════════════════════════════════════════
+        // PASS 5 — Post-Processing
+        // ════════════════════════════════════════════════════════════
         function postProcessSections(sections) {
-            const processed = [];
-
             for (const section of sections) {
-                // Within branches, detect objection trigger/response pairs
+                // Detect objection trigger/response pairs in main lines
+                section.lines = detectObjectionPairs(section.lines);
+                // Same for branches
                 for (const branch of section.branches) {
                     branch.lines = detectObjectionPairs(branch.lines);
                 }
-                section.lines = detectObjectionPairs(section.lines);
-
-                // Chunk long line sequences (memory science: groups of 3-5)
+                // Chunk long dialogue sequences (Miller's Law: 3-5 items)
                 section.lines = chunkLines(section.lines);
-
                 for (const branch of section.branches) {
                     branch.lines = chunkLines(branch.lines);
                 }
-
-                processed.push(section);
             }
 
-            return processed;
+            // Merge consecutive sections of the same type if they're tiny
+            const merged = [];
+            for (const section of sections) {
+                const prev = merged.length ? merged[merged.length - 1] : null;
+                if (prev && prev.type === section.type &&
+                    prev.lines.length <= 2 && section.lines.length <= 2 &&
+                    !prev.branches.length && !section.branches.length) {
+                    // Merge into previous
+                    prev.lines.push(...section.lines);
+                    prev.branches.push(...section.branches);
+                } else {
+                    merged.push(section);
+                }
+            }
+
+            return merged;
         }
 
         function detectObjectionPairs(lines) {
@@ -634,10 +1096,12 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 if (line.type === 'objection-trigger' && i + 1 < lines.length) {
-                    // Look for the response that follows
                     const responses = [];
                     let j = i + 1;
-                    while (j < lines.length && lines[j].type !== 'objection-trigger' && lines[j].type !== 'chunk-separator') {
+                    while (j < lines.length &&
+                           lines[j].type !== 'objection-trigger' &&
+                           lines[j].type !== 'objection-pair' &&
+                           lines[j].type !== 'chunk-separator') {
                         responses.push(lines[j]);
                         j++;
                     }
@@ -657,11 +1121,10 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         }
 
         function chunkLines(lines) {
-            // Insert chunk separators every 4-5 "say" lines (Miller's Law)
             const result = [];
             let sayCount = 0;
             for (const line of lines) {
-                if (line.type === 'say') {
+                if (line.type === 'say' || line.type === 'compliance') {
                     sayCount++;
                     if (sayCount > 4) {
                         result.push({ type: 'chunk-separator' });
@@ -671,6 +1134,26 @@ Then display it in a clean, easy-to-read practice format."></textarea>
                 result.push(line);
             }
             return result;
+        }
+
+        // ════════════════════════════════════════════════════════════
+        // MAIN PARSER — Orchestrates all passes
+        // ════════════════════════════════════════════════════════════
+        function parseScript(rawText) {
+            // Pass 1: Tokenize
+            const tokens = tokenizeLines(rawText);
+
+            // Pass 2: Classify intent (per-line)
+            const classified = classifyTokens(tokens);
+
+            // Pass 3: Contextual refinement (neighbor-aware)
+            const refined = refineClassifications(classified);
+
+            // Pass 4: Assemble into sections
+            const sections = assembleSections(refined);
+
+            // Pass 5: Post-process (objection pairs, chunking, merging)
+            return postProcessSections(sections);
         }
 
         // ════════════════════════════════════════════════════════════
@@ -710,8 +1193,25 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             const flowEl = document.getElementById('scriptFlow');
             const outlineEl = document.getElementById('sectionOutline');
 
+            // Count line types for summary
+            let dialogueCount = 0, coachingCount = 0, contextCount = 0, objectionCount = 0;
+            for (const s of sections) {
+                for (const l of s.lines) {
+                    if (l.type === 'say' || l.type === 'compliance') dialogueCount++;
+                    else if (l.type === 'coaching-note') coachingCount++;
+                    else if (l.type === 'context-note') contextCount++;
+                    else if (l.type === 'objection-pair' || l.type === 'objection-trigger') objectionCount++;
+                }
+                for (const b of s.branches) {
+                    for (const l of b.lines) {
+                        if (l.type === 'say') dialogueCount++;
+                        else if (l.type === 'objection-pair') objectionCount++;
+                    }
+                }
+            }
+
             // Build outline
-            let outlineHtml = '<div class="outline-title">Sections</div>';
+            let outlineHtml = '<div class="outline-title">Script Map</div>';
             sections.forEach((section, idx) => {
                 const color = SECTION_COLORS[section.type] || SECTION_COLORS.generic;
                 outlineHtml += `
@@ -726,9 +1226,10 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             // Build flow
             let flowHtml = '';
             sections.forEach((section, idx) => {
-                const color = SECTION_COLORS[section.type] || SECTION_COLORS.generic;
+                const typeInfo = SECTION_TYPES[section.type] || SECTION_TYPES.generic;
+                const color = typeInfo.color;
+                const typeLabel = typeInfo.label;
                 const badgeClass = 'badge-' + section.type;
-                const typeLabel = SECTION_PATTERNS.find(p => p.type === section.type)?.label || 'Section';
 
                 flowHtml += `
                     <div class="section-block open" id="section-${idx}" data-index="${idx}">
@@ -763,7 +1264,7 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             document.getElementById('pasteView').classList.remove('active');
             document.getElementById('analyzedView').classList.add('active');
             document.getElementById('pageSubtitle').textContent =
-                `${sections.length} sections detected. Use the modes above to practice.`;
+                `${sections.length} sections | ${dialogueCount} dialogue lines | ${objectionCount} objections | ${coachingCount + contextCount} notes`;
         }
 
         function renderLines(lines) {
@@ -783,6 +1284,8 @@ Then display it in a clean, easy-to-read practice format."></textarea>
                         </div>
                     `;
                 }
+                // coaching-note and context-note have ::before CSS badges
+                // compliance also has a ::before CSS badge
                 return `
                     <div class="speech-line ${line.type}">
                         <span class="speech-text">${highlightKeyPhrases(line.text)}</span>
@@ -794,9 +1297,10 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         function renderBranches(branches) {
             if (!branches.length) return '';
             return branches.map(branch => {
-                const color = SECTION_COLORS[branch.type] || SECTION_COLORS.generic;
+                const typeInfo = SECTION_TYPES[branch.type] || SECTION_TYPES.generic;
+                const color = typeInfo.color;
                 const badgeClass = 'badge-' + branch.type;
-                const typeLabel = SECTION_PATTERNS.find(p => p.type === branch.type)?.label || 'Branch';
+                const typeLabel = typeInfo.label;
                 return `
                     <div class="branch-block">
                         <div class="branch-header" onclick="toggleBranch(this)">
