@@ -241,8 +241,8 @@
 
         <!-- Recent Sessions -->
         <div class="section-title">
-            <span>Recent Sessions</span>
-            <a href="/report-cards">View all</a>
+            <span>Recent Activity</span>
+            <a href="/report-cards">View Report Cards</a>
         </div>
         <div id="recentSessions">
             <div class="empty-state">
@@ -275,34 +275,55 @@
                 // Stats
                 if (analytics) {
                     document.getElementById('stat-sessions').textContent = analytics.total_sessions;
-                    document.getElementById('stat-score').textContent = analytics.avg_score ? analytics.avg_score.toFixed(1) : '0';
-                    document.getElementById('stat-objections').textContent = analytics.objection_stats.rate + '%';
+                    // Show N/A for score/objections when sessions exist but no graded data
+                    const hasScores = analytics.avg_score > 0;
+                    document.getElementById('stat-score').textContent = hasScores ? analytics.avg_score.toFixed(1) : (analytics.total_sessions > 0 ? 'N/A' : '0');
+                    document.getElementById('stat-objections').textContent = analytics.objection_stats.faced > 0 ? analytics.objection_stats.rate + '%' : (analytics.total_sessions > 0 ? 'N/A' : '0%');
                     document.getElementById('stat-time').textContent = analytics.total_minutes.toFixed(0) + ' min';
                 }
 
-                // Recent sessions
+                // Recent sessions (includes both full sim and module sessions)
                 const container = document.getElementById('recentSessions');
                 if (sessions && sessions.length > 0) {
                     container.innerHTML = sessions.map(s => {
-                        const info = typeof s.client_info === 'string' ? JSON.parse(s.client_info) : s.client_info;
-                        const name = info ? info.first_name : 'Unknown';
-                        // Score and grade come from the LEFT JOIN to report_cards
-                        const score = s.overall_score ? s.overall_score.toFixed(0) : '--';
-                        const grade = s.letter_grade || (s.status === 'completed' ? 'F' : '--');
-                        // Link to report detail if we have a report_card_id
-                        const href = s.report_card_id
-                            ? `/report?id=${s.report_card_id}`
-                            : `/report-cards`;
-                        return `
-                            <div class="session-row" onclick="window.location.href='${href}'">
-                                <div class="session-score grade ${gradeClass(grade)}">${grade}</div>
-                                <div class="session-info">
-                                    <h4>Session with ${name}</h4>
-                                    <p>Score: ${score}/100 | Duration: ${formatDuration(s.duration_seconds || 0)}</p>
+                        const isModule = s.session_type === 'module';
+                        const statusLabel = s.status === 'completed' ? '' : (s.status === 'cancelled' ? ' (Incomplete)' : '');
+
+                        if (isModule) {
+                            // Module session rendering
+                            const moduleName = (s.module_key || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                            const statusIcon = s.status === 'completed' ? '✓' : '—';
+                            const statusClass = s.status === 'completed' ? 'grade-A' : 'grade-F';
+                            return `
+                                <div class="session-row" onclick="window.location.href='/training'">
+                                    <div class="session-score grade ${statusClass}" style="font-size:1.2rem;">${statusIcon}</div>
+                                    <div class="session-info">
+                                        <h4>${moduleName}${statusLabel}</h4>
+                                        <p>Module Training | Duration: ${formatDuration(s.duration_seconds || 0)}</p>
+                                    </div>
+                                    <div class="session-meta">${formatDate(s.started_at)}</div>
                                 </div>
-                                <div class="session-meta">${formatDate(s.started_at)}</div>
-                            </div>
-                        `;
+                            `;
+                        } else {
+                            // Full sim session rendering
+                            const info = typeof s.client_info === 'string' ? JSON.parse(s.client_info) : s.client_info;
+                            const name = info ? info.first_name : 'Unknown';
+                            const score = s.overall_score ? s.overall_score.toFixed(0) : '--';
+                            const grade = s.letter_grade || (s.status === 'completed' ? 'F' : '--');
+                            const href = s.report_card_id
+                                ? `/report?id=${s.report_card_id}`
+                                : `/report-cards`;
+                            return `
+                                <div class="session-row" onclick="window.location.href='${href}'">
+                                    <div class="session-score grade ${gradeClass(grade)}">${grade}</div>
+                                    <div class="session-info">
+                                        <h4>Session with ${name}</h4>
+                                        <p>Score: ${score}/100 | Duration: ${formatDuration(s.duration_seconds || 0)}</p>
+                                    </div>
+                                    <div class="session-meta">${formatDate(s.started_at)}</div>
+                                </div>
+                            `;
+                        }
                     }).join('');
                 }
 

@@ -34,7 +34,7 @@ async def get_overview(request: Request, days: int = 30):
 
     total_sessions = sum(a.get("sessions_count", 0) for a in analytics)
     total_minutes = sum(a.get("total_minutes", 0) for a in analytics)
-    overall_scores = [a["avg_overall"] for a in analytics if a.get("avg_overall")]
+    overall_scores = [a["avg_overall"] for a in analytics if a.get("avg_overall") is not None and a.get("sessions_count", 0) > 0]
     avg_score = sum(overall_scores) / len(overall_scores) if overall_scores else 0
 
     # Score trend over time
@@ -52,7 +52,7 @@ async def get_overview(request: Request, days: int = 30):
     category_averages = {}
     for cat in categories:
         key = f"avg_{cat}"
-        vals = [a.get(key, 0) for a in analytics if a.get(key)]
+        vals = [a.get(key, 0) for a in analytics if a.get(key) is not None and a.get("sessions_count", 0) > 0]
         category_averages[cat] = sum(vals) / len(vals) if vals else 0
 
     # Objection stats

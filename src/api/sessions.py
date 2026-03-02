@@ -457,6 +457,12 @@ async def end_session(session_id: str, request: Request):
     }
 
 
+@router.get("/")
+async def list_sessions(request: Request, limit: int = 50, offset: int = 0):
+    user = get_current_user(request)
+    return await db.get_user_sessions(user["user_id"], limit, offset)
+
+
 @router.get("/{session_id}")
 async def get_session(session_id: str, request: Request):
     user = get_current_user(request)
@@ -477,9 +483,3 @@ async def get_transcript(session_id: str, request: Request):
     if str(session["user_id"]) != user["user_id"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
     return await db.get_session_transcript(session_id)
-
-
-@router.get("/")
-async def list_sessions(request: Request, limit: int = 50, offset: int = 0):
-    user = get_current_user(request)
-    return await db.get_user_sessions(user["user_id"], limit, offset)

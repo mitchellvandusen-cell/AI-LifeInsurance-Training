@@ -577,18 +577,33 @@ async def get_session(session_id: str) -> Optional[dict]:
 
 
 async def get_user_sessions(user_id: str, limit: int = 50, offset: int = 0) -> list[dict]:
+    """Get all sessions (full sim + module) for the dashboard, sorted by recency."""
     pool = await get_pool()
+    uid = uuid.UUID(user_id)
     rows = await pool.fetch(
-        """SELECT ts.id, ts.status, ts.started_at, ts.ended_at, ts.duration_seconds,
-                  ts.client_info, ts.billed_minutes, ts.cost_cents,
-                  rc.id AS report_card_id,
-                  rc.overall_score, rc.letter_grade
-           FROM training_sessions ts
-           LEFT JOIN report_cards rc ON rc.session_id = ts.id
-           WHERE ts.user_id = $1
-           ORDER BY ts.started_at DESC
-           LIMIT $2 OFFSET $3""",
-        uuid.UUID(user_id), limit, offset,
+        """(
+            SELECT ts.id, ts.status, ts.started_at, ts.ended_at, ts.duration_seconds,
+                   ts.client_info, ts.billed_minutes, ts.cost_cents,
+                   rc.id AS report_card_id,
+                   rc.overall_score, rc.letter_grade,
+                   'full_sim' AS session_type,
+                   NULL AS module_key
+            FROM training_sessions ts
+            LEFT JOIN report_cards rc ON rc.session_id = ts.id
+            WHERE ts.user_id = $1
+        ) UNION ALL (
+            SELECT ms.id, ms.status, ms.started_at, ms.ended_at, ms.duration_seconds,
+                   NULL AS client_info, ms.billed_minutes, ms.cost_cents,
+                   NULL AS report_card_id,
+                   NULL AS overall_score, NULL AS letter_grade,
+                   'module' AS session_type,
+                   ms.module_key
+            FROM module_sessions ms
+            WHERE ms.user_id = $1
+        )
+        ORDER BY started_at DESC
+        LIMIT $2 OFFSET $3""",
+        uid, limit, offset,
     )
     return [_row_to_dict(r) for r in rows]
 
