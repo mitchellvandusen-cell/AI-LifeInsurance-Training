@@ -154,33 +154,6 @@
             color: var(--text-secondary);
             font-size: 0.85rem; font-style: italic;
         }
-        .speech-line.coaching-note {
-            background: rgba(139,92,246,0.06);
-            border-left-color: var(--accent-purple);
-            color: var(--text-muted);
-            font-size: 0.82rem; font-style: italic;
-        }
-        .speech-line.coaching-note::before {
-            content: 'TIP'; font-size: 0.6rem; font-weight: 800;
-            background: rgba(139,92,246,0.15); color: var(--accent-purple);
-            padding: 0.1rem 0.35rem; border-radius: 3px;
-            margin-right: 0.5rem; vertical-align: middle;
-            letter-spacing: 0.05em;
-        }
-        .speech-line.context-note {
-            background: rgba(106,106,138,0.04);
-            border-left-color: var(--text-muted);
-            color: var(--text-muted);
-            font-size: 0.82rem; font-style: italic;
-            opacity: 0.7;
-        }
-        .speech-line.context-note::before {
-            content: 'CONTEXT'; font-size: 0.55rem; font-weight: 800;
-            background: rgba(106,106,138,0.12); color: var(--text-muted);
-            padding: 0.1rem 0.35rem; border-radius: 3px;
-            margin-right: 0.5rem; vertical-align: middle;
-            letter-spacing: 0.05em;
-        }
         .speech-line.transition-arrow {
             background: rgba(6,182,212,0.06);
             border-left-color: var(--accent-cyan);
@@ -191,18 +164,6 @@
             background: rgba(16,185,129,0.06);
             border-left-color: var(--accent-green);
             color: var(--text-secondary); font-size: 0.85rem;
-        }
-        .speech-line.compliance {
-            background: rgba(16,185,129,0.06);
-            border-left-color: var(--accent-green);
-            color: var(--text-primary);
-        }
-        .speech-line.compliance::before {
-            content: 'COMPLIANCE'; font-size: 0.55rem; font-weight: 800;
-            background: rgba(16,185,129,0.15); color: var(--accent-green);
-            padding: 0.1rem 0.35rem; border-radius: 3px;
-            margin-right: 0.5rem; vertical-align: middle;
-            letter-spacing: 0.05em;
         }
 
         /* Key phrase highlighting */
@@ -306,33 +267,21 @@
 
         /* ── Section type colors ─────────────────────────────── */
         .type-intro { background: var(--accent-blue); }
-        .type-qualifying { background: var(--accent-cyan); }
-        .type-pitch { background: var(--accent-blue); }
-        .type-objection { background: var(--accent-red); }
-        .type-frame { background: var(--accent-amber); }
-        .type-compliance { background: var(--accent-green); }
-        .type-close { background: var(--accent-green); }
-        .type-postcall { background: var(--accent-purple); }
-        .type-generic { background: var(--text-muted); }
-        /* Legacy */
         .type-questions { background: var(--accent-cyan); }
+        .type-objection { background: var(--accent-red); }
         .type-transition { background: var(--accent-amber); }
+        .type-close { background: var(--accent-green); }
         .type-action { background: var(--accent-purple); }
+        .type-generic { background: var(--text-muted); }
 
         /* Badge colors */
         .badge-intro { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
-        .badge-qualifying { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
-        .badge-pitch { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
-        .badge-objection { background: rgba(239,68,68,0.15); color: var(--accent-red); }
-        .badge-frame { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
-        .badge-compliance { background: rgba(16,185,129,0.15); color: var(--accent-green); }
-        .badge-close { background: rgba(16,185,129,0.15); color: var(--accent-green); }
-        .badge-postcall { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
-        .badge-generic { background: rgba(106,106,138,0.15); color: var(--text-muted); }
-        /* Legacy aliases */
         .badge-questions { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
+        .badge-objection { background: rgba(239,68,68,0.15); color: var(--accent-red); }
         .badge-transition { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+        .badge-close { background: rgba(16,185,129,0.15); color: var(--accent-green); }
         .badge-action { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
+        .badge-generic { background: rgba(106,106,138,0.15); color: var(--text-muted); }
 
         /* ── Flow Connector ──────────────────────────────────── */
         .flow-connector {
@@ -414,13 +363,11 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         <div class="analyzed-view" id="analyzedView">
             <!-- Legend -->
             <div class="legend" id="legend">
-                <div class="legend-item"><div class="legend-color type-intro"></div><span>Dialogue</span></div>
-                <div class="legend-item"><div class="legend-color" style="background:var(--accent-green)"></div><span>Compliance</span></div>
-                <div class="legend-item"><div class="legend-color type-objection"></div><span>Objections</span></div>
+                <div class="legend-item"><div class="legend-color type-intro"></div><span>What to Say</span></div>
                 <div class="legend-item"><div class="legend-color type-transition"></div><span>Instructions</span></div>
-                <div class="legend-item"><div class="legend-color" style="background:var(--accent-purple)"></div><span>Coaching Tips</span></div>
-                <div class="legend-item"><div class="legend-color type-generic"></div><span>Context</span></div>
-                <div class="legend-item"><div class="legend-color type-action"></div><span>Post-Call</span></div>
+                <div class="legend-item"><div class="legend-color type-objection"></div><span>Objections</span></div>
+                <div class="legend-item"><div class="legend-color" style="background:var(--accent-cyan)"></div><span>Transitions</span></div>
+                <div class="legend-item"><div class="legend-color type-action"></div><span>Action Steps</span></div>
             </div>
 
             <!-- Focus mode controls -->
@@ -459,738 +406,485 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         let focusIndex = 0;
 
         // ════════════════════════════════════════════════════════════
-        // ENTERPRISE SCRIPT ANALYZER — Multi-Pass Contextual Engine
+        // Section Type Detection
         // ════════════════════════════════════════════════════════════
+        const SECTION_PATTERNS = [
+            { type: 'intro',      keywords: ['intro', 'opening', 'greeting', 'hey firstname', 'new lead', 'aged lead', 'facebook lead', 'average data', 'speed to lead', 'fresh lead', 'old lead', 'warm lead', 'cold lead', 'hot lead'], label: 'Intro' },
+            { type: 'questions',  keywords: ['key questions', 'questions', 'qualifying', 'discovery', 'medical', 'health questions', 'underwriting', 'situation questions'], label: 'Questions' },
+            { type: 'objection',  keywords: ['objection', 'not interested', 'already got', 'call me back', 'dont remember', "don't remember", 'rebuttal', 'pushback'], label: 'Objection' },
+            { type: 'transition', keywords: ['frame', 'framing', 'preframe', 'tie down', 'transition', 'booking', 'appointment', 'bridge'], label: 'Transition' },
+            { type: 'close',      keywords: ['close', 'closing', 'presentation', 'pitch', 'commitment', 'after you set', 'after the call', 'after call', 'post call', 'post-call', 'postcall'], label: 'Close' },
+            { type: 'action',     keywords: ['action', 'steps', 'checklist', 'to do', 'follow up', 'follow-up', 'notes to self', 'reminders'], label: 'Action Steps' },
+        ];
 
-        // ── Section type definitions ──────────────────────────────
-        const SECTION_TYPES = {
-            intro:      { label: 'Intro',             color: 'var(--accent-blue)' },
-            qualifying: { label: 'Qualifying',        color: 'var(--accent-cyan)' },
-            pitch:      { label: 'Value Proposition',  color: 'var(--accent-blue)' },
-            objection:  { label: 'Objection Handling', color: 'var(--accent-red)' },
-            frame:      { label: 'Frame / Preframe',   color: 'var(--accent-amber)' },
-            compliance: { label: 'Compliance',         color: 'var(--accent-green)' },
-            close:      { label: 'Close',              color: 'var(--accent-green)' },
-            postcall:   { label: 'Post-Call',          color: 'var(--accent-purple)' },
-            generic:    { label: 'Section',            color: 'var(--text-muted)' },
+        const SECTION_COLORS = {
+            intro: 'var(--accent-blue)',
+            questions: 'var(--accent-cyan)',
+            objection: 'var(--accent-red)',
+            transition: 'var(--accent-amber)',
+            close: 'var(--accent-green)',
+            action: 'var(--accent-purple)',
+            generic: 'var(--text-muted)',
         };
 
-        const SECTION_COLORS = {};
-        for (const [k, v] of Object.entries(SECTION_TYPES)) SECTION_COLORS[k] = v.color;
-
-        // ── Heading detection signals ─────────────────────────────
-        // These map heading text → section type
-        const HEADING_SIGNALS = [
-            // Intro patterns — catch every way someone labels an intro
-            { re: /intro|opening|greeting/i, type: 'intro' },
-            { re: /new\s*lead/i, type: 'intro' },
-            { re: /fresh\s*lead/i, type: 'intro' },
-            { re: /hot\s*lead/i, type: 'intro' },
-            { re: /warm\s*lead/i, type: 'intro' },
-            { re: /cold\s*lead/i, type: 'intro' },
-            { re: /speed\s*to\s*lead/i, type: 'intro' },
-            { re: /under\s*\d+\s*min/i, type: 'intro' },
-            { re: /aged\s*lead/i, type: 'intro' },
-            { re: /old\s*(aged?\s*)?lead/i, type: 'intro' },
-            { re: /over\s*\d+\s*(hour|day|week|month)/i, type: 'intro' },
-            { re: /\d+\s*(hour|day|week|month)\s*(old|lead|facebook)/i, type: 'intro' },
-            { re: /facebook\s*lead/i, type: 'intro' },
-            { re: /fb\s*lead/i, type: 'intro' },
-            { re: /social\s*media\s*lead/i, type: 'intro' },
-            { re: /internet\s*lead/i, type: 'intro' },
-            { re: /average\s*data/i, type: 'intro' },
-            { re: /lead\s*(type|source)\s*[:\-]/i, type: 'intro' },
-            { re: /^(the\s+)?(first|initial)\s*(call|contact)/i, type: 'intro' },
-            // Qualifying / questions — every variation
-            { re: /key\s*questions/i, type: 'qualifying' },
-            { re: /^questions$/i, type: 'qualifying' },
-            { re: /questions?\s*to\s*ask/i, type: 'qualifying' },
-            { re: /qualifying/i, type: 'qualifying' },
-            { re: /discovery/i, type: 'qualifying' },
-            { re: /medical\s*(info|questions|history)/i, type: 'qualifying' },
-            { re: /health\s*questions/i, type: 'qualifying' },
-            { re: /underwriting\s*(questions|info)/i, type: 'qualifying' },
-            { re: /intake\s*(questions|form)/i, type: 'qualifying' },
-            { re: /fact[\s-]?find/i, type: 'qualifying' },
-            // Objections — every variation
-            { re: /objection/i, type: 'objection' },
-            { re: /rebuttal/i, type: 'objection' },
-            { re: /pushback/i, type: 'objection' },
-            { re: /common\s*(objection|response|pushback|excuse)/i, type: 'objection' },
-            { re: /^not\s*interested$/i, type: 'objection' },
-            { re: /^objection\s*handl/i, type: 'objection' },
-            { re: /overcoming\s*(objection|resistance)/i, type: 'objection' },
-            { re: /if\s*they\s*(say|object|push\s*back)/i, type: 'objection' },
-            // Frame
-            { re: /frame|framing|pre-?frame/i, type: 'frame' },
-            { re: /identity\s*(frame|statement)/i, type: 'frame' },
-            { re: /customiz/i, type: 'frame' },
-            { re: /tie\s*down/i, type: 'frame' },
-            { re: /transition/i, type: 'frame' },
-            { re: /bridge/i, type: 'frame' },
-            { re: /booking|appointment|set\s*the\s*(call|appt)/i, type: 'frame' },
-            { re: /rapport/i, type: 'frame' },
-            { re: /ice\s*breaker/i, type: 'frame' },
-            // Close
-            { re: /clos(e|ing)/i, type: 'close' },
-            { re: /presentation/i, type: 'close' },
-            { re: /commitment/i, type: 'close' },
-            { re: /wrap\s*up/i, type: 'close' },
-            { re: /the\s*ask/i, type: 'close' },
-            // Post-call
-            { re: /after\s*(you\s*)?set/i, type: 'postcall' },
-            { re: /after\s*the\s*call/i, type: 'postcall' },
-            { re: /post[\s-]?call/i, type: 'postcall' },
-            { re: /action\s*steps/i, type: 'postcall' },
-            { re: /checklist/i, type: 'postcall' },
-            { re: /to[\s-]*do/i, type: 'postcall' },
-            { re: /follow[\s-]*up\s*(step|task|action|item)/i, type: 'postcall' },
-            { re: /next\s*steps/i, type: 'postcall' },
-            // Value prop / pitch
-            { re: /value\s*prop/i, type: 'pitch' },
-            { re: /benefit/i, type: 'pitch' },
-            { re: /why\s*us/i, type: 'pitch' },
-            { re: /the\s*pitch/i, type: 'pitch' },
-        ];
-
-        // ── Coaching / context note patterns ──────────────────────
-        // Lines that are ADVICE TO THE AGENT, not spoken to the client
-        const COACHING_PATTERNS = [
-            /^key\s*things?\s*to\s*remember/i,
-            /^remember\s*:/i,
-            /^(pro\s*)?tip\s*:/i,
-            /^note\s*:/i,
-            /^important\s*:/i,
-            /^the\s*(key|goal|point|idea|trick)\s*(here\s*)?(is|:)/i,
-            /^(why|how)\s*this\s*works/i,
-            /^(always|never|make\s*sure)\s+(to\s+)?/i,
-            /^(this|that)\s+(is|helps|allows|makes|gives|creates|ensures|builds)/i,
-            /^(you\s+)?(want|need|should|must|have)\s+to\s+/i,
-            /^(your|the)\s+(goal|objective|aim|purpose)\s/i,
-            /^(don'?t|do\s*not)\s+(forget|skip|miss|rush|over)/i,
-            /^customiz/i,
-            /^\^+/,  // Lines starting with ^ (annotation marks)
-            /^\*\*?(key|important|note|tip|remember)\b/i,
-        ];
-
-        // ── Context/knowledge patterns ────────────────────────────
-        // Lines that explain the script or give background, not spoken aloud
-        const CONTEXT_PATTERNS = [
-            /^(this|these)\s+(script|approach|technique|method)/i,
-            /^(use|using)\s+(this|these|the)\s+(when|for|if|script)/i,
-            /^(works?\s+best|best\s+for|designed\s+for|meant\s+for)/i,
-            /^(lead\s*type|script\s*type|scenario)\s*:/i,
-            /^(purpose|overview|description|summary)\s*:/i,
-            /^\((works?|use|for|when|if)\s/i,
-        ];
-
-        // ── Compliance sentence patterns ──────────────────────────
-        // Spoken to the client, but compliance-related (pen/paper, recording, etc.)
-        const COMPLIANCE_PATTERNS = [
-            /grab\s*(a\s*)?(pen|pencil)\s*(and|&)\s*(paper|something\s*to\s*write)/i,
-            /go\s*ahead\s*and\s*grab/i,
-            /let\s*me\s*know\s*when\s*you'?re?\s*ready/i,
-            /this\s*call\s*(is|may\s*be)\s*(being\s*)?recorded/i,
-            /for\s*quality\s*(and|&)\s*training/i,
-            /are\s*you\s*the\s*(policy\s*)?owner/i,
-            /do\s*(you|i)\s*have\s*(your|the)\s*(consent|permission)/i,
-            /pen\s*and\s*paper/i,
-        ];
-
-        // ── Objection trigger patterns ────────────────────────────
-        const OBJECTION_TRIGGER_PATTERNS = [
-            /^(not\s*interested|n[oi]t?\s*right\s*now|no\s*thanks?|i'?m\s*good)/i,
-            /^(don'?t\s*remember|didn'?t\s*(ask|request|sign|fill))/i,
-            /^(call\s*me\s*back|send\s*me\s*(info|an?\s*email))/i,
-            /^(already\s*(got|have)\s*(it|one|some|coverage|a\s*polic))/i,
-            /^(i'?m\s*not\s*(looking|interested|in\s*the\s*market))/i,
-            /^(i\s*already\s*(have|got)\s*(coverage|a\s*polic|insurance|some))/i,
-            /^(how\s*much\s*(is|does|will)\s*(this|it)\s*cost)/i,
-            /^(what\s*(company|are\s*you\s*with))/i,
-            /^(is\s*this\s*(a\s*)?scam)/i,
-            /^(i\s*need\s*to\s*talk\s*to\s*my\s*(spouse|wife|husband))/i,
-            /^(my\s*(spouse|wife|husband)\s*handles)/i,
-            /^(i\s*can'?t\s*afford)/i,
-            /^(take\s*me\s*off|remove\s*me|stop\s*calling)/i,
-            /^(let\s*me\s*think\s*(about|on)\s*it)/i,
-            /^(i'?ll\s*(think|get\s*back|call\s*you))/i,
-        ];
-
-        // ── Post-call / workflow patterns ─────────────────────────
-        const POSTCALL_PATTERNS = [
-            /^put\s*(it\s*)?(into|in)\s*(calendar|crm|system)/i,
-            /^send\s*(the\s*)?(client|them|email|text|sms)/i,
-            /^(update|log|record|note)\s*(the\s*)?(crm|system|notes|call)/i,
-            /^(set|create|schedule)\s*(a\s*)?(follow[\s-]?up|reminder|callback)/i,
-            /^(upload|attach|save)\s*(the\s*)?(recording|file|doc)/i,
-            /^(submit|file|process)\s*(the\s*)?(app|application)/i,
-            /^confirm\s*(the\s*)?(appointment|appt|booking)/i,
-        ];
-
-        // ── Transition / stage direction patterns ─────────────────
-        const TRANSITION_PATTERNS = [
-            /→|->|=>/,
-            /^then\s*(transition|move|go|switch|pivot)\s*(to|into|onto)/i,
-            /^\[transition/i,
-        ];
-
-        // ── Dialogue detection heuristics ─────────────────────────
-        // Strong signals that a line is SPOKEN TO THE CLIENT
-        const DIALOGUE_SIGNALS = [
-            /\bfirstname\b/i,            // Placeholder for client name
-            /\bagent\s*name\b/i,          // Placeholder for agent name
-            /^(hey|hi|hello|good\s*(morning|afternoon|evening))\b/i,
-            /\b(sir|ma'?am|mr\.|mrs\.|ms\.)\b/i,
-            /\?$/,                         // Ends with question mark
-            /^(so\s+|well\s+|okay\s+|great\s+|perfect\s+|awesome\s+|alright\s+)/i,
-            /^(my\s+name\s+is|i'?m\s+just\s+(a|the)\s+)/i,
-            /^(the\s+reason\s+i'?m\s+call)/i,
-            /^(we\s+(shop|check|look|compare|work|partner))/i,
-            /^(what\s+i'?m?\s+(going\s+to|gonna)\s+do)/i,
-            /^(i\s+(just\s+)?want\s+(to|you))/i,
-            /^(do\s+you\s+(have|know|remember))/i,
-            /^(are\s+you\s+(looking|the|still|interested))/i,
-            /^(would\s+(it|you)\s+be)/i,
-            /^(not\s+a\s+problem|no\s+worries|i\s+understand|i\s+hear\s+you)/i,
-            /^(the\s+process|basically|so\s+basically)/i,
-            /^(were\s+you|have\s+you|did\s+you|how\s+(long|much|old))/i,
-            /\b(your\s+(situation|family|health|mortgage|coverage|spouse|wife|husband|kids))\b/i,
-            /\b(give\s+me|tell\s+me|let\s+me)\b/i,
-            /\b(I\s+apologize|sorry\s+to|sorry\s+about)\b/i,
-        ];
-
         // ════════════════════════════════════════════════════════════
-        // PASS 1 — Structural Tokenization
+        // Script Parser — Multi-Pass Smart Analyzer
         // ════════════════════════════════════════════════════════════
-        function tokenizeLines(rawText) {
-            const rawLines = rawText.split('\n');
-            const tokens = [];
-            let blankCount = 0; // Track consecutive blanks
 
-            for (let i = 0; i < rawLines.length; i++) {
-                const raw = rawLines[i];
-                const trimmed = raw.trim();
-
-                // Empty line
-                if (!trimmed) {
-                    blankCount++;
-                    tokens.push({ idx: i, raw, trimmed, empty: true });
-                    continue;
-                }
-
-                const precedingBlanks = blankCount;
-                blankCount = 0;
-
-                // Handle "--- TEXT ---" style headings: extract the text
-                const dashWrapped = trimmed.match(/^[-=]{2,}\s*(.+?)\s*[-=]{2,}$/);
-                if (dashWrapped) {
-                    const innerText = dashWrapped[1].trim();
-                    tokens.push({
-                        idx: i, raw, trimmed, empty: false,
-                        content: innerText,
-                        isBold: false, isMarkdownHeading: false, isSeparatorLine: false,
-                        isDashWrappedHeading: true, // Special flag
-                        isNumbered: false, isDash: false, isBullet: false,
-                        hasBraces: false, isWrappedParens: false, startsWithStar: false,
-                        isShort: innerText.length < 70, isMedium: innerText.length < 120,
-                        precedingBlanks,
-                    });
-                    continue;
-                }
-
-                // Detect formatting
-                const isBold = /^\*{2,3}[^*]+\*{2,3}$/.test(trimmed) || /^__[^_]+__$/.test(trimmed);
-                const isMarkdownHeading = /^#{1,4}\s+/.test(trimmed);
-                const isSeparatorLine = /^[-=_*]{3,}\s*$/.test(trimmed);
-                const isNumbered = /^\d+[\.\)]\s+/.test(trimmed);
-                const isDash = /^[-–—]\s+/.test(trimmed) && trimmed.length < 120;
-                const isBullet = /^[•·*]\s+/.test(trimmed) && !isBold;
-                const hasBraces = /\{[^}]+\}/.test(trimmed);
-                const isWrappedParens = /^\(.*\)$/.test(trimmed);
-                const startsWithStar = /^\*\s+/.test(trimmed) && !isBold;
-
-                // Clean content (strip formatting markers)
-                let content = trimmed;
-                if (isMarkdownHeading) content = content.replace(/^#{1,4}\s+/, '');
-                if (isBold) content = content.replace(/^\*{2,3}/, '').replace(/\*{2,3}$/, '')
-                                              .replace(/^__/, '').replace(/__$/, '');
-                content = content.trim();
-
-                tokens.push({
-                    idx: i, raw, trimmed, empty: false,
-                    content,
-                    isBold, isMarkdownHeading, isSeparatorLine, isNumbered,
-                    isDash, isBullet, hasBraces, isWrappedParens, startsWithStar,
-                    isDashWrappedHeading: false,
-                    isShort: content.length < 70,
-                    isMedium: content.length < 120,
-                    precedingBlanks,
-                });
-            }
-            return tokens;
-        }
-
-        // ════════════════════════════════════════════════════════════
-        // PASS 2 — Intent Classification (per-line, no context yet)
-        // ════════════════════════════════════════════════════════════
-        function classifyTokens(tokens) {
-            const classified = [];
-
-            for (let i = 0; i < tokens.length; i++) {
-                const tok = tokens[i];
-                if (tok.empty) {
-                    classified.push({ ...tok, intent: 'blank' });
-                    continue;
-                }
-                if (tok.isSeparatorLine) {
-                    classified.push({ ...tok, intent: 'separator' });
-                    continue;
-                }
-
-                const c = tok.content;
-                const lower = c.toLowerCase();
-
-                // ── 1. Heading detection ────────────────────────
-                if (isLikelyHeading(tok, tokens, i)) {
-                    const sectionType = detectSectionType(c);
-                    classified.push({ ...tok, intent: 'heading', sectionType });
-                    continue;
-                }
-
-                // ── 2. Coaching / agent-tip notes ───────────────
-                if (COACHING_PATTERNS.some(re => re.test(c))) {
-                    // But check: is this actually dialogue?
-                    const dialogueScore = scoreDialogue(c);
-                    if (dialogueScore < 2) {
-                        classified.push({ ...tok, intent: 'coaching-note' });
-                        continue;
-                    }
-                }
-
-                // ── 3. Context / knowledge notes ────────────────
-                if (CONTEXT_PATTERNS.some(re => re.test(c))) {
-                    classified.push({ ...tok, intent: 'context-note' });
-                    continue;
-                }
-
-                // ── 4. Wrapped in parens → stage direction ──────
-                if (tok.isWrappedParens) {
-                    classified.push({ ...tok, intent: 'context-note' });
-                    continue;
-                }
-
-                // ── 5. Transition arrows ────────────────────────
-                if (TRANSITION_PATTERNS.some(re => re.test(c))) {
-                    classified.push({ ...tok, intent: 'transition-arrow' });
-                    continue;
-                }
-
-                // ── 6. Objection trigger detection ──────────────
-                // "Not interested - " or "Already got it -" patterns
-                const objSplit = c.match(/^(.+?)\s*[-–—]\s+(.+)$/);
-                if (objSplit && OBJECTION_TRIGGER_PATTERNS.some(re => re.test(objSplit[1].trim()))) {
-                    // Single line: trigger + response
-                    classified.push({
-                        ...tok, intent: 'objection-inline',
-                        trigger: objSplit[1].trim(),
-                        response: objSplit[2].trim(),
-                    });
-                    continue;
-                }
-                if (OBJECTION_TRIGGER_PATTERNS.some(re => re.test(c))) {
-                    classified.push({ ...tok, intent: 'objection-trigger' });
-                    continue;
-                }
-
-                // ── 7. Post-call workflow ────────────────────────
-                if (tok.isNumbered && POSTCALL_PATTERNS.some(re => re.test(c.replace(/^\d+[\.\)]\s+/, '')))) {
-                    classified.push({ ...tok, intent: 'postcall-step' });
-                    continue;
-                }
-
-                // ── 8. Compliance lines (spoken, but compliance) ─
-                if (COMPLIANCE_PATTERNS.some(re => re.test(c))) {
-                    classified.push({ ...tok, intent: 'compliance' });
-                    continue;
-                }
-
-                // ── 9. Dialogue vs instruction scoring ──────────
-                const dialogueScore = scoreDialogue(c);
-
-                if (dialogueScore >= 2) {
-                    classified.push({ ...tok, intent: 'say', dialogueScore });
-                } else if (tok.isDash && tok.isShort) {
-                    // Short dashed lines are often labels or notes
-                    classified.push({ ...tok, intent: 'context-note' });
-                } else if (tok.isNumbered) {
-                    // Numbered lines not caught as postcall — classify based on content
-                    if (dialogueScore >= 1) {
-                        classified.push({ ...tok, intent: 'say', dialogueScore });
-                    } else {
-                        classified.push({ ...tok, intent: 'instruction' });
-                    }
-                } else {
-                    // Default: if it's conversational-length text, likely dialogue
-                    if (c.length > 30 && /[a-z]/.test(c) && !/^[A-Z][A-Z\s]+$/.test(c)) {
-                        classified.push({ ...tok, intent: 'say', dialogueScore });
-                    } else if (c.length < 30 && !c.endsWith('?') && !c.endsWith('.')) {
-                        classified.push({ ...tok, intent: 'context-note' });
-                    } else {
-                        classified.push({ ...tok, intent: 'say', dialogueScore });
-                    }
-                }
-            }
-            return classified;
-        }
-
-        // Score how "dialogue-like" a line is (0 = not dialogue, 3+ = definitely dialogue)
+        // ── Dialogue scoring ─────────────────────────────────────
+        // How "conversational" is this text? Higher = more dialogue-like
         function scoreDialogue(text) {
+            const signals = [
+                /\b(you|your|you're|youre)\b/i,
+                /\b(I'm|Im|I am|I'll|Ill|I will|my name is|my name's)\b/i,
+                /\b(we|we're|we'll|our|us)\b/i,
+                /\b(right|correct|sound good|fair enough|sound fair|makes sense)\b/i,
+                /[?]$/,
+                /\b(hey|hi|hello|good morning|good afternoon)\b/i,
+                /\b(great|perfect|awesome|wonderful|excellent|fantastic|ok|okay|alright)\b/i,
+                /\b(so|now|well|actually|basically|literally|pretty)\b/i,
+            ];
             let score = 0;
-            for (const re of DIALOGUE_SIGNALS) {
+            for (const re of signals) {
                 if (re.test(text)) score++;
             }
-            // Penalty for coaching-style language
-            if (/^(always|never|make\s*sure|remember|the\s*(key|goal|point))/i.test(text)) score -= 1;
-            // Bonus for conversational sentence starters
-            if (/^(so|well|okay|great|perfect|awesome|absolutely|hey|hi)/i.test(text)) score++;
-            // Bonus for direct address
-            if (/\b(you|your|you're|you've)\b/i.test(text)) score++;
-            // Penalty for meta/instructional language
-            if (/\b(script|technique|approach|methodology|framework)\b/i.test(text)) score -= 1;
             return score;
         }
 
-        // ── Heading heuristics ────────────────────────────────────
-        function isLikelyHeading(tok, tokens, i) {
-            const c = tok.content;
-            const lower = c.toLowerCase();
+        function parseScript(rawText) {
+            const lines = rawText.split('\n');
 
-            // NEVER treat numbered lines as headings
-            if (tok.isNumbered) return false;
+            // ═══════════════════════════════════════════════════
+            // PASS 1 — Tokenize with rich metadata
+            // ═══════════════════════════════════════════════════
+            const tokens = [];
+            for (let i = 0; i < lines.length; i++) {
+                const raw = lines[i];
+                const trimmed = raw.trim();
 
-            // NEVER treat long lines as headings (dialogue is long, headings are short)
-            if (c.length > 100) return false;
-
-            // ── Tier 1: Explicit formatting = definitely heading ──
-
-            // Markdown headings (# Title)
-            if (tok.isMarkdownHeading) return true;
-
-            // Dash-wrapped headings (--- Title ---)
-            if (tok.isDashWrappedHeading) return true;
-
-            // Bold lines that are short
-            if (tok.isBold && tok.isShort) {
-                // Bold + matches a signal = heading
-                if (HEADING_SIGNALS.some(h => h.re.test(c))) return true;
-                // Bold + short + followed by non-bold content = heading
-                const next = findNextNonEmpty(tokens, i);
-                if (next && !next.isBold) return true;
-            }
-
-            // ALL CAPS lines (but not single words that might be emphasis)
-            if (/^[A-Z][A-Z\s\/{}&()*\-—:.!]+$/.test(c) && c.length < 60 && c.length > 2) {
-                // Make sure it's not just a shouted word in dialogue
-                if (c.split(/\s+/).length >= 2 || HEADING_SIGNALS.some(h => h.re.test(c))) {
-                    return true;
-                }
-            }
-
-            // Lines with braces that describe lead types/scenarios
-            if (tok.hasBraces && tok.isMedium) return true;
-
-            // Star-prefixed labels (* Not Interested, * Aged Leads)
-            if (tok.startsWithStar && tok.isShort) {
-                const starContent = c.replace(/^\*\s+/, '');
-                if (HEADING_SIGNALS.some(h => h.re.test(starContent))) return true;
-                if (!starContent.endsWith('?') && !starContent.endsWith('.') && starContent.length < 60) {
-                    if (OBJECTION_TRIGGER_PATTERNS.some(re => re.test(starContent))) return false;
-                    return true;
-                }
-            }
-
-            // ── Tier 2: Context-aware heading detection ──
-            // Short line + preceded by blank line(s) + matches a heading signal
-            // This catches plain-text headings like "Aged Leads" or "Key Questions"
-            const hasPrecedingBlank = (tok.precedingBlanks || 0) >= 1;
-
-            if (tok.isShort && hasPrecedingBlank && !c.endsWith('?')) {
-                // If it matches a heading signal, it's a heading
-                if (HEADING_SIGNALS.some(h => h.re.test(c))) return true;
-            }
-
-            // ── Tier 3: Structural pattern matching ──
-            // Short line that doesn't look like dialogue and matches heading signals
-            if (tok.isShort && !c.endsWith('?') && c.length < 60) {
-                if (HEADING_SIGNALS.some(h => h.re.test(c))) {
-                    // Make sure it's not actually dialogue by checking dialogue score
-                    const ds = scoreDialogue(c);
-                    if (ds <= 1) return true;
-                }
-            }
-
-            return false;
-        }
-
-        function findNextNonEmpty(tokens, fromIdx) {
-            for (let j = fromIdx + 1; j < tokens.length; j++) {
-                if (!tokens[j].empty && !tokens[j].isSeparatorLine) return tokens[j];
-            }
-            return null;
-        }
-
-        function detectSectionType(text) {
-            const lower = text.toLowerCase();
-            for (const sig of HEADING_SIGNALS) {
-                if (sig.re.test(lower)) return sig.type;
-            }
-            return 'generic';
-        }
-
-        // ════════════════════════════════════════════════════════════
-        // PASS 3 — Contextual Refinement
-        // ════════════════════════════════════════════════════════════
-        function refineClassifications(classified) {
-            const refined = [...classified];
-
-            // Track what section we're in for context
-            let currentSectionType = 'intro';
-            let inPostCallZone = false;
-
-            for (let i = 0; i < refined.length; i++) {
-                const item = refined[i];
-                if (item.intent === 'blank' || item.intent === 'separator') continue;
-
-                if (item.intent === 'heading') {
-                    currentSectionType = item.sectionType;
-                    inPostCallZone = (currentSectionType === 'postcall');
+                if (!trimmed) {
+                    tokens.push({ kind: 'blank', index: i });
                     continue;
                 }
 
-                // ── Contextual fixes ────────────────────────
-
-                // 1. ALL numbered items in a postcall zone are postcall steps
-                if (inPostCallZone && item.isNumbered) {
-                    refined[i] = { ...item, intent: 'postcall-step' };
+                // Detect separator lines (---, ===, ***, ~~~, ___)
+                if (/^[-=~*_]{3,}$/.test(trimmed)) {
+                    tokens.push({ kind: 'separator', index: i });
                     continue;
                 }
 
-                // 2. Numbered items in non-postcall zone with dialogue content → dialogue
-                if (!inPostCallZone && item.isNumbered && item.intent === 'instruction') {
-                    if (item.dialogueScore >= 1 || DIALOGUE_SIGNALS.some(re => re.test(item.content))) {
-                        refined[i] = { ...item, intent: 'say' };
-                    }
+                // ── Detect headings ──────────────────────────
+                let content = trimmed;
+                let isHeading = false;
+
+                // ***Heading*** (triple-star wrapped)
+                if (/^\*{3}[^*]+\*{3}$/.test(trimmed)) {
+                    content = trimmed.replace(/^\*{3}/, '').replace(/\*{3}$/, '').trim();
+                    isHeading = true;
+                }
+                // **Heading** (bold wrapped, must be the whole line)
+                else if (/^\*{2}[^*]+\*{2}$/.test(trimmed)) {
+                    content = trimmed.replace(/^\*{2}/, '').replace(/\*{2}$/, '').trim();
+                    isHeading = true;
+                }
+                // # Heading (markdown)
+                else if (/^#{1,4}\s+/.test(trimmed)) {
+                    content = trimmed.replace(/^#{1,4}\s+/, '').trim();
+                    isHeading = true;
+                }
+                // =====HEADING===== (equals wrapped)
+                else if (/^={3,}.+={3,}$/.test(trimmed)) {
+                    content = trimmed.replace(/^=+/, '').replace(/=+$/, '').trim();
+                    isHeading = true;
+                }
+                // ~*~ HEADING ~*~ (tilde/star decorative)
+                else if (/^[~*]{2,}.+[~*]{2,}$/.test(trimmed) && trimmed.length < 80) {
+                    content = trimmed.replace(/^[~*\s]+/, '').replace(/[~*\s]+$/, '').trim();
+                    isHeading = true;
+                }
+                // ** spaced heading ** (spaced bold)
+                else if (/^\*{2}\s+.+\s+\*{2}$/.test(trimmed)) {
+                    content = trimmed.replace(/^\*{2}\s*/, '').replace(/\s*\*{2}$/, '').trim();
+                    isHeading = true;
+                }
+                // ALL CAPS short line (e.g., "QUALIFYING")
+                else if (/^[A-Z][A-Z\s\/{}&()*\-—:!#]+$/.test(trimmed) &&
+                         trimmed.length >= 3 && trimmed.length < 60 &&
+                         !trimmed.endsWith('?') && !/^\d/.test(trimmed)) {
+                    content = trimmed;
+                    isHeading = true;
                 }
 
-                // 3. "coaching-note" that's actually surrounded by dialogue → likely dialogue
-                if (item.intent === 'coaching-note') {
-                    const prev = findPrevIntent(refined, i);
-                    const next = findNextIntent(refined, i);
-                    if (prev === 'say' && next === 'say') {
-                        // Double-check: does it really sound like dialogue?
-                        const ds = scoreDialogue(item.content);
-                        if (ds >= 2) {
-                            refined[i] = { ...item, intent: 'say' };
+                // Keyword-based heading: short line that matches a known
+                // section type and doesn't look like dialogue
+                // e.g., "QUALIFYING - the important stuff!!!"
+                // Exclude: numbered items, bullet/dashed items (those are list content)
+                if (!isHeading && content.length < 60 &&
+                    !content.endsWith('?') && !content.endsWith('.') &&
+                    !/^\d+[\.\)]\s+/.test(trimmed) &&
+                    !/^[-–—•·]\s+/.test(trimmed)) {
+                    const ds = scoreDialogue(content);
+                    if (ds <= 1) {
+                        const lower = content.toLowerCase();
+                        const matchesType = SECTION_PATTERNS.some(pat =>
+                            pat.keywords.some(kw => lower.includes(kw)));
+                        if (matchesType) {
+                            isHeading = true;
                         }
                     }
                 }
 
-                // 4. Instruction lines that start with dialogue patterns → dialogue
-                if (item.intent === 'instruction') {
-                    const ds = scoreDialogue(item.content);
-                    if (ds >= 3) {
-                        refined[i] = { ...item, intent: 'say' };
+                // If heading but too long to be a real heading, it's not
+                if (isHeading && content.length > 80) isHeading = false;
+
+                // If heading but ends with ? it's a question, not a heading
+                if (isHeading && content.endsWith('?')) isHeading = false;
+
+                // ── Detect conditional branch labels ─────────
+                let isBranchLabel = false;
+                let branchText = '';
+                let branchResponse = ''; // For "if X: response" patterns
+
+                // Strip dash/bullet prefix and bold for branch detection
+                const dashStripped = trimmed.replace(/^[-–—•·]\s+/, '');
+                const boldStripped = dashStripped.replace(/^\*{1,3}/, '').replace(/\*{1,3}$/, '').trim();
+
+                // "- **If have something**", "If starting from scratch"
+                if (/^if\s+/i.test(boldStripped) && boldStripped.length < 60 &&
+                    !boldStripped.endsWith('?') && !boldStripped.endsWith('.') &&
+                    scoreDialogue(boldStripped) <= 1) {
+                    isBranchLabel = true;
+                    branchText = boldStripped;
+                }
+
+                // "if they say yes: response" — colon-separated conditional
+                // Split label from response at the colon
+                if (!isBranchLabel && /^if\s+(they|he|she|client|prospect|the)\s/i.test(boldStripped) &&
+                    boldStripped.length < 80) {
+                    const colonMatch = boldStripped.match(/^(if\s+.+?):\s*(.+)$/i);
+                    if (colonMatch) {
+                        isBranchLabel = true;
+                        branchText = colonMatch[1].trim();
+                        branchResponse = colonMatch[2].trim();
+                    } else {
+                        isBranchLabel = true;
+                        branchText = boldStripped;
                     }
                 }
 
-                // 5. Short "context-note" that's actually a question → dialogue
-                if (item.intent === 'context-note' && item.content.endsWith('?')) {
-                    const ds = scoreDialogue(item.content);
-                    if (ds >= 1) {
-                        refined[i] = { ...item, intent: 'say' };
+                // "* If driving" — star-prefixed conditional
+                if (!isBranchLabel && /^\*\s+/i.test(trimmed)) {
+                    const starContent = trimmed.replace(/^\*\s+/, '');
+                    if (/^(if |when |booking |key questions|objection|not interested|already got|call me back)/i.test(starContent)) {
+                        isBranchLabel = true;
+                        branchText = starContent;
+                    } else if (starContent.length < 80 && !starContent.endsWith('?')) {
+                        isBranchLabel = true;
+                        branchText = starContent;
+                    }
+                }
+
+                // Don't let branch labels also be headings
+                if (isBranchLabel) isHeading = false;
+
+                tokens.push({
+                    kind: 'content', index: i,
+                    raw, trimmed, content,
+                    isHeading, isBranchLabel, branchText, branchResponse,
+                    isDashed: /^[-–—]\s+/.test(trimmed),
+                    isBulleted: /^[•·]\s+/.test(trimmed),
+                    isNumbered: /^\d+[\.\)]\s+/.test(trimmed),
+                });
+            }
+
+            // ═══════════════════════════════════════════════════
+            // PASS 2 — Classify each content line
+            // ═══════════════════════════════════════════════════
+            for (const tok of tokens) {
+                if (tok.kind !== 'content' || tok.isHeading || tok.isBranchLabel) continue;
+
+                const t = tok.trimmed;
+
+                // Transition arrows
+                if (t.includes('→') || t.includes('->')) {
+                    tok.lineType = 'transition-arrow';
+                    continue;
+                }
+
+                // Objection inline: "not interested - response text"
+                const objMatch = t.match(/^(.+?)\s*[-–—]{1,3}\s+(.+)$/);
+                if (objMatch) {
+                    const trigger = objMatch[1].trim().toLowerCase();
+                    const objectionKw = ['not interested', 'already have', 'already got', 'call me back',
+                        'too expensive', 'no thanks', 'not right now', 'my spouse', 'my wife', 'my husband',
+                        'im driving', "i'm driving", 'dont remember', "don't remember", 'im busy', "i'm busy"];
+                    if (objectionKw.some(kw => trigger.includes(kw))) {
+                        tok.lineType = 'objection-inline';
+                        tok.objTrigger = objMatch[1].trim();
+                        tok.objResponse = objMatch[2].trim();
+                        continue;
+                    }
+                }
+
+                // Numbered action steps
+                if (tok.isNumbered) {
+                    const afterNum = t.replace(/^\d+[\.\)]\s+/, '');
+                    // If the numbered content is highly conversational, it's dialogue
+                    if (scoreDialogue(afterNum) >= 3) {
+                        tok.lineType = 'say';
+                    } else {
+                        tok.lineType = 'action-step';
+                    }
+                    continue;
+                }
+
+                // Compliance lines (spoken, but compliance-specific)
+                if (/go\s*ahead\s*and\s*grab/i.test(t) || /pen\s*and\s*paper/i.test(t) ||
+                    /let\s*me\s*know\s*when\s*(you'?re|your)\s*ready/i.test(t)) {
+                    tok.lineType = 'compliance';
+                    continue;
+                }
+
+                // Coaching / context notes
+                if (/^(note|remember|tip|hint|important|key|goal|notes)\s*[:\s]/i.test(t) ||
+                    /^(this is not|this is NOT|this isn't)/i.test(t) ||
+                    /^key\s+things?\s+to\s+remember/i.test(t)) {
+                    tok.lineType = 'coaching-note';
+                    continue;
+                }
+
+                // Context notes (stage directions, process notes)
+                if (/^\(.*\)$/.test(t) || /^\[.*\]$/.test(t)) {
+                    tok.lineType = 'context-note';
+                    continue;
+                }
+
+                // Default: score dialogue vs instruction
+                const ds = scoreDialogue(t);
+                if (ds >= 2) {
+                    tok.lineType = 'say';
+                } else if (tok.isDashed && t.length < 40 && !t.endsWith('?')) {
+                    // Short dashed items (like "- male or female?") — check if Q&A
+                    const inner = t.replace(/^[-–—]\s+/, '');
+                    if (inner.endsWith('?') || scoreDialogue(inner) >= 1) {
+                        tok.lineType = 'say';
+                    } else {
+                        tok.lineType = 'context-note';
+                    }
+                } else if (t.length > 30 && /[a-z]/.test(t)) {
+                    tok.lineType = 'say';
+                } else if (t.length < 30 && !t.endsWith('?') && !t.endsWith('.') && ds === 0) {
+                    tok.lineType = 'context-note';
+                } else {
+                    tok.lineType = 'say';
+                }
+            }
+
+            // ═══════════════════════════════════════════════════
+            // PASS 3 — Block-aware contextual refinement
+            // ═══════════════════════════════════════════════════
+            // Look at windows of ~20 content tokens to validate
+            // classifications against surrounding context
+            const contentTokens = tokens.filter(t => t.kind === 'content');
+            const WINDOW = 20;
+
+            for (let start = 0; start < contentTokens.length; start += 10) {
+                const win = contentTokens.slice(start, start + WINDOW);
+                if (win.length < 3) continue;
+
+                // Count dialogue in this window
+                let sayCount = 0;
+                for (const t of win) {
+                    if (t.lineType === 'say' || t.lineType === 'compliance') sayCount++;
+                }
+                const dialogueRatio = sayCount / win.length;
+
+                // In dialogue-heavy windows (>60%), re-examine context-notes
+                if (dialogueRatio > 0.5) {
+                    for (let j = 1; j < win.length - 1; j++) {
+                        const tok = win[j];
+                        if (tok.lineType !== 'context-note' && tok.lineType !== 'coaching-note') continue;
+
+                        // Context surrounded by dialogue with high dialogue score → say
+                        const prev = win[j - 1];
+                        const next = win[j + 1];
+                        if ((prev.lineType === 'say' || prev.lineType === 'compliance') &&
+                            (next.lineType === 'say' || next.lineType === 'compliance')) {
+                            const localDs = scoreDialogue(tok.trimmed);
+                            if (localDs >= 2) {
+                                tok.lineType = 'say';
+                            }
+                        }
                     }
                 }
             }
 
-            return refined;
-        }
-
-        function findPrevIntent(classified, fromIdx) {
-            for (let j = fromIdx - 1; j >= 0; j--) {
-                if (classified[j].intent !== 'blank' && classified[j].intent !== 'separator') {
-                    return classified[j].intent;
-                }
-            }
-            return null;
-        }
-
-        function findNextIntent(classified, fromIdx) {
-            for (let j = fromIdx + 1; j < classified.length; j++) {
-                if (classified[j].intent !== 'blank' && classified[j].intent !== 'separator') {
-                    return classified[j].intent;
-                }
-            }
-            return null;
-        }
-
-        // ════════════════════════════════════════════════════════════
-        // PASS 4 — Section Assembly
-        // ════════════════════════════════════════════════════════════
-        function assembleSections(refined) {
+            // ═══════════════════════════════════════════════════
+            // PASS 4 — Assemble into sections
+            // ═══════════════════════════════════════════════════
             const sections = [];
-            let current = null;
+            let currentSection = null;
             let currentBranch = null;
 
             function closeBranch() {
-                if (currentBranch && current) {
-                    current.branches.push(currentBranch);
+                if (currentBranch && currentSection) {
+                    currentSection.branches.push(currentBranch);
                     currentBranch = null;
                 }
             }
 
             function closeSection() {
                 closeBranch();
-                if (current && (current.lines.length || current.branches.length)) {
-                    sections.push(current);
+                if (currentSection && (currentSection.lines.length || currentSection.branches.length)) {
+                    sections.push(currentSection);
                 }
-                current = null;
+                currentSection = null;
+            }
+
+            function detectSectionType(text) {
+                const lower = text.toLowerCase();
+                for (const pat of SECTION_PATTERNS) {
+                    if (pat.keywords.some(kw => lower.includes(kw))) {
+                        return pat.type;
+                    }
+                }
+                return 'generic';
             }
 
             function addLine(lineObj) {
-                const target = currentBranch ? currentBranch.lines : (current ? current.lines : null);
+                const target = currentBranch ? currentBranch.lines : (currentSection ? currentSection.lines : null);
                 if (target) target.push(lineObj);
             }
 
-            for (let i = 0; i < refined.length; i++) {
-                const item = refined[i];
+            for (const tok of tokens) {
+                if (tok.kind === 'blank') continue;
 
-                // Skip blanks and separators
-                if (item.intent === 'blank' || item.intent === 'separator') continue;
+                // Separator → section break
+                if (tok.kind === 'separator') {
+                    if (currentSection) closeSection();
+                    continue;
+                }
 
-                // ── Heading → new section ────────────────────
-                if (item.intent === 'heading') {
+                // Heading → new section
+                if (tok.isHeading) {
                     closeSection();
-                    current = {
-                        title: item.content.replace(/^[#=\-*\s]+/, '').replace(/[#=\-*]+$/, '').trim(),
-                        type: item.sectionType,
+                    const type = detectSectionType(tok.content);
+                    currentSection = {
+                        title: tok.content,
+                        type: type,
                         lines: [],
                         branches: [],
-                        fromHeading: true, // Explicit heading — never merge
+                        fromHeading: true,
                     };
                     continue;
                 }
 
-                // ── Branch start (star-prefixed conditional) ──
-                // Re-check: items tagged as heading that were actually star branches
-                // are already handled. Check for inline objection branch patterns:
-                if (item.intent === 'objection-trigger' || item.intent === 'objection-inline') {
-                    // If we're not in an objection section, start one as a branch
-                    if (current && current.type !== 'objection') {
-                        closeBranch();
-                        currentBranch = {
-                            label: item.intent === 'objection-inline' ? item.trigger : item.content,
-                            type: 'objection',
-                            lines: [],
+                // Branch label → new branch in current section
+                if (tok.isBranchLabel) {
+                    closeBranch();
+                    if (!currentSection) {
+                        currentSection = {
+                            title: 'Script', type: 'generic',
+                            lines: [], branches: [], fromHeading: false,
                         };
-                        if (item.intent === 'objection-inline') {
-                            currentBranch.lines.push({ type: 'say', text: item.response });
-                        }
-                        continue;
                     }
+                    currentBranch = {
+                        label: tok.branchText || tok.content,
+                        type: currentSection.type,
+                        lines: [],
+                    };
+                    // If branch had "if X: response" pattern, add response as first line
+                    if (tok.branchResponse) {
+                        currentBranch.lines.push({ type: 'say', text: tok.branchResponse });
+                    }
+                    continue;
                 }
 
                 // Ensure a section exists
-                if (!current) {
-                    // Auto-create intro section if we start with dialogue
-                    let autoType = 'intro';
-                    if (item.intent === 'postcall-step') autoType = 'postcall';
-                    current = {
-                        title: SECTION_TYPES[autoType].label,
-                        type: autoType,
-                        lines: [],
-                        branches: [],
-                        fromHeading: false, // Auto-created — can be merged
+                if (!currentSection) {
+                    const type = detectSectionType(tok.trimmed);
+                    currentSection = {
+                        title: type === 'generic' ? 'Script' : (SECTION_PATTERNS.find(p => p.type === type)?.label || 'Script'),
+                        type: type,
+                        lines: [], branches: [], fromHeading: false,
                     };
                 }
 
-                // ── Map intent → line type for rendering ─────
-                switch (item.intent) {
-                    case 'say':
-                        addLine({ type: 'say', text: item.content });
-                        break;
-                    case 'compliance':
-                        addLine({ type: 'compliance', text: item.content });
-                        break;
-                    case 'coaching-note':
-                        addLine({ type: 'coaching-note', text: item.content });
-                        break;
-                    case 'context-note':
-                        addLine({ type: 'context-note', text: item.content });
-                        break;
-                    case 'instruction':
-                        addLine({ type: 'instruction', text: item.content });
-                        break;
-                    case 'transition-arrow':
-                        addLine({ type: 'transition-arrow', text: item.content });
-                        break;
-                    case 'postcall-step':
-                        addLine({ type: 'action-step', text: item.content });
-                        break;
-                    case 'objection-trigger':
-                        addLine({ type: 'objection-trigger', text: item.content });
-                        break;
-                    case 'objection-inline':
-                        addLine({
-                            type: 'objection-pair',
-                            trigger: item.trigger,
-                            responses: [{ type: 'say', text: item.response }],
-                        });
-                        break;
-                    default:
-                        addLine({ type: 'say', text: item.content });
+                // Map token to line object
+                if (tok.lineType === 'objection-inline') {
+                    addLine({
+                        type: 'objection-pair',
+                        trigger: tok.objTrigger,
+                        responses: [{ type: 'say', text: tok.objResponse }],
+                    });
+                } else {
+                    addLine({ type: tok.lineType || 'say', text: tok.trimmed });
                 }
             }
+
             closeSection();
-            return sections;
+
+            // ═══════════════════════════════════════════════════
+            // PASS 5 — Post-processing
+            // ═══════════════════════════════════════════════════
+            return postProcessSections(sections);
         }
 
-        // ════════════════════════════════════════════════════════════
-        // PASS 5 — Post-Processing
-        // ════════════════════════════════════════════════════════════
         function postProcessSections(sections) {
+            // 5a. Detect objection pairs and chunk lines
             for (const section of sections) {
-                // Detect objection trigger/response pairs in main lines
-                section.lines = detectObjectionPairs(section.lines);
-                // Same for branches
                 for (const branch of section.branches) {
                     branch.lines = detectObjectionPairs(branch.lines);
                 }
-                // Chunk long dialogue sequences (Miller's Law: 3-5 items)
+                section.lines = detectObjectionPairs(section.lines);
                 section.lines = chunkLines(section.lines);
                 for (const branch of section.branches) {
                     branch.lines = chunkLines(branch.lines);
                 }
             }
 
-            // Merge consecutive sections of the same type if they're tiny
-            // NEVER merge sections created from explicit headings — those represent
-            // the script author's intentional structure (e.g., 3 separate intro variants)
-            const merged = [];
+            // 5b. Absorb postcall/action sections into the preceding
+            //     non-objection section. Their items become instructions.
+            const absorbed = [];
             for (const section of sections) {
-                const prev = merged.length ? merged[merged.length - 1] : null;
-                if (prev && prev.type === section.type &&
-                    !prev.fromHeading && !section.fromHeading &&
-                    prev.lines.length <= 2 && section.lines.length <= 2 &&
-                    !prev.branches.length && !section.branches.length) {
-                    // Merge into previous (only auto-created tiny sections)
-                    prev.lines.push(...section.lines);
-                    prev.branches.push(...section.branches);
-                } else {
-                    merged.push(section);
+                if ((section.type === 'close' || section.type === 'action') &&
+                    section.fromHeading &&
+                    section.lines.every(l => l.type === 'action-step' || l.type === 'say' ||
+                                             l.type === 'instruction' || l.type === 'chunk-separator')) {
+                    // Check if ALL non-say lines are action-steps
+                    const nonSayLines = section.lines.filter(l =>
+                        l.type !== 'say' && l.type !== 'chunk-separator' && l.type !== 'compliance');
+                    const allActionSteps = nonSayLines.length > 0 &&
+                        nonSayLines.every(l => l.type === 'action-step' || l.type === 'instruction');
+
+                    if (allActionSteps) {
+                        // Find closest non-objection section to absorb into
+                        let target = null;
+                        for (let j = absorbed.length - 1; j >= 0; j--) {
+                            if (absorbed[j].type !== 'objection') {
+                                target = absorbed[j];
+                                break;
+                            }
+                        }
+                        if (target) {
+                            target.lines.push({ type: 'context-note', text: section.title });
+                            for (const line of section.lines) {
+                                if (line.type === 'action-step') {
+                                    target.lines.push({ type: 'instruction', text: line.text });
+                                } else if (line.type === 'chunk-separator') {
+                                    // skip
+                                } else {
+                                    target.lines.push(line);
+                                }
+                            }
+                            continue; // Skip adding this section
+                        }
+                    }
                 }
+                absorbed.push(section);
             }
 
-            return merged;
+            return absorbed;
         }
 
         function detectObjectionPairs(lines) {
@@ -1198,12 +892,10 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 if (line.type === 'objection-trigger' && i + 1 < lines.length) {
+                    // Look for the response that follows
                     const responses = [];
                     let j = i + 1;
-                    while (j < lines.length &&
-                           lines[j].type !== 'objection-trigger' &&
-                           lines[j].type !== 'objection-pair' &&
-                           lines[j].type !== 'chunk-separator') {
+                    while (j < lines.length && lines[j].type !== 'objection-trigger' && lines[j].type !== 'chunk-separator') {
                         responses.push(lines[j]);
                         j++;
                     }
@@ -1223,10 +915,11 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         }
 
         function chunkLines(lines) {
+            // Insert chunk separators every 4-5 "say" lines (Miller's Law)
             const result = [];
             let sayCount = 0;
             for (const line of lines) {
-                if (line.type === 'say' || line.type === 'compliance') {
+                if (line.type === 'say') {
                     sayCount++;
                     if (sayCount > 4) {
                         result.push({ type: 'chunk-separator' });
@@ -1236,26 +929,6 @@ Then display it in a clean, easy-to-read practice format."></textarea>
                 result.push(line);
             }
             return result;
-        }
-
-        // ════════════════════════════════════════════════════════════
-        // MAIN PARSER — Orchestrates all passes
-        // ════════════════════════════════════════════════════════════
-        function parseScript(rawText) {
-            // Pass 1: Tokenize
-            const tokens = tokenizeLines(rawText);
-
-            // Pass 2: Classify intent (per-line)
-            const classified = classifyTokens(tokens);
-
-            // Pass 3: Contextual refinement (neighbor-aware)
-            const refined = refineClassifications(classified);
-
-            // Pass 4: Assemble into sections
-            const sections = assembleSections(refined);
-
-            // Pass 5: Post-process (objection pairs, chunking, merging)
-            return postProcessSections(sections);
         }
 
         // ════════════════════════════════════════════════════════════
@@ -1295,25 +968,8 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             const flowEl = document.getElementById('scriptFlow');
             const outlineEl = document.getElementById('sectionOutline');
 
-            // Count line types for summary
-            let dialogueCount = 0, coachingCount = 0, contextCount = 0, objectionCount = 0;
-            for (const s of sections) {
-                for (const l of s.lines) {
-                    if (l.type === 'say' || l.type === 'compliance') dialogueCount++;
-                    else if (l.type === 'coaching-note') coachingCount++;
-                    else if (l.type === 'context-note') contextCount++;
-                    else if (l.type === 'objection-pair' || l.type === 'objection-trigger') objectionCount++;
-                }
-                for (const b of s.branches) {
-                    for (const l of b.lines) {
-                        if (l.type === 'say') dialogueCount++;
-                        else if (l.type === 'objection-pair') objectionCount++;
-                    }
-                }
-            }
-
             // Build outline
-            let outlineHtml = '<div class="outline-title">Script Map</div>';
+            let outlineHtml = '<div class="outline-title">Sections</div>';
             sections.forEach((section, idx) => {
                 const color = SECTION_COLORS[section.type] || SECTION_COLORS.generic;
                 outlineHtml += `
@@ -1328,10 +984,9 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             // Build flow
             let flowHtml = '';
             sections.forEach((section, idx) => {
-                const typeInfo = SECTION_TYPES[section.type] || SECTION_TYPES.generic;
-                const color = typeInfo.color;
-                const typeLabel = typeInfo.label;
+                const color = SECTION_COLORS[section.type] || SECTION_COLORS.generic;
                 const badgeClass = 'badge-' + section.type;
+                const typeLabel = SECTION_PATTERNS.find(p => p.type === section.type)?.label || 'Section';
 
                 flowHtml += `
                     <div class="section-block open" id="section-${idx}" data-index="${idx}">
@@ -1366,7 +1021,7 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             document.getElementById('pasteView').classList.remove('active');
             document.getElementById('analyzedView').classList.add('active');
             document.getElementById('pageSubtitle').textContent =
-                `${sections.length} sections | ${dialogueCount} dialogue lines | ${objectionCount} objections | ${coachingCount + contextCount} notes`;
+                `${sections.length} sections detected. Use the modes above to practice.`;
         }
 
         function renderLines(lines) {
@@ -1386,8 +1041,6 @@ Then display it in a clean, easy-to-read practice format."></textarea>
                         </div>
                     `;
                 }
-                // coaching-note and context-note have ::before CSS badges
-                // compliance also has a ::before CSS badge
                 return `
                     <div class="speech-line ${line.type}">
                         <span class="speech-text">${highlightKeyPhrases(line.text)}</span>
@@ -1399,10 +1052,9 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         function renderBranches(branches) {
             if (!branches.length) return '';
             return branches.map(branch => {
-                const typeInfo = SECTION_TYPES[branch.type] || SECTION_TYPES.generic;
-                const color = typeInfo.color;
+                const color = SECTION_COLORS[branch.type] || SECTION_COLORS.generic;
                 const badgeClass = 'badge-' + branch.type;
-                const typeLabel = typeInfo.label;
+                const typeLabel = SECTION_PATTERNS.find(p => p.type === branch.type)?.label || 'Branch';
                 return `
                     <div class="branch-block">
                         <div class="branch-header" onclick="toggleBranch(this)">
