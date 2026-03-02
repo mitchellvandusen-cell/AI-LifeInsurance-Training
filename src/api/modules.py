@@ -30,8 +30,8 @@ router = APIRouter(prefix="/api/modules", tags=["modules"])
 # Active module sessions in memory
 _active_module_sessions: dict[str, dict] = {}
 
-# Maximum module session age before automatic cleanup (2 hours)
-_MODULE_SESSION_TTL_SECONDS = 2 * 60 * 60
+# Maximum module session age before automatic cleanup (4 hours)
+_MODULE_SESSION_TTL_SECONDS = 4 * 60 * 60
 
 
 async def _cleanup_stale_module_sessions():
