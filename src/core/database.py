@@ -285,6 +285,7 @@ async def init_schema():
             content         TEXT NOT NULL,
             char_count      INTEGER NOT NULL DEFAULT 0,
             source          TEXT NOT NULL DEFAULT 'paste',
+            script_type     TEXT NOT NULL DEFAULT '',
             created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
@@ -361,6 +362,19 @@ async def init_schema():
                     BEFORE UPDATE ON {table_name}
                     FOR EACH ROW EXECUTE FUNCTION update_updated_at()
             """)
+
+    # ── Safe column migrations (add columns to existing tables) ──
+    safe_columns = [
+        ("user_scripts", "script_type", "TEXT NOT NULL DEFAULT ''"),
+    ]
+    for table, col, col_def in safe_columns:
+        col_exists = await pool.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = $1 AND column_name = $2)", table, col
+        )
+        if not col_exists:
+            await pool.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+            print(f"[DB] Added column {table}.{col}")
 
     print("[DB] Schema initialized — all tables ready")
 
@@ -1120,23 +1134,24 @@ async def get_homework_history(user_id: str, limit: int = 10) -> list[dict]:
 # ══════════════════════════════════════════════════════════════
 
 async def save_user_script(
-    user_id: str, name: str, content: str, source: str = "paste"
+    user_id: str, name: str, content: str, source: str = "paste",
+    script_type: str = ""
 ) -> dict:
     pool = await get_pool()
     script_id = uuid.uuid4()
     char_count = len(content)
     await pool.execute(
-        """INSERT INTO user_scripts (id, user_id, name, content, char_count, source)
-           VALUES ($1, $2, $3, $4, $5, $6)""",
-        script_id, uuid.UUID(user_id), name, content, char_count, source,
+        """INSERT INTO user_scripts (id, user_id, name, content, char_count, source, script_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+        script_id, uuid.UUID(user_id), name, content, char_count, source, script_type,
     )
-    return {"id": str(script_id), "name": name, "char_count": char_count}
+    return {"id": str(script_id), "name": name, "char_count": char_count, "script_type": script_type}
 
 
 async def get_user_scripts(user_id: str, limit: int = 50) -> list[dict]:
     pool = await get_pool()
     rows = await pool.fetch(
-        """SELECT id, name, char_count, source, created_at, updated_at
+        """SELECT id, name, char_count, source, script_type, created_at, updated_at
            FROM user_scripts
            WHERE user_id = $1
            ORDER BY updated_at DESC LIMIT $2""",
@@ -1156,7 +1171,8 @@ async def get_user_script(user_id: str, script_id: str) -> dict | None:
 
 
 async def update_user_script(
-    user_id: str, script_id: str, name: str = None, content: str = None
+    user_id: str, script_id: str, name: str = None, content: str = None,
+    script_type: str = None
 ) -> dict | None:
     pool = await get_pool()
     parts = []
@@ -1173,6 +1189,10 @@ async def update_user_script(
         idx += 1
         parts.append(f"char_count = ${idx}")
         args.append(len(content))
+        idx += 1
+    if script_type is not None:
+        parts.append(f"script_type = ${idx}")
+        args.append(script_type)
         idx += 1
 
     if not parts:

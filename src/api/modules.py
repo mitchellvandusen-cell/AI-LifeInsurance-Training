@@ -140,6 +140,7 @@ async def start_module_session(req: StartModuleRequest, request: Request):
         session_state["script_content"] = script["content"]
         session_state["script_name"] = script["name"]
         session_state["script_id"] = req.script_id
+        session_state["script_type"] = script.get("script_type", "")
 
         mastery = await db.get_script_mastery(user_id, req.script_id)
         practice_count = mastery["practice_count"] if mastery else 0
@@ -149,7 +150,11 @@ async def start_module_session(req: StartModuleRequest, request: Request):
         session_state["mastery_level"] = mastery_level
 
         # Analyze script and generate a matched client persona
-        script_analysis = analyze_script_for_persona(script["content"])
+        # If the user set a script_type tag, use it to override auto-detection
+        script_analysis = analyze_script_for_persona(
+            script["content"],
+            script_type_override=script.get("script_type", ""),
+        )
         session_state["script_analysis"] = script_analysis
 
         gen = PersonaGenerator()
@@ -268,65 +273,81 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         await websocket.close()
         return
 
-    # Disconnect any existing voice session to prevent duplicate agents
+    # ── Voice session reuse / creation ─────────────────────────
+    # If the browser reconnects (e.g. after a network blip), reuse
+    # the existing xAI voice session so we don't lose conversation
+    # history. Only create a new voice session if none exists.
     existing_voice = session.get("voice_session")
-    if existing_voice:
-        logger.warning("[MODULE][%s] Disconnecting previous voice session before new connection", session_id)
-        await existing_voice.disconnect()
-        session["voice_session"] = None
+    is_reconnect = False
 
-    # Build module-specific system prompt
-    module_key = session["module_key"]
-    system_prompt = build_module_prompt(module_key, session.get("session_state", {}))
+    if existing_voice and existing_voice.connected:
+        # Reuse the still-connected xAI session — preserve conversation context
+        logger.info("[MODULE][%s] Browser reconnected — reusing existing xAI voice session (turn %d)", session_id, existing_voice._turn_count)
+        voice_session = existing_voice
+        is_reconnect = True
+        # Cancel any previous bridge tasks so we can re-bridge
+        for task in session.get("_bridge_tasks", []):
+            if not task.done():
+                task.cancel()
+        session["_bridge_tasks"] = []
+    else:
+        # Previous session disconnected or doesn't exist — create new one
+        if existing_voice:
+            logger.warning("[MODULE][%s] Previous voice session was disconnected — creating new one", session_id)
+            await existing_voice.disconnect()
 
-    # Callbacks for transcript processing
-    # NOTE: voice.py receive_events() already sends transcript/transcript_delta
-    # to the browser via send_to_browser. These callbacks are for server-side
-    # processing only — do NOT send duplicate transcripts to the browser here.
-    async def on_agent_transcript(text: str, turn: int):
-        """When the student speaks — log for server-side processing."""
-        print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
-        session.setdefault("student_turns", 0)
-        session["student_turns"] += 1
+        # Build module-specific system prompt
+        module_key = session["module_key"]
+        system_prompt = build_module_prompt(module_key, session.get("session_state", {}))
 
-    async def on_client_transcript(text: str, turn: int):
-        """When the AI coach speaks — log and detect session closing."""
-        print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
-        session.setdefault("coach_turns", 0)
-        session["coach_turns"] += 1
+        # Callbacks for transcript processing
+        # NOTE: voice.py receive_events() already sends transcript/transcript_delta
+        # to the browser via send_to_browser. These callbacks are for server-side
+        # processing only — do NOT send duplicate transcripts to the browser here.
+        async def on_agent_transcript(text: str, turn: int):
+            """When the student speaks — log for server-side processing."""
+            print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
+            session.setdefault("student_turns", 0)
+            session["student_turns"] += 1
 
-        # Detect the coach's closing phrase signaling session is complete
-        if not session.get("coach_concluded") and "that is a wrap for today" in text.lower():
-            session["coach_concluded"] = True
-            print(f"[MODULE][{session_id}] Coach concluded session naturally")
-            try:
-                await websocket.send_json({
-                    "type": "session_complete",
-                    "message": "Your coach has wrapped up the session.",
-                })
-            except Exception:
-                pass
+        async def on_client_transcript(text: str, turn: int):
+            """When the AI coach speaks — log and detect session closing."""
+            print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
+            session.setdefault("coach_turns", 0)
+            session["coach_turns"] += 1
 
-    # Create voice session
-    voice_session = VoiceSession(
-        session_id=session_id,
-        system_prompt=system_prompt,
-        voice=session.get("voice", "Sal"),
-        on_agent_transcript=on_agent_transcript,
-        on_client_transcript=on_client_transcript,
-    )
-    session["voice_session"] = voice_session
+            # Detect the coach's closing phrase signaling session is complete
+            if not session.get("coach_concluded") and "that is a wrap for today" in text.lower():
+                session["coach_concluded"] = True
+                print(f"[MODULE][{session_id}] Coach concluded session naturally")
+                try:
+                    await websocket.send_json({
+                        "type": "session_complete",
+                        "message": "Your coach has wrapped up the session.",
+                    })
+                except Exception:
+                    pass
 
-    # Connect to xAI
-    await websocket.send_json({"type": "status", "status": "connecting_voice"})
-    connected = await voice_session.connect()
-    if not connected:
-        await websocket.send_json({
-            "type": "error",
-            "message": "Failed to connect to voice service.",
-        })
-        await websocket.close()
-        return
+        voice_session = VoiceSession(
+            session_id=session_id,
+            system_prompt=system_prompt,
+            voice=session.get("voice", "Sal"),
+            on_agent_transcript=on_agent_transcript,
+            on_client_transcript=on_client_transcript,
+        )
+        session["voice_session"] = voice_session
+
+    # Connect to xAI if not already connected
+    if not voice_session.connected:
+        await websocket.send_json({"type": "status", "status": "connecting_voice"})
+        connected = await voice_session.connect()
+        if not connected:
+            await websocket.send_json({
+                "type": "error",
+                "message": "Failed to connect to voice service.",
+            })
+            await websocket.close()
+            return
 
     await websocket.send_json({"type": "status", "status": "ready"})
 
@@ -346,7 +367,7 @@ async def module_websocket(websocket: WebSocket, session_id: str):
                 elif data.get("type") == "end":
                     break
         except WebSocketDisconnect:
-            pass
+            logger.info("[MODULE][%s] Browser WebSocket disconnected", session_id)
         except Exception as e:
             logger.error(f"[MODULE][{session_id}] Browser→xAI error: {e}")
 
@@ -362,7 +383,7 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         """Send periodic heartbeat pings to prevent proxy/LB idle timeouts."""
         try:
             while True:
-                await asyncio.sleep(15)
+                await asyncio.sleep(10)  # More frequent pings (every 10s)
                 try:
                     await websocket.send_json({"type": "ping"})
                 except Exception:
@@ -371,32 +392,52 @@ async def module_websocket(websocket: WebSocket, session_id: str):
             pass
 
     try:
-        # Start both listener tasks FIRST so they are ready to receive events
         browser_task = asyncio.create_task(browser_to_xai())
         xai_task = asyncio.create_task(xai_to_browser())
         ping_task = asyncio.create_task(keepalive_ping())
+        session["_bridge_tasks"] = [browser_task, xai_task, ping_task]
 
-        # Small yield to let the xai_to_browser listener attach before triggering
         await asyncio.sleep(0.05)
 
-        # NOW trigger AI coach to speak first — greet the student and begin the lesson.
-        # This sends response.create to xAI, causing the model to generate its
-        # opening greeting based on the system prompt (which says "YOU SPEAK FIRST").
-        # MUST happen AFTER receive_events() is listening, otherwise greeting audio
-        # could arrive before anyone is consuming events from the xAI WebSocket.
-        await voice_session.trigger_greeting()
+        # Only trigger greeting on first connection, NOT on browser reconnects
+        if not is_reconnect:
+            await voice_session.trigger_greeting()
 
         done, pending = await asyncio.wait(
             [browser_task, xai_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
-        for task in pending:
-            task.cancel()
-        ping_task.cancel()
+
+        # Check which task finished — if browser disconnected but xAI is
+        # still alive, keep the voice session alive for browser reconnect.
+        browser_done = browser_task in done
+        xai_done = xai_task in done
+
+        if browser_done and not xai_done:
+            # Browser disconnected — keep xAI session alive for potential reconnect
+            logger.info("[MODULE][%s] Browser disconnected, keeping xAI session alive for reconnect", session_id)
+            # Don't cancel xai_task or disconnect voice — let browser reconnect
+            ping_task.cancel()
+            # Wait a bit for browser to reconnect before giving up
+            try:
+                await asyncio.wait_for(xai_task, timeout=120)  # Keep xAI alive for up to 2 min
+            except asyncio.TimeoutError:
+                logger.info("[MODULE][%s] No browser reconnect after 120s, closing xAI session", session_id)
+                xai_task.cancel()
+            except asyncio.CancelledError:
+                pass  # Normal — task was cancelled by a reconnecting browser
+        else:
+            # xAI disconnected — clean up
+            for task in pending:
+                task.cancel()
+            ping_task.cancel()
     except Exception as e:
         logger.error(f"[MODULE][{session_id}] Bridge error: {e}")
     finally:
-        await voice_session.disconnect()
+        # Only disconnect voice if the session is ending (not on browser reconnect)
+        if not session.get("voice_session") or not session["voice_session"].connected:
+            if session.get("voice_session"):
+                await session["voice_session"].disconnect()
 
 
 # ── End Module Session ───────────────────────────────────────────
@@ -623,11 +664,13 @@ MAX_SCRIPT_CHARS = 100_000
 class SaveScriptRequest(BaseModel):
     name: str
     content: str
+    script_type: str = ""  # final_expense, term_life, iul, mortgage_protection, whole_life, general_life
 
 
 class UpdateScriptRequest(BaseModel):
     name: str | None = None
     content: str | None = None
+    script_type: str | None = None
 
 
 @router.post("/scripts")
@@ -642,7 +685,8 @@ async def save_script(req: SaveScriptRequest, request: Request):
     if not req.content.strip():
         raise HTTPException(status_code=400, detail="Script content is empty.")
     result = await db.save_user_script(
-        user["user_id"], req.name.strip(), req.content, source="paste"
+        user["user_id"], req.name.strip(), req.content, source="paste",
+        script_type=req.script_type.strip(),
     )
     return result
 
@@ -724,6 +768,7 @@ async def update_script(script_id: str, req: UpdateScriptRequest, request: Reque
         user["user_id"], script_id,
         name=req.name.strip() if req.name else None,
         content=req.content,
+        script_type=req.script_type.strip() if req.script_type is not None else None,
     )
     if not result:
         raise HTTPException(status_code=404, detail="Script not found.")

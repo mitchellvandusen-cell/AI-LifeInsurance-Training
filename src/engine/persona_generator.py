@@ -282,18 +282,40 @@ LEAD_TYPE_SIGNALS = {
 }
 
 
-def analyze_script_for_persona(script_content: str) -> dict:
+def analyze_script_for_persona(script_content: str, script_type_override: str = "") -> dict:
     """
     Analyze script content to determine the best client persona match.
+
+    If script_type_override is provided (e.g. 'final_expense', 'iul'), it forces
+    the product type instead of relying on keyword detection. This is set by the
+    user when they tag their script with a type.
 
     Returns a dict with:
       - product_type: detected insurance product
       - archetype_name: best matching archetype name
       - lead_type: 'new', 'aged', 'facebook', or 'unknown'
       - confidence: how confident the match is (number of keyword hits)
-      - persona_brief: short description for prompt injection
     """
     lower = script_content.lower()
+
+    # If user explicitly tagged the script type, use that directly
+    if script_type_override:
+        override = script_type_override.strip().lower()
+        for signal in SCRIPT_PRODUCT_SIGNALS:
+            if signal["product"] == override:
+                # Detect lead type from content still
+                lead_type = "unknown"
+                for ltype, keywords in LEAD_TYPE_SIGNALS.items():
+                    if any(kw in lower for kw in keywords):
+                        lead_type = ltype
+                        break
+                return {
+                    "product_type": signal["product"],
+                    "archetype_name": signal["archetypes"][0] if signal["archetypes"] else signal["fallback_archetype"],
+                    "archetype_pool": signal["archetypes"],
+                    "lead_type": lead_type,
+                    "confidence": 100,  # User-specified = maximum confidence
+                }
 
     # Detect product type — score each product, prefer specific over generic
     best_product = None
