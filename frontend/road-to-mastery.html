@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road to Mastery — InsuranceGrokBot Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/mobile.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        .rtm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        .rtm-header h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+        .rtm-header p { font-size: 0.9rem; color: var(--text-muted); }
+
+        /* Overall progress bar */
+        .rtm-progress-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .rtm-progress-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .rtm-progress-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .rtm-progress-pct {
+            font-size: 1.25rem;
+            font-weight: 800;
+        }
+        .rtm-progress-bar {
+            height: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .rtm-progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+            transition: width 0.6s ease;
+        }
+        .rtm-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .rtm-stats span { font-weight: 600; color: var(--text-primary); }
+
+        /* Phase sections */
+        .phase-section {
+            margin-bottom: 2rem;
+        }
+        .phase-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .phase-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .phase-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            flex: 1;
+        }
+        .phase-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+        .phase-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            padding-left: 1.75rem;
+        }
+        .phase-chevron {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .phase-header.collapsed .phase-chevron {
+            transform: rotate(-90deg);
+        }
+
+        /* Day cards */
+        .day-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.5rem;
+            margin-left: 1.75rem;
+            transition: all 0.2s;
+        }
+        .day-card:hover {
+            border-color: var(--border-active);
+        }
+        .day-card.completed {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.03);
+        }
+        .day-card.current {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(79, 70, 229, 0.1);
+        }
+        .day-card.locked {
+            opacity: 0.5;
+        }
+        .day-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.35rem;
+        }
+        .day-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .day-status {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 8px;
+        }
+        .day-status.complete {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+        }
+        .day-status.in-progress {
+            background: rgba(79, 70, 229, 0.15);
+            color: var(--accent-blue);
+        }
+        .day-status.locked-status {
+            background: rgba(160, 160, 192, 0.1);
+            color: var(--text-muted);
+        }
+        .day-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.15rem;
+        }
+        .day-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        /* Activities inside a day */
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.6rem;
+            border-radius: var(--radius-sm);
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .activity-item:hover {
+            border-color: var(--accent-blue);
+            background: rgba(79, 70, 229, 0.05);
+        }
+        .activity-item.done {
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .activity-item.done .activity-check {
+            color: var(--accent-green);
+        }
+        .activity-check {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            color: var(--border-color);
+        }
+        .activity-label { flex: 1; font-weight: 500; }
+        .activity-module {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .activity-go {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            white-space: nowrap;
+        }
+
+        /* Start overlay */
+        .rtm-start-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+        }
+        .rtm-start-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 3rem;
+            max-width: 520px;
+            text-align: center;
+        }
+        .rtm-start-card h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .rtm-start-card .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+        .rtm-start-card .phase-preview {
+            text-align: left;
+            margin-bottom: 2rem;
+        }
+        .phase-preview-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+        }
+        .phase-preview-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .phase-preview-text { flex: 1; }
+        .phase-preview-days {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Reset button */
+        .rtm-reset {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .rtm-reset:hover { color: var(--accent-red); }
+
+        @media (max-width: 768px) {
+            .rtm-header { flex-direction: column; }
+            .day-card { margin-left: 0.5rem; }
+            .rtm-stats { flex-wrap: wrap; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar (same as all pages) -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <a href="/dashboard" class="nav-logo" style="font-size:1.1rem;">
+                <span class="logo-accent">InsuranceGrokBot</span> Training
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Dashboard
+            </a>
+            <a href="/training" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>
+                Start Training
+            </a>
+            <a href="/road-to-mastery" class="sidebar-link active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Road to Mastery
+            </a>
+            <a href="/analytics" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                Analytics
+            </a>
+            <a href="/report-cards" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                Report Cards
+            </a>
+            <a href="/homework" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                Homework
+            </a>
+            <a href="/scripts" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                Script Practice
+            </a>
+            <a href="/recordings" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                Call Recordings
+            </a>
+            <a href="/billing" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Billing
+            </a>
+            <a href="/settings" class="sidebar-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                Settings
+            </a>
+        </nav>
+        <div style="padding: 0.75rem 1.5rem; border-top: 1px solid var(--border-color); margin-top: auto;">
+            <div style="font-size:0.85rem; color:var(--text-secondary);" id="userName"></div>
+            <a href="#" onclick="API.logout(); return false;" style="font-size:0.8rem; color:var(--text-muted);">Sign out</a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Loading state -->
+        <div id="loadingState" style="text-align:center;padding:4rem;">
+            <p style="color:var(--text-muted);">Loading your mastery plan...</p>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/mobile-nav.js"></script>
+    <script>
+        initMobileNav('road-to-mastery');
+        if (!requireAuth()) { /* redirects */ }
+
+        let planData = null;
+        let completedSet = new Set();  // "day:actIndex" strings for fast lookup
+
+        const MODULE_NAMES = {
+            mindset_mastery: 'Mindset',
+            tonality_mastery: 'Tonality',
+            rapport_building: 'Rapport',
+            question_mastery: 'Questions',
+            objection_handling: 'Objections',
+            preframing_control: 'Frame Control',
+            behavioral_profiling: 'Behavioral',
+            script_practice: 'Script Practice',
+            full_call_simulation: 'Full Call Sim',
+        };
+
+        async function init() {
+            try {
+                const me = await API.getMe();
+                document.getElementById('userName').textContent = me.name || me.email;
+            } catch (e) {}
+
+            try {
+                const data = await API.getMasteryPlan();
+                planData = data;
+
+                if (data.plan) {
+                    buildCompletedSet(data.plan);
+                    renderPlan(data);
+                } else {
+                    renderStartScreen(data);
+                }
+            } catch (err) {
+                document.getElementById('mainContent').innerHTML = `
+                    <div style="text-align:center;padding:4rem;">
+                        <h2 style="color:var(--accent-red);margin-bottom:0.5rem;">Failed to load</h2>
+                        <p style="color:var(--text-muted);">${err.message}</p>
+                        <button class="btn btn-primary" style="margin-top:1rem;" onclick="location.reload()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        function buildCompletedSet(plan) {
+            completedSet.clear();
+            for (const c of (plan.completed_activities || [])) {
+                completedSet.add(`${c.day}:${c.activity_index}`);
+            }
+        }
+
+        function isActivityDone(day, actIdx) {
+            return completedSet.has(`${day}:${actIdx}`);
+        }
+
+        function isDayComplete(dayData) {
+            return dayData.activities.every((_, i) => isActivityDone(dayData.day, i));
+        }
+
+        function isDayUnlocked(dayData) {
+            if (dayData.day === 1) return true;
+            // Unlocked if previous day is complete
+            const prevDay = planData.curriculum.find(d => d.day === dayData.day - 1);
+            return prevDay ? isDayComplete(prevDay) : true;
+        }
+
+        function getProgress() {
+            const total = planData.total_activities;
+            const done = completedSet.size;
+            return { done, total, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+        }
+
+        function getDaysComplete() {
+            return planData.curriculum.filter(d => isDayComplete(d)).length;
+        }
+
+        function getCurrentDay() {
+            for (const d of planData.curriculum) {
+                if (!isDayComplete(d)) return d.day;
+            }
+            return planData.total_days; // All done
+        }
+
+        // ── Render the start screen ──────────────────────
+        function renderStartScreen(data) {
+            const phases = data.phases || [];
+            document.getElementById('mainContent').innerHTML = `
+                <div class="rtm-start-overlay">
+                    <div class="rtm-start-card">
+                        <h2>Road to Mastery</h2>
+                        <p class="subtitle">
+                            A 35-day structured program that takes you from zero to
+                            top 1% closer. Every module, every skill, every framework — mastered.
+                        </p>
+                        <div class="phase-preview">
+                            ${phases.map(p => `
+                                <div class="phase-preview-item">
+                                    <div class="phase-preview-dot" style="background:${p.color};"></div>
+                                    <div class="phase-preview-text">${p.name}</div>
+                                    <div class="phase-preview-days">Days ${p.days[0]}-${p.days[1]}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="btn btn-primary btn-lg" style="width:100%;" onclick="startPlan()">
+                            Begin Your Journey
+                        </button>
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:1rem;">
+                            Complete at your own pace. "Days" are training days, not calendar days.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ── Start plan ──────────────────────────────────
+        async function startPlan() {
+            try {
+                const result = await API.startMasteryPlan();
+                planData.plan = result.plan;
+                buildCompletedSet(result.plan);
+                renderPlan(planData);
+                showToast('Your Road to Mastery has begun!', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ── Render full plan view ─────────────────────────
+        function renderPlan(data) {
+            const { done, total, pct } = getProgress();
+            const daysComplete = getDaysComplete();
+            const currentDay = getCurrentDay();
+            const allDone = pct === 100;
+
+            document.getElementById('mainContent').innerHTML = `
+                <div class="rtm-header">
+                    <div>
+                        <h1>Road to Mastery</h1>
+                        <p>${allDone ? 'Congratulations! You\'ve completed the program.' : `Day ${currentDay} of ${data.total_days} — keep pushing.`}</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:1rem;">
+                        <a href="/training" class="btn btn-secondary btn-sm">Live Training</a>
+                        <span class="rtm-reset" onclick="confirmReset()">Reset Plan</span>
+                    </div>
+                </div>
+
+                <div class="rtm-progress-card">
+                    <div class="rtm-progress-top">
+                        <div class="rtm-progress-label">Overall Progress</div>
+                        <div class="rtm-progress-pct" style="color:var(--accent-cyan);">${pct}%</div>
+                    </div>
+                    <div class="rtm-progress-bar">
+                        <div class="rtm-progress-fill" style="width:${pct}%;"></div>
+                    </div>
+                    <div class="rtm-stats">
+                        <div><span>${done}</span> / ${total} activities</div>
+                        <div><span>${daysComplete}</span> / ${data.total_days} days</div>
+                        <div>Current: <span>Day ${currentDay}</span></div>
+                    </div>
+                </div>
+
+                <div id="phasesContainer"></div>
+            `;
+
+            renderPhases(data);
+        }
+
+        function renderPhases(data) {
+            const container = document.getElementById('phasesContainer');
+            const currentDay = getCurrentDay();
+
+            container.innerHTML = (data.phases || []).map(phase => {
+                const phaseDays = data.curriculum.filter(d =>
+                    d.day >= phase.days[0] && d.day <= phase.days[1]
+                );
+                const phaseDone = phaseDays.every(d => isDayComplete(d));
+                const phaseStarted = phaseDays.some(d =>
+                    d.activities.some((_, i) => isActivityDone(d.day, i))
+                );
+                const phaseBadge = phaseDone
+                    ? `<span class="phase-badge" style="background:rgba(16,185,129,0.15);color:var(--accent-green);">Complete</span>`
+                    : phaseStarted
+                    ? `<span class="phase-badge" style="background:rgba(79,70,229,0.15);color:var(--accent-blue);">In Progress</span>`
+                    : `<span class="phase-badge" style="background:rgba(160,160,192,0.1);color:var(--text-muted);">Days ${phase.days[0]}-${phase.days[1]}</span>`;
+
+                const isCurrentPhase = currentDay >= phase.days[0] && currentDay <= phase.days[1];
+                const collapsed = !isCurrentPhase && !phaseDone ? ' collapsed' : '';
+
+                return `
+                    <div class="phase-section">
+                        <div class="phase-header${collapsed}" onclick="togglePhase(this)">
+                            <div class="phase-dot" style="background:${phase.color};"></div>
+                            <div class="phase-title">${phase.name}</div>
+                            ${phaseBadge}
+                            <svg class="phase-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div class="phase-desc">${phase.description}</div>
+                        <div class="phase-days" style="${collapsed ? 'display:none;' : ''}">
+                            ${phaseDays.map(d => renderDayCard(d, currentDay)).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDayCard(dayData, currentDay) {
+            const complete = isDayComplete(dayData);
+            const unlocked = isDayUnlocked(dayData);
+            const isCurrent = dayData.day === currentDay;
+            const cls = complete ? 'completed' : isCurrent ? 'current' : !unlocked ? 'locked' : '';
+            const statusHtml = complete
+                ? '<span class="day-status complete">Complete</span>'
+                : isCurrent
+                ? '<span class="day-status in-progress">Current</span>'
+                : !unlocked
+                ? '<span class="day-status locked-status">Locked</span>'
+                : '';
+
+            return `
+                <div class="day-card ${cls}">
+                    <div class="day-top">
+                        <div class="day-label">Day ${dayData.day}</div>
+                        ${statusHtml}
+                    </div>
+                    <div class="day-title">${dayData.title}</div>
+                    <div class="day-desc">${dayData.description}</div>
+                    <div class="activity-list">
+                        ${dayData.activities.map((act, i) => renderActivity(dayData, act, i, unlocked)).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderActivity(dayData, act, idx, unlocked) {
+            const done = isActivityDone(dayData.day, idx);
+            const moduleName = MODULE_NAMES[act.module] || act.module;
+            const checkIcon = done
+                ? '<svg class="activity-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+                : '<svg class="activity-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+            const goBtn = !done && unlocked
+                ? `<span class="activity-go" onclick="event.stopPropagation();launchActivity(${dayData.day},${idx},'${act.module}',${act.topic_index === null || act.topic_index === undefined ? 'null' : act.topic_index})">Train</span>`
+                : '';
+
+            return `
+                <div class="activity-item ${done ? 'done' : ''}" onclick="${!done && unlocked ? `launchActivity(${dayData.day},${idx},'${act.module}',${act.topic_index === null || act.topic_index === undefined ? 'null' : act.topic_index})` : ''}">
+                    ${checkIcon}
+                    <span class="activity-label">${act.label}</span>
+                    <span class="activity-module">${moduleName}</span>
+                    ${goBtn}
+                </div>
+            `;
+        }
+
+        // ── Phase toggle ────────────────────────────────
+        function togglePhase(header) {
+            header.classList.toggle('collapsed');
+            const days = header.parentElement.querySelector('.phase-days');
+            if (days) {
+                days.style.display = header.classList.contains('collapsed') ? 'none' : '';
+            }
+        }
+
+        // ── Launch activity → go to training ─────────────
+        function launchActivity(day, actIdx, moduleKey, topicIndex) {
+            // Store in sessionStorage so training.html can complete it when done
+            sessionStorage.setItem('rtm_activity', JSON.stringify({
+                day, activity_index: actIdx, module: moduleKey, topic_index: topicIndex,
+            }));
+
+            if (moduleKey === 'full_call_simulation') {
+                // Full call sim → regular training flow
+                window.location.href = '/training?mode=full&rtm=1';
+            } else if (moduleKey === 'script_practice') {
+                // Script practice → scripts page
+                window.location.href = '/training?mode=script_practice&rtm=1';
+            } else {
+                // Module training with optional topic
+                const topicParam = topicIndex !== null && topicIndex !== undefined ? `&topic=${topicIndex}` : '';
+                window.location.href = `/training?mode=${moduleKey}${topicParam}&rtm=1`;
+            }
+        }
+
+        // ── Mark activity complete (called from training page via postMessage or direct) ──
+        async function markComplete(day, actIdx) {
+            try {
+                const result = await API.completePlanActivity(day, actIdx);
+                planData.plan = result.plan;
+                buildCompletedSet(result.plan);
+                renderPlan(planData);
+            } catch (err) {
+                console.error('Failed to mark activity complete:', err);
+            }
+        }
+
+        // ── Reset plan ──────────────────────────────────
+        function confirmReset() {
+            if (confirm('Reset your Road to Mastery progress? This will start you back at Day 1.')) {
+                doReset();
+            }
+        }
+
+        async function doReset() {
+            try {
+                const result = await API.resetMasteryPlan();
+                planData.plan = result.plan;
+                buildCompletedSet(result.plan);
+                renderPlan(planData);
+                showToast('Plan reset to Day 1', 'info');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ── Init ────────────────────────────────────────
+        init();
+    </script>
+</body>
+</html>
