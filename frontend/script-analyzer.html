@@ -481,29 +481,76 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         // ── Heading detection signals ─────────────────────────────
         // These map heading text → section type
         const HEADING_SIGNALS = [
-            // Intro patterns
+            // Intro patterns — catch every way someone labels an intro
             { re: /intro|opening|greeting/i, type: 'intro' },
-            { re: /new\s*lead|speed\s*to\s*lead|under\s*(5|2|10)\s*min/i, type: 'intro' },
-            { re: /aged\s*lead|over\s*\d+\s*(hour|day|week|month)/i, type: 'intro' },
-            { re: /facebook\s*lead|fb\s*lead|social\s*media/i, type: 'intro' },
+            { re: /new\s*lead/i, type: 'intro' },
+            { re: /fresh\s*lead/i, type: 'intro' },
+            { re: /hot\s*lead/i, type: 'intro' },
+            { re: /warm\s*lead/i, type: 'intro' },
+            { re: /cold\s*lead/i, type: 'intro' },
+            { re: /speed\s*to\s*lead/i, type: 'intro' },
+            { re: /under\s*\d+\s*min/i, type: 'intro' },
+            { re: /aged\s*lead/i, type: 'intro' },
+            { re: /old\s*(aged?\s*)?lead/i, type: 'intro' },
+            { re: /over\s*\d+\s*(hour|day|week|month)/i, type: 'intro' },
+            { re: /\d+\s*(hour|day|week|month)\s*(old|lead|facebook)/i, type: 'intro' },
+            { re: /facebook\s*lead/i, type: 'intro' },
+            { re: /fb\s*lead/i, type: 'intro' },
+            { re: /social\s*media\s*lead/i, type: 'intro' },
+            { re: /internet\s*lead/i, type: 'intro' },
             { re: /average\s*data/i, type: 'intro' },
-            // Qualifying / questions
-            { re: /key\s*questions|qualifying|discovery|medical|health\s*questions|underwriting/i, type: 'qualifying' },
-            // Objections
-            { re: /objection|rebuttal|pushback|common\s*responses/i, type: 'objection' },
+            { re: /lead\s*(type|source)\s*[:\-]/i, type: 'intro' },
+            { re: /^(the\s+)?(first|initial)\s*(call|contact)/i, type: 'intro' },
+            // Qualifying / questions — every variation
+            { re: /key\s*questions/i, type: 'qualifying' },
+            { re: /^questions$/i, type: 'qualifying' },
+            { re: /questions?\s*to\s*ask/i, type: 'qualifying' },
+            { re: /qualifying/i, type: 'qualifying' },
+            { re: /discovery/i, type: 'qualifying' },
+            { re: /medical\s*(info|questions|history)/i, type: 'qualifying' },
+            { re: /health\s*questions/i, type: 'qualifying' },
+            { re: /underwriting\s*(questions|info)/i, type: 'qualifying' },
+            { re: /intake\s*(questions|form)/i, type: 'qualifying' },
+            { re: /fact[\s-]?find/i, type: 'qualifying' },
+            // Objections — every variation
+            { re: /objection/i, type: 'objection' },
+            { re: /rebuttal/i, type: 'objection' },
+            { re: /pushback/i, type: 'objection' },
+            { re: /common\s*(objection|response|pushback|excuse)/i, type: 'objection' },
             { re: /^not\s*interested$/i, type: 'objection' },
             { re: /^objection\s*handl/i, type: 'objection' },
-            { re: /^common\s*(objection|response|pushback)/i, type: 'objection' },
+            { re: /overcoming\s*(objection|resistance)/i, type: 'objection' },
+            { re: /if\s*they\s*(say|object|push\s*back)/i, type: 'objection' },
             // Frame
-            { re: /frame|framing|pre-?frame|identity|customiz/i, type: 'frame' },
-            { re: /tie\s*down|transition|bridge|booking|appointment|set\s*the\s*(call|appt)/i, type: 'frame' },
+            { re: /frame|framing|pre-?frame/i, type: 'frame' },
+            { re: /identity\s*(frame|statement)/i, type: 'frame' },
+            { re: /customiz/i, type: 'frame' },
+            { re: /tie\s*down/i, type: 'frame' },
+            { re: /transition/i, type: 'frame' },
+            { re: /bridge/i, type: 'frame' },
+            { re: /booking|appointment|set\s*the\s*(call|appt)/i, type: 'frame' },
+            { re: /rapport/i, type: 'frame' },
+            { re: /ice\s*breaker/i, type: 'frame' },
             // Close
-            { re: /close|closing|presentation|pitch|commitment|wrap\s*up/i, type: 'close' },
-            { re: /after\s*(you\s*)?set|after\s*the\s*call|post[\s-]?call/i, type: 'postcall' },
+            { re: /clos(e|ing)/i, type: 'close' },
+            { re: /presentation/i, type: 'close' },
+            { re: /commitment/i, type: 'close' },
+            { re: /wrap\s*up/i, type: 'close' },
+            { re: /the\s*ask/i, type: 'close' },
             // Post-call
-            { re: /action\s*steps|checklist|to[\s-]*do|follow[\s-]*up/i, type: 'postcall' },
+            { re: /after\s*(you\s*)?set/i, type: 'postcall' },
+            { re: /after\s*the\s*call/i, type: 'postcall' },
+            { re: /post[\s-]?call/i, type: 'postcall' },
+            { re: /action\s*steps/i, type: 'postcall' },
+            { re: /checklist/i, type: 'postcall' },
+            { re: /to[\s-]*do/i, type: 'postcall' },
+            { re: /follow[\s-]*up\s*(step|task|action|item)/i, type: 'postcall' },
+            { re: /next\s*steps/i, type: 'postcall' },
             // Value prop / pitch
-            { re: /value\s*prop|pitch|benefit|why\s*us/i, type: 'pitch' },
+            { re: /value\s*prop/i, type: 'pitch' },
+            { re: /benefit/i, type: 'pitch' },
+            { re: /why\s*us/i, type: 'pitch' },
+            { re: /the\s*pitch/i, type: 'pitch' },
         ];
 
         // ── Coaching / context note patterns ──────────────────────
@@ -618,6 +665,7 @@ Then display it in a clean, easy-to-read practice format."></textarea>
         function tokenizeLines(rawText) {
             const rawLines = rawText.split('\n');
             const tokens = [];
+            let blankCount = 0; // Track consecutive blanks
 
             for (let i = 0; i < rawLines.length; i++) {
                 const raw = rawLines[i];
@@ -625,7 +673,28 @@ Then display it in a clean, easy-to-read practice format."></textarea>
 
                 // Empty line
                 if (!trimmed) {
+                    blankCount++;
                     tokens.push({ idx: i, raw, trimmed, empty: true });
+                    continue;
+                }
+
+                const precedingBlanks = blankCount;
+                blankCount = 0;
+
+                // Handle "--- TEXT ---" style headings: extract the text
+                const dashWrapped = trimmed.match(/^[-=]{2,}\s*(.+?)\s*[-=]{2,}$/);
+                if (dashWrapped) {
+                    const innerText = dashWrapped[1].trim();
+                    tokens.push({
+                        idx: i, raw, trimmed, empty: false,
+                        content: innerText,
+                        isBold: false, isMarkdownHeading: false, isSeparatorLine: false,
+                        isDashWrappedHeading: true, // Special flag
+                        isNumbered: false, isDash: false, isBullet: false,
+                        hasBraces: false, isWrappedParens: false, startsWithStar: false,
+                        isShort: innerText.length < 70, isMedium: innerText.length < 120,
+                        precedingBlanks,
+                    });
                     continue;
                 }
 
@@ -652,8 +721,10 @@ Then display it in a clean, easy-to-read practice format."></textarea>
                     content,
                     isBold, isMarkdownHeading, isSeparatorLine, isNumbered,
                     isDash, isBullet, hasBraces, isWrappedParens, startsWithStar,
+                    isDashWrappedHeading: false,
                     isShort: content.length < 70,
                     isMedium: content.length < 120,
+                    precedingBlanks,
                 });
             }
             return tokens;
@@ -797,39 +868,65 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             // NEVER treat numbered lines as headings
             if (tok.isNumbered) return false;
 
-            // Explicit markdown headings
+            // NEVER treat long lines as headings (dialogue is long, headings are short)
+            if (c.length > 100) return false;
+
+            // ── Tier 1: Explicit formatting = definitely heading ──
+
+            // Markdown headings (# Title)
             if (tok.isMarkdownHeading) return true;
 
-            // Bold short lines that match known heading patterns
+            // Dash-wrapped headings (--- Title ---)
+            if (tok.isDashWrappedHeading) return true;
+
+            // Bold lines that are short
             if (tok.isBold && tok.isShort) {
+                // Bold + matches a signal = heading
                 if (HEADING_SIGNALS.some(h => h.re.test(c))) return true;
-                // Bold short lines followed by non-empty content are likely headings
+                // Bold + short + followed by non-bold content = heading
                 const next = findNextNonEmpty(tokens, i);
                 if (next && !next.isBold) return true;
             }
 
-            // ALL CAPS short lines
-            if (/^[A-Z][A-Z\s\/{}&()*\-—:.]+$/.test(c) && c.length < 60 && c.length > 2) {
-                return true;
+            // ALL CAPS lines (but not single words that might be emphasis)
+            if (/^[A-Z][A-Z\s\/{}&()*\-—:.!]+$/.test(c) && c.length < 60 && c.length > 2) {
+                // Make sure it's not just a shouted word in dialogue
+                if (c.split(/\s+/).length >= 2 || HEADING_SIGNALS.some(h => h.re.test(c))) {
+                    return true;
+                }
             }
 
             // Lines with braces that describe lead types/scenarios
             if (tok.hasBraces && tok.isMedium) return true;
 
-            // Star-prefixed short lines that look like category labels
+            // Star-prefixed labels (* Not Interested, * Aged Leads)
             if (tok.startsWithStar && tok.isShort) {
                 const starContent = c.replace(/^\*\s+/, '');
                 if (HEADING_SIGNALS.some(h => h.re.test(starContent))) return true;
-                // If it looks like a label (doesn't end with conversational punctuation)
                 if (!starContent.endsWith('?') && !starContent.endsWith('.') && starContent.length < 60) {
-                    if (OBJECTION_TRIGGER_PATTERNS.some(re => re.test(starContent))) return false; // it's an objection, not heading
+                    if (OBJECTION_TRIGGER_PATTERNS.some(re => re.test(starContent))) return false;
                     return true;
                 }
             }
 
-            // Known heading phrases (exact or near-exact)
-            if (tok.isShort && !c.endsWith('?')) {
+            // ── Tier 2: Context-aware heading detection ──
+            // Short line + preceded by blank line(s) + matches a heading signal
+            // This catches plain-text headings like "Aged Leads" or "Key Questions"
+            const hasPrecedingBlank = (tok.precedingBlanks || 0) >= 1;
+
+            if (tok.isShort && hasPrecedingBlank && !c.endsWith('?')) {
+                // If it matches a heading signal, it's a heading
                 if (HEADING_SIGNALS.some(h => h.re.test(c))) return true;
+            }
+
+            // ── Tier 3: Structural pattern matching ──
+            // Short line that doesn't look like dialogue and matches heading signals
+            if (tok.isShort && !c.endsWith('?') && c.length < 60) {
+                if (HEADING_SIGNALS.some(h => h.re.test(c))) {
+                    // Make sure it's not actually dialogue by checking dialogue score
+                    const ds = scoreDialogue(c);
+                    if (ds <= 1) return true;
+                }
             }
 
             return false;
@@ -978,6 +1075,7 @@ Then display it in a clean, easy-to-read practice format."></textarea>
                         type: item.sectionType,
                         lines: [],
                         branches: [],
+                        fromHeading: true, // Explicit heading — never merge
                     };
                     continue;
                 }
@@ -1011,6 +1109,7 @@ Then display it in a clean, easy-to-read practice format."></textarea>
                         type: autoType,
                         lines: [],
                         branches: [],
+                        fromHeading: false, // Auto-created — can be merged
                     };
                 }
 
@@ -1074,13 +1173,16 @@ Then display it in a clean, easy-to-read practice format."></textarea>
             }
 
             // Merge consecutive sections of the same type if they're tiny
+            // NEVER merge sections created from explicit headings — those represent
+            // the script author's intentional structure (e.g., 3 separate intro variants)
             const merged = [];
             for (const section of sections) {
                 const prev = merged.length ? merged[merged.length - 1] : null;
                 if (prev && prev.type === section.type &&
+                    !prev.fromHeading && !section.fromHeading &&
                     prev.lines.length <= 2 && section.lines.length <= 2 &&
                     !prev.branches.length && !section.branches.length) {
-                    // Merge into previous
+                    // Merge into previous (only auto-created tiny sections)
                     prev.lines.push(...section.lines);
                     prev.branches.push(...section.branches);
                 } else {
