@@ -87,6 +87,7 @@ class VoiceSession:
         self._current_agent_text = ""
         self._current_client_text = ""
         self._turn_count = 0
+        self._response_start_time = 0.0  # Track when AI response audio starts
 
     def set_browser_callback(self, callback: Optional[Callable]):
         """Set or swap the browser send callback. Thread-safe for asyncio."""
@@ -211,6 +212,10 @@ class VoiceSession:
                     "input": {"format": {"type": AUDIO_FORMAT, "rate": SAMPLE_RATE}},
                     "output": {"format": {"type": AUDIO_FORMAT, "rate": SAMPLE_RATE}},
                 },
+                # Allow longer AI responses to prevent speech cutoff on coaching turns.
+                # The coach often delivers multi-sentence feedback, demonstrations, and
+                # exercises — default token limits can truncate these mid-sentence.
+                "max_response_output_tokens": 4096,
             },
         }
         await self.xai_ws.send(json.dumps(config))
@@ -291,6 +296,9 @@ class VoiceSession:
                 if event_type in ("response.output_audio.delta", "response.audio.delta"):
                     delta = data.get("delta", "")
                     if delta:
+                        # Track when audio stream starts for transcript pacing
+                        if self._response_start_time == 0.0:
+                            self._response_start_time = time.time()
                         await self._send_browser({"type": "audio", "data": delta})
 
                 # ── Agent transcript (what the user said) ─────────
@@ -314,7 +322,13 @@ class VoiceSession:
                 elif event_type in ("response.output_audio_transcript.delta", "response.audio_transcript.delta"):
                     delta = data.get("delta", "")
                     self._current_client_text += delta
-                    await self._send_browser({"type": "transcript_delta", "role": "client", "delta": delta})
+                    # Include elapsed time since audio started so frontend can
+                    # pace text display to match speech playback speed
+                    elapsed = time.time() - self._response_start_time if self._response_start_time else 0
+                    await self._send_browser({
+                        "type": "transcript_delta", "role": "client", "delta": delta,
+                        "elapsed": round(elapsed, 2),
+                    })
 
                 # ── Client transcript complete ───────────────────
                 elif event_type in ("response.output_audio_transcript.done", "response.audio_transcript.done"):
@@ -331,10 +345,34 @@ class VoiceSession:
                             except Exception as e:
                                 logger.error("[%s] on_client_transcript error: %s", self.session_id, e, exc_info=True)
                     self._current_client_text = ""
+                    self._response_start_time = 0.0  # Reset for next response
 
                 # ── Response complete ────────────────────────────
                 elif event_type == "response.done":
-                    logger.debug("[%s] Response complete", self.session_id)
+                    # Check if the response was truncated (speech cutoff)
+                    response_data = data.get("response", {})
+                    status_details = response_data.get("status_details", {})
+                    response_status = response_data.get("status", "completed")
+                    if response_status == "incomplete":
+                        reason = status_details.get("reason", "unknown")
+                        logger.warning(
+                            "[%s] Response TRUNCATED (reason=%s) — AI speech was cut off",
+                            self.session_id, reason,
+                        )
+                        # Auto-continue: ask the AI to keep going from where it stopped
+                        if reason in ("max_output_tokens", "length"):
+                            logger.info("[%s] Auto-continuing truncated response...", self.session_id)
+                            try:
+                                await self.xai_ws.send(json.dumps({
+                                    "type": "response.create",
+                                    "response": {
+                                        "instructions": "You were cut off mid-sentence. Continue EXACTLY where you left off — pick up the sentence naturally. Do NOT repeat what you already said. Do NOT start over.",
+                                    },
+                                }))
+                            except Exception as e:
+                                logger.error("[%s] Error auto-continuing: %s", self.session_id, e)
+                    else:
+                        logger.debug("[%s] Response complete", self.session_id)
                     await self._send_browser({"type": "status", "status": "listening"})
 
                 # ── Speech detected (user starts talking) ────────
