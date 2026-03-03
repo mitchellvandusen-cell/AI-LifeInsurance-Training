@@ -203,9 +203,15 @@ class VoiceSession:
                 "instructions": self.system_prompt,
                 "turn_detection": {
                     "type": "server_vad",
-                    "threshold": 0.5,
-                    "prefix_padding_ms": 500,
-                    "silence_duration_ms": 1200,
+                    # Lower threshold = less likely to falsely detect end-of-speech.
+                    # 0.5 was cutting users off mid-sentence ("go ahead and..." → "Go").
+                    "threshold": 0.35,
+                    # Capture more of the start of utterances so first words aren't clipped
+                    "prefix_padding_ms": 600,
+                    # Allow natural mid-sentence pauses (breathing, thinking) without
+                    # the VAD triggering end-of-turn. 1200ms was way too short for
+                    # conversational speech — people pause 1-2s between clauses.
+                    "silence_duration_ms": 1800,
                 },
                 "input_audio_transcription": {"model": "whisper-large-v3"},
                 "audio": {
