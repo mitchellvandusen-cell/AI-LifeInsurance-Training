@@ -111,7 +111,15 @@ class TranscriptPipeline:
 
     # How long to wait after the last transcript event before emitting.
     # This allows progressive extensions to collapse into one emission.
-    DEBOUNCE_SECONDS = 0.6
+    # Tuned for coaching sessions where the student pauses to think.
+    DEBOUNCE_SECONDS = 2.0
+
+    # If a new transcript arrives within this window after the last
+    # emission, merge it with the previous emission rather than
+    # creating a new line. Handles VAD mid-sentence splits: the VAD
+    # fires speech_stopped, emits half the sentence, then the user
+    # continues and a new transcript arrives for the second half.
+    MERGE_WINDOW_SECONDS = 4.0
 
     # If >60% of the agent's words overlap with recent coach speech,
     # it's likely echo, not the user talking.
@@ -127,6 +135,7 @@ class TranscriptPipeline:
         # ── History for dedup ────────────────────────────────
         self._last_emitted_text: str = ""
         self._last_emitted_norm: str = ""
+        self._last_emit_time: float = 0.0
 
         # ── Coach speech ring buffer for echo detection ──────
         # Stores the last N coach utterances (normalized).
@@ -135,11 +144,18 @@ class TranscriptPipeline:
         # ── Callback to invoke on flush ──────────────────────
         self._flush_callback: Optional[Callable] = None
 
+        # ── Merge tracking ───────────────────────────────────
+        # Set True when receive() merges with a previous emission.
+        # Read by VoiceSession's flush callback to decide whether
+        # to send 'transcript' (new line) or 'replace_transcript'.
+        self._next_emit_is_merge: bool = False
+
         # ── Stats ────────────────────────────────────────────
         self.events_received: int = 0
         self.events_emitted: int = 0
         self.events_dropped_dedup: int = 0
         self.events_dropped_echo: int = 0
+        self.events_merged: int = 0
 
     # ── Public API ───────────────────────────────────────────
 
@@ -182,7 +198,30 @@ class TranscriptPipeline:
             )
             return False
 
+        # ── Merge window: continuation of the same turn ──────
+        # If this transcript arrives shortly after a previous
+        # emission and there's nothing pending, the VAD likely
+        # split a single utterance mid-sentence. Merge with the
+        # last emission by prepending it as pending text.
+        if (
+            not self._pending_text
+            and self._last_emitted_text
+            and self._last_emit_time > 0
+            and (time.time() - self._last_emit_time) < self.MERGE_WINDOW_SECONDS
+        ):
+            self._pending_text = self._last_emitted_text + " " + text
+            self._next_emit_is_merge = True
+            self.events_merged += 1
+            logger.info(
+                "[%s] Merged continuation: ...%s + %s",
+                self.session_id,
+                self._last_emitted_text[-30:],
+                text[:30],
+            )
+            return True
+
         # ── Genuinely new transcript ─────────────────────────
+        self._next_emit_is_merge = False
         self._pending_text = text
         return True
 
@@ -252,6 +291,7 @@ class TranscriptPipeline:
         self._pending_text = ""
         self._last_emitted_text = text
         self._last_emitted_norm = _normalize(text)
+        self._last_emit_time = time.time()
         self.events_emitted += 1
 
         if self._flush_callback:
@@ -269,6 +309,7 @@ class TranscriptPipeline:
             "emitted": self.events_emitted,
             "dropped_dedup": self.events_dropped_dedup,
             "dropped_echo": self.events_dropped_echo,
+            "merged": self.events_merged,
         }
 
 
@@ -443,10 +484,13 @@ class VoiceSession:
                     "threshold": 0.35,
                     # Capture more of the start of utterances so first words aren't clipped
                     "prefix_padding_ms": 600,
-                    # Allow natural mid-sentence pauses (breathing, thinking) without
-                    # the VAD triggering end-of-turn. 1200ms was way too short for
-                    # conversational speech — people pause 1-2s between clauses.
-                    "silence_duration_ms": 1800,
+                    # Allow natural mid-sentence pauses (breathing, thinking)
+                    # without the VAD triggering end-of-turn. This is a coaching
+                    # session, not a customer support bot — the student needs time
+                    # to think, breathe, and formulate responses. 3.5s + our 2s
+                    # debounce gives ~4s effective pause tolerance before the
+                    # system considers the user's turn complete.
+                    "silence_duration_ms": 3500,
                 },
                 "input_audio_transcription": {"model": "whisper-large-v3"},
                 "audio": {
@@ -515,13 +559,32 @@ class VoiceSession:
     # ── Agent (user) transcript emission ─────────────────────
 
     async def _on_pipeline_flush(self, text: str):
-        """Called by TranscriptPipeline when a clean transcript is ready."""
-        self._turn_count += 1
-        logger.info("[%s] Agent said (turn %d): %.80s...", self.session_id, self._turn_count, text)
-        await self._send_browser({
-            "type": "transcript", "role": "agent",
-            "text": text, "turn": self._turn_count,
-        })
+        """Called by TranscriptPipeline when a clean transcript is ready.
+
+        If the pipeline merged this text with a previous emission (VAD
+        split mid-sentence), we send a ``replace_transcript`` message so
+        the frontend updates the last agent line in-place rather than
+        appending a new one.
+        """
+        is_merge = self._pipeline._next_emit_is_merge
+        # Clear the flag immediately — it's been consumed
+        self._pipeline._next_emit_is_merge = False
+
+        if is_merge:
+            # Merged continuation — replace the last agent line
+            logger.info("[%s] Agent said (merged turn %d): %.80s...", self.session_id, self._turn_count, text)
+            await self._send_browser({
+                "type": "replace_transcript", "role": "agent",
+                "text": text, "turn": self._turn_count,
+            })
+        else:
+            self._turn_count += 1
+            logger.info("[%s] Agent said (turn %d): %.80s...", self.session_id, self._turn_count, text)
+            await self._send_browser({
+                "type": "transcript", "role": "agent",
+                "text": text, "turn": self._turn_count,
+            })
+
         if self.on_agent_transcript:
             try:
                 await self.on_agent_transcript(text, self._turn_count)
@@ -609,12 +672,14 @@ class VoiceSession:
                     response_status = response_data.get("status", "completed")
 
                     if response_status == "cancelled":
-                        # Response was cancelled (barge-in or explicit cancel)
+                        # Response was cancelled (barge-in or explicit cancel).
+                        # Do NOT send 'listening' — the user is speaking and
+                        # 'recording' status was already sent by speech_started.
                         logger.info("[%s] Response cancelled (barge-in)", self.session_id)
                         self._current_client_text = ""
                         self._response_start_time = 0.0
-                        # Don't send 'listening' — the user is speaking,
-                        # 'recording' status was already sent.
+                        # Tell browser to clear any partial coach transcript
+                        await self._send_browser({"type": "clear_streaming"})
                     elif response_status == "incomplete":
                         reason = status_details.get("reason", "unknown")
                         logger.warning(
@@ -634,9 +699,12 @@ class VoiceSession:
                                 }))
                             except Exception as e:
                                 logger.error("[%s] Error auto-continuing: %s", self.session_id, e)
+                        else:
+                            # Truncated for other reason (turn_detected, etc.)
+                            await self._send_browser({"type": "status", "status": "listening"})
                     else:
                         logger.debug("[%s] Response complete", self.session_id)
-                    await self._send_browser({"type": "status", "status": "listening"})
+                        await self._send_browser({"type": "status", "status": "listening"})
 
                 # ── Speech detected (user starts talking) ────────
                 # If the AI is currently responding, this is a barge-in.
@@ -749,10 +817,11 @@ class VoiceSession:
         stats = self._pipeline.get_stats()
         logger.info(
             "[%s] Transcript pipeline stats: received=%d emitted=%d "
-            "dropped_dedup=%d dropped_echo=%d",
+            "dropped_dedup=%d dropped_echo=%d merged=%d",
             self.session_id,
             stats["received"], stats["emitted"],
             stats["dropped_dedup"], stats["dropped_echo"],
+            stats["merged"],
         )
 
         self._send_to_browser = None  # Detach browser

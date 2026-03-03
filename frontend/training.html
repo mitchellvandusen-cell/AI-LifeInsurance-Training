@@ -1845,6 +1845,24 @@
                     addTranscript(data.role, data.text);
                     break;
 
+                case 'replace_transcript':
+                    // Replace the last agent transcript line (merge from VAD split)
+                    replaceLastTranscript(data.role, data.text);
+                    break;
+
+                case 'clear_streaming':
+                    // Clear partial coach transcript on barge-in
+                    if (streamingDiv) {
+                        streamingDiv.remove();
+                        streamingDiv = null;
+                    }
+                    transcriptBuffer = [];
+                    if (transcriptFlushTimer) {
+                        clearTimeout(transcriptFlushTimer);
+                        transcriptFlushTimer = null;
+                    }
+                    break;
+
                 case 'transcript_delta':
                     updateStreamingTranscript(data.role, data.delta);
                     break;
@@ -2041,6 +2059,22 @@
                 <div class="text">${escapeHTML(text)}</div>
             `;
             container.appendChild(msg);
+            document.getElementById('transcriptArea').scrollTop = document.getElementById('transcriptArea').scrollHeight;
+        }
+
+        function replaceLastTranscript(role, text) {
+            // Replace the last transcript line of the given role.
+            // Used when the pipeline merges a VAD-split sentence.
+            const container = document.getElementById('transcriptContent');
+            const msgs = container.querySelectorAll('.transcript-msg');
+            for (let i = msgs.length - 1; i >= 0; i--) {
+                const roleDiv = msgs[i].querySelector('.role');
+                if (roleDiv && roleDiv.classList.contains(role)) {
+                    const textDiv = msgs[i].querySelector('.text');
+                    if (textDiv) textDiv.textContent = text;
+                    break;
+                }
+            }
             document.getElementById('transcriptArea').scrollTop = document.getElementById('transcriptArea').scrollHeight;
         }
 
