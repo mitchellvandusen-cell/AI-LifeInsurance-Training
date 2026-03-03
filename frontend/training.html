@@ -1102,7 +1102,13 @@
             btn.textContent = 'Starting...';
 
             try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    }
+                });
                 const data = await API.startModuleSession(selectedModule, null, scriptId, selectedTopicIndex);
                 sessionId = data.session_id;
                 sessionCompleted = false;
@@ -1705,8 +1711,15 @@
             btn.textContent = 'Starting...';
 
             try {
-                // Request mic access first
-                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // Request mic access first — enable echo cancellation so the
+                // AI coach's audio doesn't get picked up and re-transcribed
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    }
+                });
 
                 // Populate sidebar with client info
                 renderSidebar(clientInfo);

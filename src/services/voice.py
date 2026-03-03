@@ -89,6 +89,15 @@ class VoiceSession:
         self._turn_count = 0
         self._response_start_time = 0.0  # Track when AI response audio starts
 
+        # Agent transcript debounce — xAI often sends multiple
+        # transcription.completed events per utterance (progressive
+        # extensions as the user keeps talking, or exact duplicates).
+        # We buffer them and only emit after a short timeout or when
+        # the AI starts responding (whichever comes first).
+        self._pending_agent_text = ""
+        self._agent_debounce_task: Optional[asyncio.Task] = None
+        self._agent_debounce_seconds = 0.6
+
     def set_browser_callback(self, callback: Optional[Callable]):
         """Set or swap the browser send callback. Thread-safe for asyncio."""
         self._send_to_browser = callback
@@ -277,6 +286,38 @@ class VoiceSession:
             except Exception:
                 pass  # Browser might be disconnected — that's OK
 
+    async def _flush_agent_transcript(self):
+        """Emit the buffered agent transcript to browser + callback."""
+        text = self._pending_agent_text
+        if not text:
+            return
+        self._pending_agent_text = ""
+        self._turn_count += 1
+        logger.info("[%s] Agent said (turn %d): %.80s...", self.session_id, self._turn_count, text)
+        await self._send_browser({
+            "type": "transcript", "role": "agent",
+            "text": text, "turn": self._turn_count,
+        })
+        if self.on_agent_transcript:
+            try:
+                await self.on_agent_transcript(text, self._turn_count)
+            except Exception as e:
+                logger.error("[%s] on_agent_transcript error: %s", self.session_id, e, exc_info=True)
+
+    async def _debounced_agent_flush(self):
+        """Wait for the debounce period, then flush."""
+        try:
+            await asyncio.sleep(self._agent_debounce_seconds)
+            await self._flush_agent_transcript()
+        except asyncio.CancelledError:
+            pass  # Debounce was restarted or flushed early — expected
+
+    def _cancel_agent_debounce(self):
+        """Cancel any pending debounce timer."""
+        if self._agent_debounce_task and not self._agent_debounce_task.done():
+            self._agent_debounce_task.cancel()
+            self._agent_debounce_task = None
+
     async def _receive_loop(self):
         """
         Independent long-lived loop that receives events from xAI.
@@ -308,21 +349,21 @@ class VoiceSession:
                         await self._send_browser({"type": "audio", "data": delta})
 
                 # ── Agent transcript (what the user said) ─────────
+                # xAI often fires multiple transcription.completed events
+                # for a single utterance (progressive extensions as the
+                # user keeps talking, or exact duplicates).  We buffer
+                # them and only emit the final text after a short
+                # debounce timeout or when the AI starts responding.
                 elif event_type == "conversation.item.input_audio_transcription.completed":
                     text = data.get("transcript", "")
                     if text:
                         self._current_agent_text = text
-                        self._turn_count += 1
-                        logger.info("[%s] Agent said (turn %d): %.80s...", self.session_id, self._turn_count, text)
-                        await self._send_browser({
-                            "type": "transcript", "role": "agent",
-                            "text": text, "turn": self._turn_count,
-                        })
-                        if self.on_agent_transcript:
-                            try:
-                                await self.on_agent_transcript(text, self._turn_count)
-                            except Exception as e:
-                                logger.error("[%s] on_agent_transcript error: %s", self.session_id, e, exc_info=True)
+                        self._pending_agent_text = text
+                        # Restart debounce timer
+                        self._cancel_agent_debounce()
+                        self._agent_debounce_task = asyncio.create_task(
+                            self._debounced_agent_flush()
+                        )
 
                 # ── Client transcript delta (streaming) ──────────
                 elif event_type in ("response.output_audio_transcript.delta", "response.audio_transcript.delta"):
@@ -400,6 +441,11 @@ class VoiceSession:
                     logger.debug("[%s] Session config updated by xAI", self.session_id)
 
                 elif event_type == "response.created":
+                    # AI is about to speak — flush any pending agent
+                    # transcript immediately so it's logged before the
+                    # coach's response.
+                    self._cancel_agent_debounce()
+                    await self._flush_agent_transcript()
                     logger.debug("[%s] AI generating response...", self.session_id)
                     await self._send_browser({"type": "status", "status": "responding"})
 
@@ -470,6 +516,10 @@ class VoiceSession:
         """Close the xAI WebSocket connection and stop background tasks."""
         self.connected = False
         self._send_to_browser = None  # Detach browser
+
+        # Flush any pending agent transcript before shutdown
+        self._cancel_agent_debounce()
+        await self._flush_agent_transcript()
 
         if self._keepalive_task and not self._keepalive_task.done():
             self._keepalive_task.cancel()
