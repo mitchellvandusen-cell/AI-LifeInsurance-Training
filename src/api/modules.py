@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from src.api.middleware import get_current_user, get_ws_user
 from src.core import database as db
 from src.engine.homework_engine import HomeworkEngine
+from src.engine.module_report_generator import generate_module_report_card
 from src.engine.persona_generator import PersonaGenerator, analyze_script_for_persona
 from src.knowledge.sales_mastery import TRAINING_MODULES
 from src.knowledge.mastery_curriculum import CURRICULUM, PHASES, TOTAL_DAYS, TOTAL_ACTIVITIES
@@ -306,11 +307,17 @@ async def module_websocket(websocket: WebSocket, session_id: str):
             print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
             session.setdefault("student_turns", 0)
             session["student_turns"] += 1
+            # Track conversation for report card generation
+            session.setdefault("conversation_log", [])
+            session["conversation_log"].append({"role": "agent", "content": text, "turn": turn})
 
         async def on_client_transcript(text: str, turn: int):
             print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
             session.setdefault("coach_turns", 0)
             session["coach_turns"] += 1
+            # Track conversation for report card generation
+            session.setdefault("conversation_log", [])
+            session["conversation_log"].append({"role": "client", "content": text, "turn": turn})
             if not session.get("coach_concluded") and "that is a wrap for today" in text.lower():
                 session["coach_concluded"] = True
                 print(f"[MODULE][{session_id}] Coach concluded session naturally")
@@ -519,6 +526,55 @@ async def end_module_session(session_id: str, request: Request):
                 "mastery_level": existing["mastery_level"] if existing else 0,
             }
 
+    # ── Generate AI report card from conversation transcript ──
+    report_card = None
+    report_id = None
+    conversation_log = session.get("conversation_log", [])
+    module_info = AVAILABLE_MODULES.get(module_key, {})
+    module_name = module_info.get("name", module_key.replace("_", " ").title())
+
+    if conversation_log and len(conversation_log) >= 2:
+        try:
+            report_card = await generate_module_report_card(
+                module_key=module_key,
+                module_name=module_name,
+                conversation_log=conversation_log,
+                duration_seconds=duration_seconds,
+                student_turns=session.get("student_turns", 0),
+                coach_turns=session.get("coach_turns", 0),
+                session_qualified=session_qualified,
+            )
+            if report_card:
+                # Save to report_cards table (same table as full sim report cards)
+                report_id = await db.save_report_card(session_id, user["user_id"], report_card)
+                logger.info(
+                    "[MODULE] Report card saved: %s | report_id=%s | score=%s",
+                    session_id, report_id, report_card.get("overall_score"),
+                )
+        except Exception as e:
+            logger.error("[MODULE] Report card generation failed: %s", e, exc_info=True)
+
+    # ── Auto-generate homework if enough sessions ──
+    homework_data = None
+    try:
+        report_cards = await db.get_user_report_cards(user["user_id"], limit=50)
+        if len(report_cards) >= 5:
+            engine = HomeworkEngine(min_sessions=5)
+            result = engine.analyze(report_cards)
+            if result:
+                homework_data = {
+                    "sessions_analyzed": result.sessions_analyzed,
+                    "overall_assessment": result.overall_assessment,
+                    "strengths": result.strengths,
+                    "weaknesses": result.weaknesses,
+                    "assignments": [asdict(a) for a in result.assignments],
+                    "focus_order": result.recommended_focus_order,
+                }
+                await db.save_homework_report(user["user_id"], homework_data)
+                logger.info("[MODULE] Homework auto-generated for user %s", user["user_id"])
+    except Exception as e:
+        logger.error("[MODULE] Homework generation failed: %s", e, exc_info=True)
+
     _active_module_sessions.pop(session_id, None)
 
     response = {
@@ -529,6 +585,11 @@ async def end_module_session(session_id: str, request: Request):
         "mastery": mastery_data,
         "session_qualified": session_qualified,
     }
+    if report_card:
+        response["report_card"] = report_card
+        response["report_id"] = report_id
+    if homework_data:
+        response["homework"] = homework_data
     if not session_qualified:
         response["message"] = (
             "Session ended before your coach completed the lesson. "
