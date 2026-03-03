@@ -20,9 +20,19 @@ import json
 import logging
 import os
 
+import re
+
 import openai
 
 logger = logging.getLogger(__name__)
+
+# Regex to clean stutter artifacts: 3+ consecutive repeated words
+_STUTTER_RE = re.compile(r'\b(\w+)(?:\s*,?\s+\1){2,}\b', re.IGNORECASE)
+
+
+def _clean_transcript_text(text: str) -> str:
+    """Remove stutter artifacts from transcript text before grading."""
+    return _STUTTER_RE.sub(lambda m: m.group(1), text).strip()
 
 
 _MODULE_REPORT_PROMPT = """You are an elite sales training analyst reviewing a completed training module session.
@@ -32,6 +42,22 @@ You have access to the full conversation transcript between the AI coach and the
 
 Analyze this training session and produce a structured report card. Be specific about
 what happened in THIS session — reference actual quotes, moments, and observations.
+
+## CRITICAL: TRANSCRIPT QUALITY NOTICE
+
+This transcript was captured via real-time voice-to-text during a live coaching session.
+The audio pipeline may introduce artifacts that do NOT reflect the student's actual speech:
+
+- **Repeated words** (e.g., "my my my name") are often caused by audio echo or
+  transcription overlap, NOT the student actually stuttering. Do NOT penalize the student
+  for repeated words unless the coach explicitly addressed stuttering as a coaching point.
+- **Truncated sentences** ending in "..." may be partial transcriptions, not the student
+  trailing off.
+- **Slight word variations** between similar entries may be the same utterance transcribed
+  at different points.
+
+**Your job is to evaluate the student's SALES SKILLS — their pitch, objection handling,
+rapport building, and technique. Ignore transcription quality artifacts entirely.**
 
 ## SESSION INFO
 
@@ -123,12 +149,21 @@ async def generate_module_report_card(
         logger.warning("No conversation log — skipping module report card generation")
         return None
 
-    # Build transcript string
+    # Build transcript string — clean stutter artifacts and deduplicate
     transcript_lines = []
+    prev_line = ""
     for msg in conversation_log:
         role = "STUDENT" if msg.get("role") == "agent" else "COACH"
         content = msg.get("content", "")[:800]  # Trim very long messages
-        transcript_lines.append(f"{role}: {content}")
+        # Clean any remaining stutter artifacts
+        if role == "STUDENT":
+            content = _clean_transcript_text(content)
+        line = f"{role}: {content}"
+        # Skip duplicate consecutive lines
+        if line == prev_line:
+            continue
+        transcript_lines.append(line)
+        prev_line = line
     transcript = "\n".join(transcript_lines[-50:])  # Last 50 turns max
 
     total_turns = student_turns + coach_turns

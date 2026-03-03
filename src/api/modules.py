@@ -23,7 +23,7 @@ from src.engine.persona_generator import PersonaGenerator, analyze_script_for_pe
 from src.knowledge.sales_mastery import TRAINING_MODULES
 from src.knowledge.mastery_curriculum import CURRICULUM, PHASES, TOTAL_DAYS, TOTAL_ACTIVITIES
 from src.prompts.module_prompts import build_module_prompt
-from src.services.voice import VoiceSession
+from src.services.voice import VoiceSession, clean_stutter_artifacts
 
 logger = logging.getLogger(__name__)
 
@@ -321,18 +321,20 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         system_prompt = build_module_prompt(module_key, session.get("session_state", {}))
 
         async def on_agent_transcript(text: str, turn: int):
-            print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
+            logger.info("[MODULE][%s] Student said (turn %d): %.80s...", session_id, turn, text)
             session.setdefault("student_turns", 0)
             session.setdefault("conversation_log", [])
             log = session["conversation_log"]
 
-            # Dedup: if the last entry is also an agent (student) turn and
-            # the new text is an extension of it (or identical), REPLACE
-            # rather than append — prevents double-counting from late
-            # transcription events.
+            # Belt-and-suspenders dedup (primary dedup is in voice.py
+            # TranscriptPipeline, but guard against edge cases here too).
+            # If the last entry is also an agent turn and this text is an
+            # extension/duplicate, REPLACE rather than append.
             if log and log[-1]["role"] == "agent":
                 prev = log[-1]["content"]
-                if text.startswith(prev) or prev.startswith(text) or text == prev:
+                prev_n = " ".join(prev.lower().split())
+                text_n = " ".join(text.lower().split())
+                if text_n == prev_n or text_n.startswith(prev_n) or prev_n.startswith(text_n):
                     log[-1] = {"role": "agent", "content": text, "turn": turn}
                     return
 
@@ -340,10 +342,9 @@ async def module_websocket(websocket: WebSocket, session_id: str):
             log.append({"role": "agent", "content": text, "turn": turn})
 
         async def on_client_transcript(text: str, turn: int):
-            print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
+            logger.info("[MODULE][%s] Coach said (turn %d): %.80s...", session_id, turn, text)
             session.setdefault("coach_turns", 0)
             session["coach_turns"] += 1
-            # Track conversation for report card generation
             session.setdefault("conversation_log", [])
             session["conversation_log"].append({"role": "client", "content": text, "turn": turn})
             if not session.get("coach_concluded") and "that is a wrap for today" in text.lower():
@@ -445,6 +446,51 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         if voice_session._send_to_browser is send_to_this_browser:
             voice_session.set_browser_callback(None)
         logger.info("[MODULE][%s] Browser bridge ended (xAI session stays alive)", session_id)
+
+
+# ── Transcript Cleaning ──────────────────────────────────────────
+
+def _clean_conversation_log(raw_log: list[dict]) -> list[dict]:
+    """Clean a conversation log before grading.
+
+    Applies three passes:
+      1. Remove exact-duplicate consecutive entries (same role + same text)
+      2. Collapse consecutive agent entries that are prefix extensions
+         into a single entry with the longest text
+      3. Clean stutter artifacts from remaining agent text
+    """
+    if not raw_log:
+        return []
+
+    # Pass 1 + 2: Dedup and collapse consecutive same-role entries
+    collapsed: list[dict] = []
+    for entry in raw_log:
+        role = entry.get("role", "")
+        content = entry.get("content", "").strip()
+        if not content:
+            continue
+
+        if collapsed and collapsed[-1]["role"] == role:
+            prev = collapsed[-1]["content"]
+            prev_n = " ".join(prev.lower().split())
+            curr_n = " ".join(content.lower().split())
+            # Exact duplicate → skip
+            if curr_n == prev_n:
+                continue
+            # Extension → keep the longer one
+            if curr_n.startswith(prev_n) or prev_n.startswith(curr_n):
+                if len(curr_n) >= len(prev_n):
+                    collapsed[-1] = {**entry, "content": content}
+                continue
+
+        collapsed.append({**entry, "content": content})
+
+    # Pass 3: Clean stutter artifacts from student (agent) text
+    for entry in collapsed:
+        if entry["role"] == "agent":
+            entry["content"] = clean_stutter_artifacts(entry["content"])
+
+    return collapsed
 
 
 # ── End Module Session ───────────────────────────────────────────
@@ -554,9 +600,15 @@ async def end_module_session(session_id: str, request: Request):
                 "mastery_level": existing["mastery_level"] if existing else 0,
             }
 
+    # ── Clean transcript before grading ─────────────────────
+    # Remove any remaining stutter artifacts and duplicate entries
+    # so the grading LLM evaluates what the student actually said,
+    # not audio pipeline noise.
+    raw_log = session.get("conversation_log", [])
+    conversation_log = _clean_conversation_log(raw_log)
+
     # ── Generate AI report card from conversation transcript ──
     report_card = None
-    conversation_log = session.get("conversation_log", [])
     module_info = AVAILABLE_MODULES.get(module_key, {})
     module_name = module_info.get("name", module_key.replace("_", " ").title())
 
