@@ -1797,6 +1797,11 @@
                         voiceState = 'idle';
                         circle.className = 'voice-circle processing';
                         status.textContent = 'Reconnecting to voice service...';
+                    } else if (data.status === 'reconnected') {
+                        voiceState = 'idle';
+                        circle.className = 'voice-circle';
+                        wsReconnectAttempts = 0;
+                        status.textContent = 'Reconnected — continuing session (turn ' + (data.turn || '?') + ')';
                     } else if (data.status === 'connected' || data.status === 'ready') {
                         voiceState = 'idle';
                         circle.className = 'voice-circle';
