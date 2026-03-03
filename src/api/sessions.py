@@ -307,22 +307,20 @@ async def training_websocket(websocket: WebSocket, session_id: str):
             import traceback
             traceback.print_exc()
 
-    # Bridge: xAI → browser (audio + events forwarding)
-    async def xai_to_browser():
-        async def send_to_browser(msg: dict):
-            try:
-                await websocket.send_json(msg)
-            except Exception:
-                pass
-        await voice_session.receive_events(send_to_browser)
+    # Set up browser callback for the voice session (decoupled architecture)
+    async def send_to_this_browser(msg: dict):
+        try:
+            await websocket.send_json(msg)
+        except Exception:
+            pass
 
-    # Run both bridges concurrently — FIRST_COMPLETED is correct here:
-    # when either side disconnects, we tear down the other side
+    voice_session.set_browser_callback(send_to_this_browser)
+
+    # Keepalive pings to browser to prevent proxy/LB idle timeout
     async def keepalive_ping():
-        """Send periodic heartbeat pings to prevent proxy/LB idle timeouts."""
         try:
             while True:
-                await asyncio.sleep(15)
+                await asyncio.sleep(10)
                 try:
                     await websocket.send_json({"type": "ping"})
                 except Exception:
@@ -330,33 +328,19 @@ async def training_websocket(websocket: WebSocket, session_id: str):
         except asyncio.CancelledError:
             pass
 
+    # The receive loop runs as an independent background task inside VoiceSession.
+    # We just need to run browser_to_xai here — when browser disconnects,
+    # the xAI session can still be cleaned up properly.
+    ping_task = asyncio.create_task(keepalive_ping(), name="keepalive_ping")
     try:
-        browser_task = asyncio.create_task(browser_to_xai(), name="browser_to_xai")
-        xai_task = asyncio.create_task(xai_to_browser(), name="xai_to_browser")
-        ping_task = asyncio.create_task(keepalive_ping(), name="keepalive_ping")
-
-        done, pending = await asyncio.wait(
-            [browser_task, xai_task],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-
-        # Log which task finished first
-        for task in done:
-            exc = task.exception() if not task.cancelled() else None
-            if exc:
-                print(f"[WS][{session_id}] Task {task.get_name()} failed: {exc}")
-            else:
-                print(f"[WS][{session_id}] Task {task.get_name()} completed")
-
-        for task in pending:
-            print(f"[WS][{session_id}] Cancelling {task.get_name()}")
-            task.cancel()
-        ping_task.cancel()
-
+        await browser_to_xai()
     except Exception as e:
         print(f"[WS][{session_id}] Bridge error: {e}")
     finally:
-        await voice_session.disconnect()
+        ping_task.cancel()
+        if voice_session._send_to_browser is send_to_this_browser:
+            voice_session.set_browser_callback(None)
+        print(f"[WS][{session_id}] Browser bridge ended")
         print(f"[WS][{session_id}] Session cleanup complete")
 
 

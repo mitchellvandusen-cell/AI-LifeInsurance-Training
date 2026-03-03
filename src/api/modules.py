@@ -255,7 +255,13 @@ async def start_module_session(req: StartModuleRequest, request: Request):
 
 @router.websocket("/ws/{session_id}")
 async def module_websocket(websocket: WebSocket, session_id: str):
-    """WebSocket endpoint for module voice training."""
+    """WebSocket endpoint for module voice training.
+
+    Architecture: The xAI voice session runs independently as a background task.
+    This handler only bridges browser audio ↔ xAI and swaps the browser callback.
+    If the browser disconnects and reconnects, the xAI session keeps running —
+    we just re-bridge without losing conversation context.
+    """
     await websocket.accept()
 
     ws_user = await get_ws_user(websocket)
@@ -273,60 +279,47 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         await websocket.close()
         return
 
-    # ── Voice session reuse / creation ─────────────────────────
-    # If the browser reconnects (e.g. after a network blip), reuse
-    # the existing xAI voice session so we don't lose conversation
-    # history. Only create a new voice session if none exists.
+    # ── Voice session: reuse or create ──────────────────────
     existing_voice = session.get("voice_session")
     is_reconnect = False
 
     if existing_voice and existing_voice.connected:
-        # Reuse the still-connected xAI session — preserve conversation context
-        logger.info("[MODULE][%s] Browser reconnected — reusing existing xAI voice session (turn %d)", session_id, existing_voice._turn_count)
+        # Reuse the still-connected xAI session
+        logger.info("[MODULE][%s] Browser reconnected — reusing xAI session (turn %d)", session_id, existing_voice._turn_count)
         voice_session = existing_voice
         is_reconnect = True
-        # Cancel any previous bridge tasks so we can re-bridge
-        for task in session.get("_bridge_tasks", []):
-            if not task.done():
-                task.cancel()
-        session["_bridge_tasks"] = []
+    elif existing_voice and existing_voice._receive_task and not existing_voice._receive_task.done():
+        # xAI receive loop is still running (reconnecting maybe)
+        logger.info("[MODULE][%s] Browser reconnected — xAI receive loop still active", session_id)
+        voice_session = existing_voice
+        is_reconnect = True
     else:
-        # Previous session disconnected or doesn't exist — create new one
+        # No existing session or it's dead — create new one
         if existing_voice:
-            logger.warning("[MODULE][%s] Previous voice session was disconnected — creating new one", session_id)
+            logger.warning("[MODULE][%s] Previous voice session dead — creating new one", session_id)
             await existing_voice.disconnect()
 
-        # Build module-specific system prompt
         module_key = session["module_key"]
         system_prompt = build_module_prompt(module_key, session.get("session_state", {}))
 
-        # Callbacks for transcript processing
-        # NOTE: voice.py receive_events() already sends transcript/transcript_delta
-        # to the browser via send_to_browser. These callbacks are for server-side
-        # processing only — do NOT send duplicate transcripts to the browser here.
         async def on_agent_transcript(text: str, turn: int):
-            """When the student speaks — log for server-side processing."""
             print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
             session.setdefault("student_turns", 0)
             session["student_turns"] += 1
 
         async def on_client_transcript(text: str, turn: int):
-            """When the AI coach speaks — log and detect session closing."""
             print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
             session.setdefault("coach_turns", 0)
             session["coach_turns"] += 1
-
-            # Detect the coach's closing phrase signaling session is complete
             if not session.get("coach_concluded") and "that is a wrap for today" in text.lower():
                 session["coach_concluded"] = True
                 print(f"[MODULE][{session_id}] Coach concluded session naturally")
-                try:
-                    await websocket.send_json({
+                voice_session = session.get("voice_session")
+                if voice_session:
+                    await voice_session._send_browser({
                         "type": "session_complete",
                         "message": "Your coach has wrapped up the session.",
                     })
-                except Exception:
-                    pass
 
         voice_session = VoiceSession(
             session_id=session_id,
@@ -337,7 +330,7 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         )
         session["voice_session"] = voice_session
 
-    # Connect to xAI if not already connected
+    # ── Connect to xAI if needed ────────────────────────────
     if not voice_session.connected:
         await websocket.send_json({"type": "status", "status": "connecting_voice"})
         connected = await voice_session.connect()
@@ -349,9 +342,29 @@ async def module_websocket(websocket: WebSocket, session_id: str):
             await websocket.close()
             return
 
+    # ── Swap browser callback to this WebSocket ─────────────
+    async def send_to_this_browser(msg: dict):
+        try:
+            await websocket.send_json(msg)
+        except Exception:
+            pass
+
+    voice_session.set_browser_callback(send_to_this_browser)
     await websocket.send_json({"type": "status", "status": "ready"})
 
-    # Bridge: browser ↔ xAI
+    if is_reconnect:
+        await websocket.send_json({
+            "type": "status",
+            "status": "reconnected",
+            "turn": voice_session._turn_count,
+        })
+
+    # ── Trigger greeting on first connection only ───────────
+    if not is_reconnect:
+        await asyncio.sleep(0.05)  # Let receive loop attach
+        await voice_session.trigger_greeting()
+
+    # ── Bridge: browser → xAI (audio + commands) ────────────
     async def browser_to_xai():
         try:
             while True:
@@ -367,23 +380,15 @@ async def module_websocket(websocket: WebSocket, session_id: str):
                 elif data.get("type") == "end":
                     break
         except WebSocketDisconnect:
-            logger.info("[MODULE][%s] Browser WebSocket disconnected", session_id)
+            logger.info("[MODULE][%s] Browser disconnected", session_id)
         except Exception as e:
-            logger.error(f"[MODULE][{session_id}] Browser→xAI error: {e}")
-
-    async def xai_to_browser():
-        async def send_to_browser(msg: dict):
-            try:
-                await websocket.send_json(msg)
-            except Exception:
-                pass
-        await voice_session.receive_events(send_to_browser)
+            logger.error("[MODULE][%s] Browser→xAI error: %s", session_id, e)
 
     async def keepalive_ping():
-        """Send periodic heartbeat pings to prevent proxy/LB idle timeouts."""
+        """Send periodic pings to browser to prevent proxy idle timeout."""
         try:
             while True:
-                await asyncio.sleep(10)  # More frequent pings (every 10s)
+                await asyncio.sleep(10)
                 try:
                     await websocket.send_json({"type": "ping"})
                 except Exception:
@@ -391,53 +396,20 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         except asyncio.CancelledError:
             pass
 
+    # Run browser bridge — when it ends, we just detach browser callback.
+    # The xAI session continues running independently.
+    ping_task = asyncio.create_task(keepalive_ping())
     try:
-        browser_task = asyncio.create_task(browser_to_xai())
-        xai_task = asyncio.create_task(xai_to_browser())
-        ping_task = asyncio.create_task(keepalive_ping())
-        session["_bridge_tasks"] = [browser_task, xai_task, ping_task]
-
-        await asyncio.sleep(0.05)
-
-        # Only trigger greeting on first connection, NOT on browser reconnects
-        if not is_reconnect:
-            await voice_session.trigger_greeting()
-
-        done, pending = await asyncio.wait(
-            [browser_task, xai_task],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-
-        # Check which task finished — if browser disconnected but xAI is
-        # still alive, keep the voice session alive for browser reconnect.
-        browser_done = browser_task in done
-        xai_done = xai_task in done
-
-        if browser_done and not xai_done:
-            # Browser disconnected — keep xAI session alive for potential reconnect
-            logger.info("[MODULE][%s] Browser disconnected, keeping xAI session alive for reconnect", session_id)
-            # Don't cancel xai_task or disconnect voice — let browser reconnect
-            ping_task.cancel()
-            # Wait a bit for browser to reconnect before giving up
-            try:
-                await asyncio.wait_for(xai_task, timeout=120)  # Keep xAI alive for up to 2 min
-            except asyncio.TimeoutError:
-                logger.info("[MODULE][%s] No browser reconnect after 120s, closing xAI session", session_id)
-                xai_task.cancel()
-            except asyncio.CancelledError:
-                pass  # Normal — task was cancelled by a reconnecting browser
-        else:
-            # xAI disconnected — clean up
-            for task in pending:
-                task.cancel()
-            ping_task.cancel()
+        await browser_to_xai()
     except Exception as e:
-        logger.error(f"[MODULE][{session_id}] Bridge error: {e}")
+        logger.error("[MODULE][%s] Bridge error: %s", session_id, e)
     finally:
-        # Only disconnect voice if the session is ending (not on browser reconnect)
-        if not session.get("voice_session") or not session["voice_session"].connected:
-            if session.get("voice_session"):
-                await session["voice_session"].disconnect()
+        ping_task.cancel()
+        # Detach this browser — the voice session keeps running
+        # Only clear if it's still pointing to our callback
+        if voice_session._send_to_browser is send_to_this_browser:
+            voice_session.set_browser_callback(None)
+        logger.info("[MODULE][%s] Browser bridge ended (xAI session stays alive)", session_id)
 
 
 # ── End Module Session ───────────────────────────────────────────
