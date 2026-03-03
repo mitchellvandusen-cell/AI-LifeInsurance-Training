@@ -323,10 +323,21 @@ async def module_websocket(websocket: WebSocket, session_id: str):
         async def on_agent_transcript(text: str, turn: int):
             print(f"[MODULE][{session_id}] Student said (turn {turn}): {text[:80]}...")
             session.setdefault("student_turns", 0)
-            session["student_turns"] += 1
-            # Track conversation for report card generation
             session.setdefault("conversation_log", [])
-            session["conversation_log"].append({"role": "agent", "content": text, "turn": turn})
+            log = session["conversation_log"]
+
+            # Dedup: if the last entry is also an agent (student) turn and
+            # the new text is an extension of it (or identical), REPLACE
+            # rather than append — prevents double-counting from late
+            # transcription events.
+            if log and log[-1]["role"] == "agent":
+                prev = log[-1]["content"]
+                if text.startswith(prev) or prev.startswith(text) or text == prev:
+                    log[-1] = {"role": "agent", "content": text, "turn": turn}
+                    return
+
+            session["student_turns"] += 1
+            log.append({"role": "agent", "content": text, "turn": turn})
 
         async def on_client_transcript(text: str, turn: int):
             print(f"[MODULE][{session_id}] Coach said (turn {turn}): {text[:80]}...")
