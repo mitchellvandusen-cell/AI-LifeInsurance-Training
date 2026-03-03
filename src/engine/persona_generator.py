@@ -192,12 +192,30 @@ MALE_NAMES = [
     "Gary", "Raymond", "Gerald", "Carl", "Roger", "Wayne", "Keith", "Larry",
 ]
 
+# Senior-appropriate male names (born 1945-1970)
+SENIOR_MALE_NAMES = [
+    "Robert", "William", "Richard", "James", "Donald", "Thomas", "Charles",
+    "Ronald", "George", "Kenneth", "Raymond", "Harold", "Arthur", "Gerald",
+    "Eugene", "Carl", "Frank", "Roy", "Earl", "Walter", "Clarence",
+    "Larry", "Wayne", "Ralph", "Henry", "Howard", "Ernest", "Albert",
+    "Bobby", "Dale", "Vernon", "Leon",
+]
+
 FEMALE_NAMES = [
     "Mary", "Patricia", "Jennifer", "Linda", "Barbara", "Elizabeth", "Susan",
     "Jessica", "Sarah", "Karen", "Lisa", "Nancy", "Betty", "Margaret",
     "Sandra", "Ashley", "Dorothy", "Kimberly", "Emily", "Donna", "Michelle",
     "Carol", "Amanda", "Deborah", "Stephanie", "Rebecca", "Sharon", "Laura",
     "Cynthia", "Kathleen", "Amy", "Angela", "Shirley", "Brenda", "Teresa",
+]
+
+# Senior-appropriate female names (born 1945-1970)
+SENIOR_FEMALE_NAMES = [
+    "Mary", "Patricia", "Linda", "Barbara", "Betty", "Margaret", "Dorothy",
+    "Nancy", "Sandra", "Carol", "Sharon", "Shirley", "Donna", "Brenda",
+    "Ruth", "Norma", "Carolyn", "Wanda", "Gloria", "Edna", "Virginia",
+    "Beverly", "Judy", "Joyce", "Evelyn", "Helen", "Lucille", "Mildred",
+    "Phyllis", "Lorraine", "Gladys", "Jean",
 ]
 
 LAST_NAMES = [
@@ -223,7 +241,17 @@ SCRIPT_PRODUCT_SIGNALS = [
                       "burial costs", "leave behind", "not be a burden",
                       "fixed income", "ages 50", "ages 60", "whole life",
                       "guaranteed issue", "simplified issue", "no medical exam",
-                      "graded benefit", "senior", "cover funeral"],
+                      "graded benefit", "senior", "cover funeral",
+                      "burial insurance", "burial plan", "funeral plan",
+                      "end of life expenses", "put away", "taken care of",
+                      "pass away", "when i go", "when you go",
+                      "rest in peace", "loved ones behind",
+                      "50 to 85", "50 and 85", "between 50", "over 50",
+                      "social security", "retirement", "pension",
+                      "grandchildren", "grandkids", "golden years",
+                      "peace of mind", "family a burden",
+                      "casket", "memorial", "cemetery",
+                      "aarp", "globe life", "colonial penn"],
         "archetypes": ["The Retired Grandparent", "The Recently Widowed"],
         "fallback_archetype": "The Retired Grandparent",
     },
@@ -375,27 +403,42 @@ class PersonaGenerator:
 
         # Generate demographics
         gender = random.choice(["male", "female"])
-        if gender == "male":
-            first_name = random.choice(MALE_NAMES)
+        age = random.randint(*archetype["age_range"])
+
+        # Use age-appropriate names — seniors get traditional names, not millennial names
+        if age >= 55:
+            if gender == "male":
+                first_name = random.choice(SENIOR_MALE_NAMES)
+            else:
+                first_name = random.choice(SENIOR_FEMALE_NAMES)
         else:
-            first_name = random.choice(FEMALE_NAMES)
+            if gender == "male":
+                first_name = random.choice(MALE_NAMES)
+            else:
+                first_name = random.choice(FEMALE_NAMES)
         last_name = random.choice(LAST_NAMES)
 
-        age = random.randint(*archetype["age_range"])
         occupation = random.choice(archetype["occupations"])
         income = random.randint(*archetype["income_range"])
 
-        # Marital status weighted by archetype
+        # Marital status weighted by archetype and age
         if archetype["name"] == "The Recently Widowed":
             marital_status = "Widowed"
         elif archetype["name"] == "The Reluctant Spouse":
             marital_status = "Married"
+        elif archetype["name"] == "The Retired Grandparent":
+            # Seniors: Widowed or Married most common, no Single
+            weights = [0, 45, 20, 35]  # Single, Married, Divorced, Widowed
+            marital_status = random.choices(MARITAL_STATUSES, weights=weights, k=1)[0]
         else:
             weights = [15, 50, 25, 10]  # Single, Married, Divorced, Widowed
             marital_status = random.choices(MARITAL_STATUSES, weights=weights, k=1)[0]
 
-        # Dependents
-        if marital_status == "Single" and age < 30:
+        # Dependents — age-appropriate
+        if age >= 60:
+            # Seniors: grown children, 0 dependents at home (they have adult kids/grandkids)
+            dependents = random.choices([0, 1], weights=[75, 25], k=1)[0]
+        elif marital_status == "Single" and age < 30:
             dependents = random.choices([0, 1], weights=[80, 20], k=1)[0]
         elif marital_status == "Married":
             dependents = random.choices([0, 1, 2, 3, 4], weights=[10, 25, 35, 20, 10], k=1)[0]
@@ -410,15 +453,25 @@ class PersonaGenerator:
         # Tobacco
         tobacco = random.random() < 0.15  # 15% tobacco use
 
-        # Existing coverage
+        # Existing coverage — age-appropriate options
         existing = None
         if random.random() < 0.3:
-            existing = random.choice([
-                "Small group policy through work ($25k)",
-                "Old whole life policy from 20 years ago ($10k)",
-                "Term policy expiring next year ($100k)",
-                "No coverage at all",
-            ])
+            if age >= 55:
+                existing = random.choice([
+                    "Small group policy from old job ($5k-$10k)",
+                    "Old whole life policy from 20+ years ago ($5k)",
+                    "AARP or Globe Life policy that keeps going up in price",
+                    "Term policy that expired a few years back",
+                    "Nothing — never got around to it",
+                    "Spouse had a policy but they passed and it paid out already",
+                ])
+            else:
+                existing = random.choice([
+                    "Small group policy through work ($25k)",
+                    "Old whole life policy from 20 years ago ($10k)",
+                    "Term policy expiring next year ($100k)",
+                    "No coverage at all",
+                ])
 
         # Reason for inquiry
         pain = random.choice(archetype["pain_points"])
@@ -479,13 +532,22 @@ class PersonaGenerator:
         )
 
     def generate_for_script(self, script_content: str, mastery_level: int = 0,
-                            practice_count: int = 0) -> ClientPersona:
+                            practice_count: int = 0,
+                            script_type_override: str = "",
+                            precomputed_analysis: dict | None = None) -> ClientPersona:
         """
         Generate a persona that matches the script's product type and target market.
         Uses mastery_level to rotate through progressively harder archetypes.
+
+        If precomputed_analysis is provided (from a prior analyze_script_for_persona call),
+        it skips re-analysis. Otherwise, analyzes the script content directly.
         """
-        analysis = analyze_script_for_persona(script_content)
+        if precomputed_analysis:
+            analysis = precomputed_analysis
+        else:
+            analysis = analyze_script_for_persona(script_content, script_type_override)
         pool = analysis["archetype_pool"]
+        product_type = analysis.get("product_type", "general_life")
 
         # At lower mastery (0-2), use the easiest/most natural archetype for the product
         # At higher mastery (3-5), rotate to harder archetypes from the pool
@@ -497,6 +559,36 @@ class PersonaGenerator:
             archetype_name = pool[idx]
 
         persona = self.generate(archetype_name=archetype_name)
+
+        # ── Product-specific demographic overrides ────────────────
+        # Final expense = seniors. Force age-appropriate attributes.
+        if product_type == "final_expense":
+            if persona.age < 50:
+                persona.age = random.randint(55, 78)
+            # Seniors typically have grown children, not young dependents
+            if persona.dependents > 2:
+                persona.dependents = random.choices([0, 1, 2], weights=[40, 40, 20], k=1)[0]
+            # Use senior-appropriate pain points
+            persona.pain_points = ["funeral costs", "not being a burden on family",
+                                   "leaving something for grandkids", "covering end-of-life expenses"]
+            # Adjust reason for inquiry to match final expense context
+            fe_reasons = [
+                "Worried about funeral costs being a burden on family",
+                "A friend passed recently and the family struggled to pay for the funeral",
+                "Wants to make sure everything is taken care of when the time comes",
+                "Saw a commercial about final expense and it got them thinking",
+                "Children mentioned they should look into burial insurance",
+                "Spouse passed recently and saw how expensive it was firsthand",
+            ]
+            persona.reason_for_inquiry = random.choice(fe_reasons)
+            # Adjust existing coverage for seniors
+            if persona.existing_coverage is None and random.random() < 0.4:
+                persona.existing_coverage = random.choice([
+                    "Small group policy from old job ($5k-$10k)",
+                    "Old whole life policy from years ago ($5k)",
+                    "AARP policy that costs too much ($15k)",
+                    "Nothing — never got around to it",
+                ])
 
         # Override persona attributes based on mastery level for difficulty scaling
         if mastery_level <= 1:
@@ -540,13 +632,26 @@ class PersonaGenerator:
         return conditions
 
     def _build_reason(self, pain: str, age: int, marital: str, deps: int) -> str:
-        templates = [
-            f"Concerned about {pain}",
-            f"Wants coverage because of {pain}",
-            f"Spouse asked them to look into coverage for {pain}",
-            f"Saw an ad and realized they need to address {pain}",
-            f"A friend recently passed and it made them think about {pain}",
-        ]
+        if age >= 55:
+            # Senior-appropriate reasons
+            templates = [
+                f"Concerned about {pain}",
+                f"A friend recently passed and it was a wake-up call about {pain}",
+                f"Children mentioned they should look into coverage for {pain}",
+                f"Saw a commercial about burial insurance and started thinking about {pain}",
+                f"Pastor at church mentioned the importance of planning for {pain}",
+                f"Doctor's visit got them thinking about {pain}",
+            ]
+            if marital == "Widowed":
+                templates.append(f"After losing their spouse, realized firsthand the cost of {pain}")
+        else:
+            templates = [
+                f"Concerned about {pain}",
+                f"Wants coverage because of {pain}",
+                f"Spouse asked them to look into coverage for {pain}",
+                f"Saw an ad and realized they need to address {pain}",
+                f"A friend recently passed and it made them think about {pain}",
+            ]
         return random.choice(templates)
 
     def _build_personality_notes(self, archetype: dict, six_axis: SixAxisProfile, age: int) -> str:
