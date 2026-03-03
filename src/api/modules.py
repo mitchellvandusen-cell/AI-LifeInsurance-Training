@@ -545,7 +545,6 @@ async def end_module_session(session_id: str, request: Request):
 
     # ── Generate AI report card from conversation transcript ──
     report_card = None
-    report_id = None
     conversation_log = session.get("conversation_log", [])
     module_info = AVAILABLE_MODULES.get(module_key, {})
     module_name = module_info.get("name", module_key.replace("_", " ").title())
@@ -562,11 +561,12 @@ async def end_module_session(session_id: str, request: Request):
                 session_qualified=session_qualified,
             )
             if report_card:
-                # Save to report_cards table (same table as full sim report cards)
-                report_id = await db.save_report_card(session_id, user["user_id"], report_card)
+                # Save to module_sessions table (not report_cards — that has
+                # a FK to training_sessions which module sessions aren't in)
+                await db.save_module_report_card(session_id, report_card)
                 logger.info(
-                    "[MODULE] Report card saved: %s | report_id=%s | score=%s",
-                    session_id, report_id, report_card.get("overall_score"),
+                    "[MODULE] Report card saved on module_sessions: %s | score=%s",
+                    session_id, report_card.get("overall_score"),
                 )
         except Exception as e:
             logger.error("[MODULE] Report card generation failed: %s", e, exc_info=True)
@@ -604,7 +604,6 @@ async def end_module_session(session_id: str, request: Request):
     }
     if report_card:
         response["report_card"] = report_card
-        response["report_id"] = report_id
     if homework_data:
         response["homework"] = homework_data
     if not session_qualified:
