@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import random
 import time
 from dataclasses import asdict
 
@@ -166,6 +167,19 @@ async def start_module_session(req: StartModuleRequest, request: Request):
             script_type_override=script.get("script_type", ""),
             precomputed_analysis=script_analysis,
         )
+
+        # ── Auto-select voice to match persona gender ──
+        # In script practice, the AI plays the CLIENT (prospect).
+        # The voice must match the persona's gender for immersion.
+        # Available xAI voices: Ara (F), Eve (F), Rex (M), Leo (M), Sal (neutral)
+        if not req.voice:
+            if matched_persona.gender == "female":
+                voice = random.choice(["Ara", "Eve"])
+            elif matched_persona.gender == "male":
+                voice = random.choice(["Rex", "Leo"])
+            else:
+                voice = "Sal"
+
         # Serialize persona for prompt injection
         session_state["matched_persona"] = {
             "name": matched_persona.name,
@@ -191,7 +205,8 @@ async def start_module_session(req: StartModuleRequest, request: Request):
         print(f"[SCRIPT] Analyzed: product={script_analysis['product_type']}, "
               f"archetype={script_analysis['archetype_name']}, "
               f"lead={script_analysis['lead_type']}, "
-              f"persona={matched_persona.name} (age {matched_persona.age})")
+              f"persona={matched_persona.name} ({matched_persona.gender}, age {matched_persona.age}), "
+              f"voice={voice}")
 
         mastery_data = {
             "practice_count": practice_count,
