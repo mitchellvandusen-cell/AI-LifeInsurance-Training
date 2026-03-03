@@ -163,6 +163,8 @@ async def start_module_session(req: StartModuleRequest, request: Request):
             script["content"],
             mastery_level=mastery_level,
             practice_count=practice_count,
+            script_type_override=script.get("script_type", ""),
+            precomputed_analysis=script_analysis,
         )
         # Serialize persona for prompt injection
         session_state["matched_persona"] = {
