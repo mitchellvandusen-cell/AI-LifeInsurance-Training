@@ -1787,6 +1787,12 @@
             switch (data.type) {
                 case 'status':
                     if (data.status === 'recording') {
+                        // If coach was speaking, user is barging in —
+                        // immediately kill all queued/playing audio so
+                        // they don't hear double-speech overlap.
+                        if (voiceState === 'responding') {
+                            resetAudioQueue();
+                        }
                         voiceState = 'recording';
                         circle.className = 'voice-circle recording';
                         status.textContent = 'Listening...';
@@ -1950,7 +1956,9 @@
 
         // ── Audio Playback (server → speaker) with queue ─────
         // Chunks must play sequentially, not overlapping.
+        // Active sources are tracked so they can be stopped on barge-in.
         let nextPlayTime = 0;
+        let activeSources = [];  // Track playing AudioBufferSourceNodes
 
         function playAudio(base64Data) {
             const ctx = playbackContext || audioContext;
@@ -1985,6 +1993,13 @@
                 source.connect(ctx.destination);
             }
 
+            // Track this source so it can be stopped on barge-in
+            activeSources.push(source);
+            source.onended = () => {
+                const idx = activeSources.indexOf(source);
+                if (idx !== -1) activeSources.splice(idx, 1);
+            };
+
             // Schedule chunks back-to-back instead of overlapping
             const now = ctx.currentTime;
             if (nextPlayTime < now) nextPlayTime = now;
@@ -1993,6 +2008,11 @@
         }
 
         function resetAudioQueue() {
+            // Stop all currently playing and scheduled audio sources
+            for (const src of activeSources) {
+                try { src.stop(); } catch (e) { /* already stopped */ }
+            }
+            activeSources = [];
             nextPlayTime = 0;
         }
 

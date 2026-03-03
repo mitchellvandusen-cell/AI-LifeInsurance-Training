@@ -604,17 +604,25 @@ class VoiceSession:
 
                 # ── Response complete ────────────────────────────
                 elif event_type == "response.done":
-                    # Check if the response was truncated (speech cutoff)
                     response_data = data.get("response", {})
                     status_details = response_data.get("status_details", {})
                     response_status = response_data.get("status", "completed")
-                    if response_status == "incomplete":
+
+                    if response_status == "cancelled":
+                        # Response was cancelled (barge-in or explicit cancel)
+                        logger.info("[%s] Response cancelled (barge-in)", self.session_id)
+                        self._current_client_text = ""
+                        self._response_start_time = 0.0
+                        # Don't send 'listening' — the user is speaking,
+                        # 'recording' status was already sent.
+                    elif response_status == "incomplete":
                         reason = status_details.get("reason", "unknown")
                         logger.warning(
                             "[%s] Response TRUNCATED (reason=%s) — AI speech was cut off",
                             self.session_id, reason,
                         )
-                        # Auto-continue: ask the AI to keep going from where it stopped
+                        # Auto-continue only for token-limit truncation,
+                        # NOT for turn_detected (user barge-in)
                         if reason in ("max_output_tokens", "length"):
                             logger.info("[%s] Auto-continuing truncated response...", self.session_id)
                             try:
@@ -631,8 +639,19 @@ class VoiceSession:
                     await self._send_browser({"type": "status", "status": "listening"})
 
                 # ── Speech detected (user starts talking) ────────
+                # If the AI is currently responding, this is a barge-in.
+                # Cancel the in-flight response so the AI stops generating
+                # audio and the user doesn't hear overlapping speech.
                 elif event_type == "input_audio_buffer.speech_started":
-                    logger.debug("[%s] Speech detected", self.session_id)
+                    if self._response_start_time != 0.0:
+                        logger.info("[%s] Barge-in detected — cancelling active response", self.session_id)
+                        try:
+                            await self.xai_ws.send(json.dumps({"type": "response.cancel"}))
+                        except Exception as e:
+                            logger.warning("[%s] Failed to cancel response on barge-in: %s", self.session_id, e)
+                        self._response_start_time = 0.0
+                    else:
+                        logger.debug("[%s] Speech detected", self.session_id)
                     await self._send_browser({"type": "status", "status": "recording"})
 
                 # ── Speech stopped (processing) ──────────────────
