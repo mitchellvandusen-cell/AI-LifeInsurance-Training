@@ -258,7 +258,8 @@ async def init_schema():
             billed_from     TEXT DEFAULT 'subscription',
             session_state   JSONB DEFAULT '{}'::jsonb,
             voice_name      TEXT DEFAULT 'Sal',
-            feedback_summary TEXT
+            feedback_summary TEXT,
+            report_card     JSONB
         );
         CREATE INDEX IF NOT EXISTS idx_mod_sessions_user   ON module_sessions(user_id);
         CREATE INDEX IF NOT EXISTS idx_mod_sessions_module ON module_sessions(module_key);
@@ -366,6 +367,7 @@ async def init_schema():
     # ── Safe column migrations (add columns to existing tables) ──
     safe_columns = [
         ("user_scripts", "script_type", "TEXT NOT NULL DEFAULT ''"),
+        ("module_sessions", "report_card", "JSONB"),
     ]
     for table, col, col_def in safe_columns:
         col_exists = await pool.fetchval(
@@ -1066,6 +1068,16 @@ async def end_module_session(
         billed_minutes, cost_cents, billed_from, uuid.UUID(session_id),
     )
     return {"id": session_id, "status": status}
+
+
+async def save_module_report_card(session_id: str, report: dict) -> str:
+    """Save an AI-generated report card directly on the module_sessions row."""
+    pool = await get_pool()
+    await pool.execute(
+        "UPDATE module_sessions SET report_card = $1 WHERE id = $2",
+        json.dumps(report), uuid.UUID(session_id),
+    )
+    return session_id
 
 
 async def get_module_sessions(user_id: str, module_key: str = None, limit: int = 50) -> list[dict]:
