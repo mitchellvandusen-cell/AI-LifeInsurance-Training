@@ -1,5 +1,6 @@
 """
-xAI Grok Voice Agent API integration.
+xAI Grok Voice Agent API integration — production-grade speech pipeline.
+
 Manages WebSocket connections to wss://api.x.ai/v1/realtime for
 real-time speech-to-speech training sessions.
 
@@ -10,6 +11,14 @@ Architecture:
 The VoiceSession runs its own receive loop as an independent background task.
 Browser connections come and go (reconnects), but the xAI session persists.
 The browser callback is swappable — reconnects just swap where events go.
+
+Transcript pipeline:
+  Raw xAI events come in as multiple partial/duplicate transcription.completed
+  events per utterance. The TranscriptPipeline class collapses these into clean,
+  single-emission turns using:
+    1. Debounced buffering (collapse progressive extensions)
+    2. Duplicate / prefix / overlap detection
+    3. Echo fingerprinting (reject text that mirrors recent coach speech)
 
 xAI event reference (differs from OpenAI):
   Audio out:     response.output_audio.delta
@@ -26,7 +35,9 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
+from collections import deque
 from typing import Callable, Optional
 
 import websockets
@@ -43,10 +54,232 @@ SAMPLE_RATE = 24000
 AUDIO_FORMAT = "audio/pcm"
 
 
+# ══════════════════════════════════════════════════════════════
+# TRANSCRIPT PIPELINE
+# Production-grade dedup, debounce, and echo rejection for
+# messy real-time speech-to-text events.
+# ══════════════════════════════════════════════════════════════
+
+# Regex to detect stutter artifacts: 3+ consecutive repeated words
+# e.g., "my my my my name" or "the the the the audio"
+_STUTTER_RE = re.compile(r'\b(\w+)(?:\s*,?\s+\1){2,}\b', re.IGNORECASE)
+
+
+def _normalize(text: str) -> str:
+    """Lowercase, strip, collapse whitespace for comparison."""
+    return " ".join(text.lower().split())
+
+
+def _word_overlap_ratio(a: str, b: str) -> float:
+    """Jaccard similarity between two texts' word sets (0.0–1.0)."""
+    wa = set(a.lower().split())
+    wb = set(b.lower().split())
+    if not wa or not wb:
+        return 0.0
+    return len(wa & wb) / len(wa | wb)
+
+
+def clean_stutter_artifacts(text: str) -> str:
+    """Remove repeated-word stutter artifacts caused by audio echo.
+
+    "yeah yeah yeah my my my my name is" → "yeah my name is"
+    Preserves intentional emphasis (max 2 repeats).
+    """
+    def _dedup_run(match: re.Match) -> str:
+        word = match.group(1)
+        return word
+    return _STUTTER_RE.sub(_dedup_run, text).strip()
+
+
+class TranscriptPipeline:
+    """Processes raw xAI transcript events into clean, single-emission turns.
+
+    xAI's Realtime API fires multiple ``transcription.completed`` events for
+    a single utterance — progressive extensions as the user keeps talking,
+    exact duplicates from retry/reconnect, and echo artifacts from coach
+    audio bleeding into the mic.  This class collapses all of that into one
+    clean transcript per actual user turn.
+
+    Usage in VoiceSession:
+        pipeline = TranscriptPipeline(session_id)
+        # On each transcription.completed event:
+        pipeline.receive(text)           # buffer it
+        pipeline.start_debounce(flush)   # (re)start the timer
+        # On response.created:
+        pipeline.flush_now()             # emit immediately
+    """
+
+    # How long to wait after the last transcript event before emitting.
+    # This allows progressive extensions to collapse into one emission.
+    DEBOUNCE_SECONDS = 0.6
+
+    # If >60% of the agent's words overlap with recent coach speech,
+    # it's likely echo, not the user talking.
+    ECHO_OVERLAP_THRESHOLD = 0.60
+
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+
+        # ── Buffer state ─────────────────────────────────────
+        self._pending_text: str = ""
+        self._debounce_task: Optional[asyncio.Task] = None
+
+        # ── History for dedup ────────────────────────────────
+        self._last_emitted_text: str = ""
+        self._last_emitted_norm: str = ""
+
+        # ── Coach speech ring buffer for echo detection ──────
+        # Stores the last N coach utterances (normalized).
+        self._recent_coach: deque[str] = deque(maxlen=8)
+
+        # ── Callback to invoke on flush ──────────────────────
+        self._flush_callback: Optional[Callable] = None
+
+        # ── Stats ────────────────────────────────────────────
+        self.events_received: int = 0
+        self.events_emitted: int = 0
+        self.events_dropped_dedup: int = 0
+        self.events_dropped_echo: int = 0
+
+    # ── Public API ───────────────────────────────────────────
+
+    def receive(self, text: str) -> bool:
+        """Buffer an incoming transcript. Returns False if dropped as duplicate."""
+        text = text.strip()
+        if not text:
+            return False
+
+        self.events_received += 1
+        norm = _normalize(text)
+
+        # ── Drop exact duplicates of pending or last-emitted ─
+        if norm == _normalize(self._pending_text):
+            self.events_dropped_dedup += 1
+            return False
+        if norm == self._last_emitted_norm:
+            self.events_dropped_dedup += 1
+            return False
+
+        # ── Progressive extension: keep the longer version ───
+        pending_norm = _normalize(self._pending_text)
+        if pending_norm and (norm.startswith(pending_norm) or pending_norm.startswith(norm)):
+            self._pending_text = text if len(norm) >= len(pending_norm) else self._pending_text
+            self.events_dropped_dedup += 1
+            return True
+
+        # ── Extension of last emitted (late arrival) ─────────
+        if self._last_emitted_norm and norm.startswith(self._last_emitted_norm):
+            self._pending_text = text
+            self.events_dropped_dedup += 1
+            return True
+
+        # ── Echo detection ───────────────────────────────────
+        if self._is_echo(norm):
+            self.events_dropped_echo += 1
+            logger.info(
+                "[%s] Dropped echo transcript: %.60s...",
+                self.session_id, text,
+            )
+            return False
+
+        # ── Genuinely new transcript ─────────────────────────
+        self._pending_text = text
+        return True
+
+    def record_coach_speech(self, text: str):
+        """Track coach utterances for echo detection."""
+        norm = _normalize(text)
+        if norm:
+            self._recent_coach.append(norm)
+
+    def start_debounce(self, callback: Callable):
+        """Start (or restart) the debounce timer. Callback is called on flush."""
+        self._flush_callback = callback
+        self._cancel_debounce()
+        self._debounce_task = asyncio.create_task(self._debounce_wait())
+
+    async def flush_now(self) -> Optional[str]:
+        """Cancel debounce timer and emit pending text immediately.
+
+        Returns the emitted text, or None if nothing was pending.
+        """
+        self._cancel_debounce()
+        return await self._emit()
+
+    def has_pending(self) -> bool:
+        return bool(self._pending_text)
+
+    # ── Internal ─────────────────────────────────────────────
+
+    def _is_echo(self, norm_text: str) -> bool:
+        """Check if this transcript is just echoed coach audio."""
+        if not self._recent_coach:
+            return False
+        # Check against each recent coach utterance
+        for coach_norm in self._recent_coach:
+            overlap = _word_overlap_ratio(norm_text, coach_norm)
+            if overlap >= self.ECHO_OVERLAP_THRESHOLD:
+                return True
+        return False
+
+    def _cancel_debounce(self):
+        if self._debounce_task and not self._debounce_task.done():
+            self._debounce_task.cancel()
+            self._debounce_task = None
+
+    async def _debounce_wait(self):
+        try:
+            await asyncio.sleep(self.DEBOUNCE_SECONDS)
+            await self._emit()
+        except asyncio.CancelledError:
+            pass  # Debounce was restarted or flushed early
+
+    async def _emit(self) -> Optional[str]:
+        """Emit the pending text via callback and update history."""
+        text = self._pending_text
+        if not text:
+            return None
+
+        # Clean stutter artifacts before emitting
+        cleaned = clean_stutter_artifacts(text)
+        if cleaned != text:
+            logger.info(
+                "[%s] Cleaned stutter: '%s' → '%s'",
+                self.session_id, text[:60], cleaned[:60],
+            )
+            text = cleaned
+
+        self._pending_text = ""
+        self._last_emitted_text = text
+        self._last_emitted_norm = _normalize(text)
+        self.events_emitted += 1
+
+        if self._flush_callback:
+            try:
+                await self._flush_callback(text)
+            except Exception as e:
+                logger.error("[%s] Flush callback error: %s", self.session_id, e, exc_info=True)
+
+        return text
+
+    def get_stats(self) -> dict:
+        """Return pipeline statistics for logging/debugging."""
+        return {
+            "received": self.events_received,
+            "emitted": self.events_emitted,
+            "dropped_dedup": self.events_dropped_dedup,
+            "dropped_echo": self.events_dropped_echo,
+        }
+
+
+# ══════════════════════════════════════════════════════════════
+# VOICE SESSION
+# ══════════════════════════════════════════════════════════════
+
 class VoiceSession:
     """
     Manages a single voice training session with xAI.
-    Bridges browser WebSocket ↔ xAI WebSocket, intercepting
+    Bridges browser WebSocket <-> xAI WebSocket, intercepting
     transcriptions to feed the training engine.
 
     The receive loop runs as an independent background task.
@@ -84,19 +317,12 @@ class VoiceSession:
         self._keepalive_task: Optional[asyncio.Task] = None
 
         # Transcript accumulation
-        self._current_agent_text = ""
         self._current_client_text = ""
         self._turn_count = 0
         self._response_start_time = 0.0  # Track when AI response audio starts
 
-        # Agent transcript debounce — xAI often sends multiple
-        # transcription.completed events per utterance (progressive
-        # extensions as the user keeps talking, or exact duplicates).
-        # We buffer them and only emit after a short timeout or when
-        # the AI starts responding (whichever comes first).
-        self._pending_agent_text = ""
-        self._agent_debounce_task: Optional[asyncio.Task] = None
-        self._agent_debounce_seconds = 0.6
+        # Production transcript pipeline — handles dedup, debounce, echo
+        self._pipeline = TranscriptPipeline(session_id)
 
     def set_browser_callback(self, callback: Optional[Callable]):
         """Set or swap the browser send callback. Thread-safe for asyncio."""
@@ -213,7 +439,7 @@ class VoiceSession:
                 "turn_detection": {
                     "type": "server_vad",
                     # Lower threshold = less likely to falsely detect end-of-speech.
-                    # 0.5 was cutting users off mid-sentence ("go ahead and..." → "Go").
+                    # 0.5 was cutting users off mid-sentence ("go ahead and..." -> "Go").
                     "threshold": 0.35,
                     # Capture more of the start of utterances so first words aren't clipped
                     "prefix_padding_ms": 600,
@@ -286,12 +512,10 @@ class VoiceSession:
             except Exception:
                 pass  # Browser might be disconnected — that's OK
 
-    async def _flush_agent_transcript(self):
-        """Emit the buffered agent transcript to browser + callback."""
-        text = self._pending_agent_text
-        if not text:
-            return
-        self._pending_agent_text = ""
+    # ── Agent (user) transcript emission ─────────────────────
+
+    async def _on_pipeline_flush(self, text: str):
+        """Called by TranscriptPipeline when a clean transcript is ready."""
         self._turn_count += 1
         logger.info("[%s] Agent said (turn %d): %.80s...", self.session_id, self._turn_count, text)
         await self._send_browser({
@@ -304,19 +528,7 @@ class VoiceSession:
             except Exception as e:
                 logger.error("[%s] on_agent_transcript error: %s", self.session_id, e, exc_info=True)
 
-    async def _debounced_agent_flush(self):
-        """Wait for the debounce period, then flush."""
-        try:
-            await asyncio.sleep(self._agent_debounce_seconds)
-            await self._flush_agent_transcript()
-        except asyncio.CancelledError:
-            pass  # Debounce was restarted or flushed early — expected
-
-    def _cancel_agent_debounce(self):
-        """Cancel any pending debounce timer."""
-        if self._agent_debounce_task and not self._agent_debounce_task.done():
-            self._agent_debounce_task.cancel()
-            self._agent_debounce_task = None
+    # ── Main receive loop ────────────────────────────────────
 
     async def _receive_loop(self):
         """
@@ -339,7 +551,7 @@ class VoiceSession:
 
                 event_type = data.get("type", "")
 
-                # ── Audio response chunks → browser ──────────────
+                # ── Audio response chunks -> browser ──────────────
                 if event_type in ("response.output_audio.delta", "response.audio.delta"):
                     delta = data.get("delta", "")
                     if delta:
@@ -349,21 +561,15 @@ class VoiceSession:
                         await self._send_browser({"type": "audio", "data": delta})
 
                 # ── Agent transcript (what the user said) ─────────
-                # xAI often fires multiple transcription.completed events
-                # for a single utterance (progressive extensions as the
-                # user keeps talking, or exact duplicates).  We buffer
-                # them and only emit the final text after a short
-                # debounce timeout or when the AI starts responding.
+                # xAI fires multiple transcription.completed events per
+                # utterance. The pipeline collapses them into a single
+                # clean emission via debounce + dedup + echo rejection.
                 elif event_type == "conversation.item.input_audio_transcription.completed":
                     text = data.get("transcript", "")
                     if text:
-                        self._current_agent_text = text
-                        self._pending_agent_text = text
-                        # Restart debounce timer
-                        self._cancel_agent_debounce()
-                        self._agent_debounce_task = asyncio.create_task(
-                            self._debounced_agent_flush()
-                        )
+                        accepted = self._pipeline.receive(text)
+                        if accepted:
+                            self._pipeline.start_debounce(self._on_pipeline_flush)
 
                 # ── Client transcript delta (streaming) ──────────
                 elif event_type in ("response.output_audio_transcript.delta", "response.audio_transcript.delta"):
@@ -381,6 +587,8 @@ class VoiceSession:
                 elif event_type in ("response.output_audio_transcript.done", "response.audio_transcript.done"):
                     text = data.get("transcript", self._current_client_text)
                     if text:
+                        # Record coach speech for echo detection
+                        self._pipeline.record_coach_speech(text)
                         logger.info("[%s] Client said (turn %d): %.80s...", self.session_id, self._turn_count, text)
                         await self._send_browser({
                             "type": "transcript", "role": "client",
@@ -444,8 +652,7 @@ class VoiceSession:
                     # AI is about to speak — flush any pending agent
                     # transcript immediately so it's logged before the
                     # coach's response.
-                    self._cancel_agent_debounce()
-                    await self._flush_agent_transcript()
+                    await self._pipeline.flush_now()
                     logger.debug("[%s] AI generating response...", self.session_id)
                     await self._send_browser({"type": "status", "status": "responding"})
 
@@ -515,11 +722,21 @@ class VoiceSession:
     async def disconnect(self):
         """Close the xAI WebSocket connection and stop background tasks."""
         self.connected = False
-        self._send_to_browser = None  # Detach browser
 
         # Flush any pending agent transcript before shutdown
-        self._cancel_agent_debounce()
-        await self._flush_agent_transcript()
+        await self._pipeline.flush_now()
+
+        # Log pipeline stats for diagnostics
+        stats = self._pipeline.get_stats()
+        logger.info(
+            "[%s] Transcript pipeline stats: received=%d emitted=%d "
+            "dropped_dedup=%d dropped_echo=%d",
+            self.session_id,
+            stats["received"], stats["emitted"],
+            stats["dropped_dedup"], stats["dropped_echo"],
+        )
+
+        self._send_to_browser = None  # Detach browser
 
         if self._keepalive_task and not self._keepalive_task.done():
             self._keepalive_task.cancel()

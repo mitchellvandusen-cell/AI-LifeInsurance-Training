@@ -1912,6 +1912,24 @@
             processor.onaudioprocess = (e) => {
                 if (!ws || ws.readyState !== WebSocket.OPEN) return;
                 const float32 = e.inputBuffer.getChannelData(0);
+
+                // ── RMS gate during coach response ──────────────
+                // When the AI coach is speaking, residual echo can leak
+                // through even with browser AEC enabled.  Suppress low-
+                // energy audio (echo residual) during the 'responding'
+                // state.  Loud audio (user actually speaking / barge-in)
+                // still passes through to allow interruption.
+                if (voiceState === 'responding') {
+                    let sum = 0;
+                    for (let i = 0; i < float32.length; i++) {
+                        sum += float32[i] * float32[i];
+                    }
+                    const rms = Math.sqrt(sum / float32.length);
+                    // Threshold tuned for echo residual — real speech
+                    // during barge-in is typically >0.03 RMS
+                    if (rms < 0.015) return;
+                }
+
                 const pcm16 = new Int16Array(float32.length);
                 for (let i = 0; i < float32.length; i++) {
                     pcm16[i] = Math.max(-1, Math.min(1, float32[i])) * 0x7FFF;
