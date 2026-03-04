@@ -291,21 +291,38 @@ async def module_websocket(websocket: WebSocket, session_id: str):
     we just re-bridge without losing conversation context.
     """
     await websocket.accept()
+    print(f"[MODULE-WS][{session_id}] WebSocket accepted, authenticating...")
+
+    try:
+        await _module_ws_handler(websocket, session_id)
+    except Exception as e:
+        print(f"[MODULE-WS][{session_id}] UNHANDLED EXCEPTION: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+async def _module_ws_handler(websocket: WebSocket, session_id: str):
+    """Inner handler extracted so top-level can catch all exceptions."""
 
     ws_user = await get_ws_user(websocket)
     if not ws_user:
+        print(f"[MODULE-WS][{session_id}] Auth failed — closing")
         return
 
     session = _active_module_sessions.get(session_id)
     if not session:
+        print(f"[MODULE-WS][{session_id}] Session not found in active sessions (have {len(_active_module_sessions)} sessions: {list(_active_module_sessions.keys())[:5]})")
         await websocket.send_json({"type": "error", "message": "Session not found"})
         await websocket.close()
         return
 
     if session["user_id"] != ws_user["user_id"]:
+        print(f"[MODULE-WS][{session_id}] User mismatch: session={session['user_id']} ws={ws_user['user_id']}")
         await websocket.send_json({"type": "error", "message": "Unauthorized"})
         await websocket.close()
         return
+
+    print(f"[MODULE-WS][{session_id}] Auth OK, setting up voice session...")
 
     # ── Voice session: reuse or create ──────────────────────
     existing_voice = session.get("voice_session")
@@ -378,15 +395,18 @@ async def module_websocket(websocket: WebSocket, session_id: str):
 
     # ── Connect to xAI if needed ────────────────────────────
     if not voice_session.connected:
+        print(f"[MODULE-WS][{session_id}] Connecting to xAI voice...")
         await websocket.send_json({"type": "status", "status": "connecting_voice"})
         connected = await voice_session.connect()
         if not connected:
+            print(f"[MODULE-WS][{session_id}] xAI connection FAILED")
             await websocket.send_json({
                 "type": "error",
                 "message": "Failed to connect to voice service.",
             })
             await websocket.close()
             return
+        print(f"[MODULE-WS][{session_id}] xAI connected OK")
 
     # ── Swap browser callback to this WebSocket ─────────────
     async def send_to_this_browser(msg: dict):
