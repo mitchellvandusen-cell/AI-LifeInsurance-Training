@@ -114,6 +114,12 @@ async def start_module_session(req: StartModuleRequest, request: Request):
 
     voice = req.voice or "Sal"
 
+    # Fetch student's name for personalized greetings
+    user_data = await db.get_user_by_id(user_id)
+    student_name = ""
+    if user_data and user_data.get("name"):
+        student_name = user_data["name"].strip().split()[0]  # First name only
+
     # Resolve topic if provided
     topic_info = None
     if req.topic_index is not None and req.module_key in AVAILABLE_MODULES:
@@ -125,6 +131,10 @@ async def start_module_session(req: StartModuleRequest, request: Request):
     session_state = {}
     mastery_data = None
     script = None
+
+    # Inject student name for personalized greetings
+    if student_name:
+        session_state["student_name"] = student_name
 
     # Inject topic info into session state for prompt builder
     if topic_info:
