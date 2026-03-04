@@ -1554,7 +1554,8 @@
             wsIntentionallyClosed = false;
 
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${location.host}/api/modules/ws/${sessionId}`;
+            const token = API.token;
+            const wsUrl = `${protocol}//${location.host}/api/modules/ws/${sessionId}?token=${token}`;
 
             ws = new WebSocket(wsUrl);
             ws.onopen = () => {
@@ -1562,7 +1563,6 @@
                     showToast('Reconnected! Continuing session...', 'success');
                 }
                 wsReconnectAttempts = 0;
-                ws.send(JSON.stringify({ type: 'auth', token: API.token }));
                 // Start mic capture immediately so student can respond after coach greeting
                 startAudioCapture();
             };

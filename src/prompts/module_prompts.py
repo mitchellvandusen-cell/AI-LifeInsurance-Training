@@ -401,11 +401,17 @@ def _coach_memory(state: dict) -> str:
     This is the State-Driven Prompting half of the architecture.
     The LLM cannot decide what it remembers — the code tells it."""
 
+    # Inject student name so the coach can greet them personally
+    student_name = state.get("student_name", "")
+
     progress_keys = [
         "drills_completed", "exercises_completed", "scenarios_completed",
         "current_drill", "current_exercise", "practice_count",
     ]
     memory_parts = []
+
+    if student_name:
+        memory_parts.append(f"- Student Name: {student_name}")
 
     for key in progress_keys:
         if key in state and state[key]:
@@ -3122,11 +3128,17 @@ The agent's practice level adjusts automatically based on how many times they've
 practiced this specific script.
 
 ## CURRENT SESSION STATUS
+- Student Name: {state.get('student_name', 'the agent')}
 - Script: "{script_name}"
 - Practice Sessions Completed: {practice_count}
 - Mastery Level: {mastery_level}/5 — {level_label}
 - The agent's screen is showing the script with progressive word blanking based
   on their mastery level. At level 0 they see everything; by level 5 it's hidden.
+
+IMPORTANT: When you greet the student at the start, address them by their name
+("{state.get('student_name', '')}"), NOT by the client character name below.
+You are the coach greeting your student. You only become the client character
+AFTER the initial greeting when the practice run begins.
 
 ## THE AGENT'S SCRIPT
 ```
