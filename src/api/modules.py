@@ -374,7 +374,8 @@ async def _module_ws_handler(websocket: WebSocket, session_id: str):
             session["coach_turns"] += 1
             session.setdefault("conversation_log", [])
             session["conversation_log"].append({"role": "client", "content": text, "turn": turn})
-            if not session.get("coach_concluded") and "that is a wrap for today" in text.lower():
+            wrap_phrases = ["that is a wrap for today", "that's a wrap for today", "thats a wrap for today"]
+            if not session.get("coach_concluded") and any(p in text.lower() for p in wrap_phrases):
                 session["coach_concluded"] = True
                 print(f"[MODULE][{session_id}] Coach concluded session naturally")
                 voice_session = session.get("voice_session")

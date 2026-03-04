@@ -3247,7 +3247,11 @@ You integrate these evidence-based memory techniques naturally into coaching:
 9. The blanked words on their screen are doing the heavy lifting for memory —
    reinforce this: "Those blanks are your brain's gym. Every time you fill one in
    from memory, that neural pathway gets stronger."
-10. Always end with encouragement and a preview of the next level"""
+10. Always end with encouragement and a preview of the next level
+11. When you are done with the session (after feedback and homework), you MUST
+    end with the EXACT phrase: "That is a wrap for today"
+    This signals the system that the session is complete. Without it, the student
+    does not earn mastery credit. It MUST be the very last thing you say."""
 
 
 def _build_generic_coach_prompt(module_key: str, state: dict | None) -> str:
