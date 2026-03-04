@@ -1102,6 +1102,20 @@
             btn.textContent = 'Starting...';
 
             try {
+                // Create AudioContexts IMMEDIATELY during user gesture (button click).
+                // Mobile browsers (especially iOS Safari) require AudioContext creation
+                // and resume to happen during a direct user interaction. If we defer
+                // this to ws.onopen, the gesture chain is broken and audio won't play.
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                }
+                if (audioContext.state === 'suspended') await audioContext.resume();
+
+                if (!playbackContext) {
+                    playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                }
+                if (playbackContext.state === 'suspended') await playbackContext.resume();
+
                 mediaStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
                         echoCancellation: true,
@@ -1718,6 +1732,18 @@
             btn.textContent = 'Starting...';
 
             try {
+                // Create AudioContexts during user gesture (button click) for mobile compatibility.
+                // Mobile browsers require AudioContext creation during direct user interaction.
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                }
+                if (audioContext.state === 'suspended') await audioContext.resume();
+
+                if (!playbackContext) {
+                    playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                }
+                if (playbackContext.state === 'suspended') await playbackContext.resume();
+
                 // Request mic access first — enable echo cancellation so the
                 // AI coach's audio doesn't get picked up and re-transcribed
                 mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -1892,6 +1918,21 @@
                     }
                     break;
 
+                case 'ping':
+                    // Respond to server keepalive and ensure audio contexts stay active
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'pong' }));
+                    }
+                    // Mobile browsers may suspend AudioContext during perceived inactivity
+                    if (playbackContext && playbackContext.state === 'suspended') {
+                        playbackContext.resume();
+                        console.log('[AUDIO] Resumed suspended playbackContext on ping');
+                    }
+                    if (audioContext && audioContext.state === 'suspended') {
+                        audioContext.resume();
+                    }
+                    break;
+
                 case 'error':
                     showToast(data.message, 'error');
                     status.textContent = 'Error — check connection';
@@ -1907,16 +1948,29 @@
         let playbackPitchAnalyser = null; // Separate analyser for pitch detection on coach audio
         let playbackPitchBuffer = null;
 
+        let audioCaptureActive = false;  // Guard against duplicate setup on reconnect
+
         function startAudioCapture() {
             if (!mediaStream) return;
 
-            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-            // Ensure context is running (browser autoplay policy)
+            // Reuse contexts created during user gesture (startModuleTraining / startSession).
+            // Only create here as fallback for non-module flows or if somehow missing.
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            }
             if (audioContext.state === 'suspended') audioContext.resume();
 
-            // Create a separate playback context so capture and playback don't interfere
-            playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            if (!playbackContext) {
+                playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            }
             if (playbackContext.state === 'suspended') playbackContext.resume();
+
+            // On reconnect, audio capture is already running — just resume contexts
+            if (audioCaptureActive) {
+                console.log('[AUDIO] Capture already active — resuming contexts only');
+                return;
+            }
+            audioCaptureActive = true;
 
             const source = audioContext.createMediaStreamSource(mediaStream);
             const processor = audioContext.createScriptProcessor(4096, 1, 1);
@@ -2242,6 +2296,7 @@
             playbackAnalyser = null;
             playbackPitchAnalyser = null;
             playbackPitchBuffer = null;
+            audioCaptureActive = false;
             voiceState = 'idle';
 
             // Get report
