@@ -1837,7 +1837,10 @@
                         voiceState = 'idle';
                         circle.className = 'voice-circle';
                         status.textContent = 'Your turn — speak now';
-                        resetAudioQueue();
+                        // Do NOT resetAudioQueue() here — audio chunks may still be
+                        // playing from the queue. The 'listening' status means xAI
+                        // finished GENERATING audio, not that all audio has PLAYED.
+                        // The queue drains naturally. Barge-in has its own reset.
                     } else if (data.status === 'connecting_voice') {
                         voiceState = 'idle';
                         status.textContent = 'Connecting to voice service...';
