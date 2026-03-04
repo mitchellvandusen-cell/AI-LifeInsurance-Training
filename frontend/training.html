@@ -1559,18 +1559,25 @@
 
             ws = new WebSocket(wsUrl);
             ws.onopen = () => {
+                console.log('[MODULE-WS] WebSocket connected');
                 if (wsReconnectAttempts > 0) {
                     showToast('Reconnected! Continuing session...', 'success');
                 }
                 wsReconnectAttempts = 0;
                 // Start mic capture immediately so student can respond after coach greeting
-                startAudioCapture();
+                try {
+                    startAudioCapture();
+                } catch (err) {
+                    console.error('[MODULE-WS] startAudioCapture failed:', err);
+                    showToast('Audio setup failed: ' + err.message, 'error');
+                }
             };
             ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
                 handleVoiceEvent(data);
             };
-            ws.onclose = () => {
+            ws.onclose = (evt) => {
+                console.log('[MODULE-WS] WebSocket closed — code:', evt.code, 'reason:', evt.reason, 'wasClean:', evt.wasClean);
                 if (wsIntentionallyClosed) {
                     document.getElementById('voiceStatus').textContent = 'Disconnected';
                     return;
