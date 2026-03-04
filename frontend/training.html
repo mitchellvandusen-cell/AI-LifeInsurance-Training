@@ -813,10 +813,28 @@
         </div>
     </div>
 
+    <!-- ═══ Screen 1c: Script Picker (for script_practice from module menu) ═══ -->
+    <div class="screen screen-pre" id="screenScripts">
+        <div class="client-card" style="width:540px;max-height:90vh;display:flex;flex-direction:column;padding:1.75rem;">
+            <a onclick="showScreen('screenSelect')" class="back-link" style="flex-shrink:0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Back to Modules
+            </a>
+            <div class="card-header" style="margin-bottom:0.75rem;flex-shrink:0;">
+                <h2>Script Practice</h2>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">Choose a script to practice</p>
+            </div>
+            <div id="scriptPickerList" style="display:flex;flex-direction:column;gap:0.5rem;overflow-y:auto;flex:1;min-height:0;padding-right:0.25rem;-webkit-overflow-scrolling:touch;"></div>
+            <div style="margin-top:1rem;flex-shrink:0;">
+                <a href="/scripts" class="btn btn-secondary" style="width:100%;font-size:0.85rem;display:block;text-align:center;">Upload a New Script</a>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ Screen 1b: Module Pre-Session ═══ -->
     <div class="screen screen-pre" id="screenModulePre">
         <div class="client-card" style="width:480px;max-height:85vh;display:flex;flex-direction:column;">
-            <a onclick="showScreen(selectedTopicIndex !== null ? 'screenTopics' : 'screenSelect')" class="back-link" style="flex-shrink:0;">
+            <a onclick="showScreen(selectedModule === 'script_practice' && !window.location.search.includes('script_id') ? 'screenScripts' : selectedTopicIndex !== null ? 'screenTopics' : 'screenSelect')" class="back-link" style="flex-shrink:0;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
                 Back
             </a>
@@ -954,6 +972,11 @@
             if (mode === 'full') {
                 showScreen('screenPre');
                 initFullSim();
+            } else if (mode === 'script_practice') {
+                // Script practice: always show script picker first so user selects a script
+                selectedModule = 'script_practice';
+                scriptId = null;
+                await showScriptPicker();
             } else {
                 selectedModule = mode;
                 try {
@@ -982,6 +1005,97 @@
                     showToast(err.message, 'error');
                 }
             }
+        }
+
+        // ── Script Picker (for script_practice from module menu) ─
+        async function showScriptPicker() {
+            const listEl = document.getElementById('scriptPickerList');
+            listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.85rem;">Loading scripts...</div>';
+            showScreen('screenScripts');
+
+            try {
+                const [scripts, masteryData] = await Promise.all([
+                    API.getScripts(),
+                    API.getScriptMastery().catch(() => ({})),
+                ]);
+
+                if (!scripts || scripts.length === 0) {
+                    listEl.innerHTML = `
+                        <div style="text-align:center;padding:2rem;">
+                            <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+                                You don't have any scripts yet. Upload one to start practicing.
+                            </p>
+                            <a href="/scripts" class="btn btn-primary" style="font-size:0.85rem;">Go to Scripts</a>
+                        </div>`;
+                    return;
+                }
+
+                listEl.innerHTML = scripts.map(s => {
+                    const m = masteryData[s.id];
+                    const level = m ? m.mastery_level : 0;
+                    const count = m ? m.practice_count : 0;
+                    const label = MASTERY_LABELS[level] || 'Full Read';
+                    const blankPct = Math.round(BLANK_PERCENTAGES[level] * 100);
+                    return `
+                    <div onclick="selectScriptForPractice('${s.id}', ${JSON.stringify(s.name).replace(/'/g,"\\'")})"
+                         style="cursor:pointer;padding:0.85rem 1rem;border:1px solid var(--border-color);border-radius:var(--radius-sm);transition:all .2s;"
+                         onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem;">
+                            <h4 style="font-size:0.9rem;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;">${escapeHTML(s.name)}</h4>
+                            <span class="mastery-level-badge" style="font-size:0.65rem;white-space:nowrap;">Lv ${level} — ${label}</span>
+                        </div>
+                        <div class="mastery-bar-container" style="margin-bottom:0.3rem;">
+                            <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
+                            <span class="mastery-label">${level}/5</span>
+                        </div>
+                        <div style="font-size:0.7rem;color:var(--text-muted);">
+                            ${count} session${count !== 1 ? 's' : ''} completed &bull; ${blankPct}% blanked
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (err) {
+                listEl.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--accent-red);font-size:0.85rem;">Failed to load scripts: ${escapeHTML(err.message)}</div>`;
+            }
+        }
+
+        function selectScriptForPractice(sid, name) {
+            scriptId = sid;
+            trainingMode = 'script_practice';
+
+            // Show the pre-session screen with mastery info for this specific script
+            document.getElementById('moduleTitle').textContent = 'Script Practice';
+            document.getElementById('moduleDesc').textContent = escapeHTML(name);
+            document.getElementById('moduleStartBtn').disabled = false;
+            document.getElementById('moduleStartBtn').textContent = 'Start Practice';
+
+            const m = {}; // Will be loaded below
+            const allMastery = API.getScriptMastery().then(mastery => {
+                const m = mastery[sid] || {};
+                const level = m.mastery_level || 0;
+                const count = m.practice_count || 0;
+                const label = MASTERY_LABELS[level] || 'Full Read';
+                const blankPct = Math.round(BLANK_PERCENTAGES[level] * 100);
+                document.getElementById('moduleSkills').innerHTML = `
+                    <div style="background:var(--bg-primary);border-radius:var(--radius-md);padding:1rem;margin-bottom:0.5rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                            <span style="font-size:0.8rem;font-weight:700;">Level ${level} — ${label}</span>
+                            <span style="font-size:0.75rem;color:var(--text-muted);">${count} session${count !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="mastery-bar-container">
+                            <div class="mastery-bar"><div class="mastery-bar-fill level-${level}"></div></div>
+                            <span class="mastery-label">${level}/5</span>
+                        </div>
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">
+                            ${blankPct}% of words blanked. ${level < 5 ? 'Recall the missing words from memory.' : 'Script fully hidden — pure recall.'}
+                        </p>
+                    </div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">Active recall &amp; progressive blanking</div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">Memory techniques: chunking, visualization, spaced retrieval</div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);padding:0.3rem 0;border-bottom:1px solid var(--border-color);">Natural delivery &amp; tonality coaching</div>
+                `;
+            }).catch(() => {});
+
+            showScreen('screenModulePre');
         }
 
         // ── Topics screen ────────────────────────────────────
