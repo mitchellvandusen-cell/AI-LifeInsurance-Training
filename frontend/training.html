@@ -557,6 +557,22 @@
                 border-right: none; border-bottom: 1px solid var(--border-color);
             }
             .script-practice-layout .sp-right { height: auto; min-height: 60vh; }
+            /* Floating end button on mobile so it's always accessible */
+            .mobile-end-btn {
+                display: block;
+                position: fixed;
+                bottom: 1rem;
+                right: 1rem;
+                z-index: 100;
+                padding: 0.6rem 1.25rem;
+                font-size: 0.85rem;
+                font-weight: 700;
+                border-radius: 2rem;
+                box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-end-btn { display: none; }
         }
 
         /* ── Report Overlay ──────────────────────────────── */
@@ -1524,6 +1540,14 @@
 
             sessionScreen.appendChild(layout);
 
+            // Add floating end button for mobile
+            const mobileEndBtn = document.createElement('button');
+            mobileEndBtn.className = 'btn btn-danger mobile-end-btn';
+            mobileEndBtn.textContent = 'End Session';
+            mobileEndBtn.onclick = () => endTraining();
+            mobileEndBtn.id = 'mobileEndBtn';
+            sessionScreen.appendChild(mobileEndBtn);
+
             // Wire up alternative element IDs for the script practice layout
             // so handleVoiceEvent, addTranscript, etc. find the right elements
             window._spMode = true;
@@ -1912,13 +1936,8 @@
                     sessionCompleted = true;
                     status.textContent = 'Session complete — great work!';
                     circle.className = 'voice-circle';
-                    showToast('Your coach has wrapped up the session.', 'success');
-                    // Update the End Session button to show completion
-                    const endBtn = document.querySelector('[onclick="endTraining()"]');
-                    if (endBtn) {
-                        endBtn.textContent = 'View Results';
-                        endBtn.className = 'btn btn-primary btn-sm';
-                    }
+                    // Show a prominent overlay prompting the user to save/end
+                    showSessionCompleteOverlay();
                     break;
 
                 case 'ping':
@@ -2245,6 +2264,37 @@
             vizAnimId = requestAnimationFrame(animateVisualizer);
         }
 
+        // ── Session Complete Overlay ──────────────────────────
+        function showSessionCompleteOverlay() {
+            // Remove if already showing
+            const existing = document.getElementById('sessionCompleteOverlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'sessionCompleteOverlay';
+            overlay.style.cssText = `
+                position: fixed; bottom: 0; left: 0; right: 0; z-index: 150;
+                background: linear-gradient(to top, rgba(10,10,26,0.98), rgba(10,10,26,0.92));
+                backdrop-filter: blur(8px);
+                padding: 1.5rem; text-align: center;
+                border-top: 2px solid var(--accent-green);
+                animation: slideUp 0.3s ease-out;
+            `;
+            overlay.innerHTML = `
+                <style>@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }</style>
+                <div style="font-size:1.5rem;margin-bottom:0.25rem;">&#127942;</div>
+                <h3 style="font-size:1.1rem;margin:0 0 0.5rem;color:var(--text-primary);">Session Complete!</h3>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 1rem;">
+                    Your coach has wrapped up. Tap below to save your progress and see your report.
+                </p>
+                <button class="btn btn-primary" onclick="document.getElementById('sessionCompleteOverlay').remove(); endTraining();"
+                    style="font-size:1rem;padding:0.75rem 2rem;min-width:200px;">
+                    Save &amp; View Results
+                </button>
+            `;
+            document.body.appendChild(overlay);
+        }
+
         // ── End Training ─────────────────────────────────────
         async function endTraining() {
             if (!sessionId) return;
@@ -2258,10 +2308,15 @@
                 window._spMode = false;
                 const spLayout = document.getElementById('scriptPracticeLayout');
                 if (spLayout) spLayout.remove();
+                const mobileBtn = document.getElementById('mobileEndBtn');
+                if (mobileBtn) mobileBtn.remove();
                 document.getElementById('sessionSidebar').style.display = '';
                 const oldMain = document.querySelector('.session-main');
                 if (oldMain) oldMain.style.display = '';
             }
+            // Remove session complete overlay if present
+            const scOverlay = document.getElementById('sessionCompleteOverlay');
+            if (scOverlay) scOverlay.remove();
 
             // Close WebSocket
             if (ws) {
