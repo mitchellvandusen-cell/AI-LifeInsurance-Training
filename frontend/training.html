@@ -864,8 +864,9 @@
                     <span>LIVE</span>
                 </div>
                 <h3 id="sessionClientName">Training Session</h3>
-                <div style="display:flex; align-items:center; gap:1rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
                     <div class="session-timer" id="timer">00:00</div>
+                    <button class="btn btn-warning btn-sm pause-btn" onclick="togglePause()">Pause</button>
                     <button class="btn btn-danger btn-sm" onclick="endTraining()">End Session</button>
                 </div>
             </div>
@@ -914,6 +915,8 @@
         let selectedModule = null;
         let scriptId = null;  // For script_practice mode
         let sessionCompleted = false;  // Set true when AI coach concludes
+        let isPaused = false;           // True when session is paused
+        let pausedElapsed = 0;          // ms elapsed before current pause
         let selectedTopicIndex = null;  // Index into module's topics array
         let cachedModData = null;  // Cache module data to avoid re-fetching
         let cachedMasteryData = null;
@@ -1616,6 +1619,7 @@
                         <h3 id="spSessionName">Script Practice</h3>
                         <div style="display:flex;align-items:center;gap:0.5rem;">
                             <span class="session-timer" id="spTimer">00:00</span>
+                            <button class="btn btn-warning btn-sm pause-btn" onclick="togglePause()">Pause</button>
                             <button class="btn btn-danger btn-sm" onclick="endTraining()">End</button>
                         </div>
                     </div>
@@ -2132,6 +2136,7 @@
 
             processor.onaudioprocess = (e) => {
                 if (!ws || ws.readyState !== WebSocket.OPEN) return;
+                if (isPaused) return;
                 const float32 = e.inputBuffer.getChannelData(0);
 
                 // ── RMS gate during coach response ──────────────
@@ -2409,10 +2414,47 @@
             document.body.appendChild(overlay);
         }
 
+        // ── Pause / Resume Training ───────────────────────────
+        function togglePause() {
+            if (!sessionId) return;
+            isPaused = !isPaused;
+
+            const pauseBtns = document.querySelectorAll('.pause-btn');
+            const status = document.getElementById('voiceStatus');
+            const circle = document.getElementById('voiceCircle');
+
+            if (isPaused) {
+                // Freeze timer: store elapsed so far
+                pausedElapsed = Date.now() - startTime;
+                clearInterval(timerInterval);
+                timerInterval = null;
+                // UI feedback
+                pauseBtns.forEach(btn => {
+                    btn.textContent = 'Resume';
+                    btn.classList.remove('btn-warning');
+                    btn.classList.add('btn-success');
+                });
+                if (circle) circle.className = 'voice-circle';
+                if (status) status.textContent = 'Paused — mic muted';
+            } else {
+                // Restore timer from where it left off
+                startTime = Date.now() - pausedElapsed;
+                timerInterval = setInterval(updateTimer, 1000);
+                // UI feedback
+                pauseBtns.forEach(btn => {
+                    btn.textContent = 'Pause';
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-warning');
+                });
+                if (status) status.textContent = 'Resumed — speak now';
+            }
+        }
+
         // ── End Training ─────────────────────────────────────
         async function endTraining() {
             if (!sessionId) return;
 
+            isPaused = false;
             clearInterval(timerInterval);
             if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
             wsIntentionallyClosed = true;
