@@ -181,6 +181,7 @@ async def init_schema():
         CREATE TABLE IF NOT EXISTS call_recordings (
             id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
             user_id         UUID NOT NULL,
+            call_sid             TEXT,
             twilio_recording_sid TEXT,
             twilio_call_sid      TEXT,
             recording_url        TEXT,
@@ -192,12 +193,21 @@ async def init_schema():
             report_card     JSONB,
             caller_number   TEXT,
             agent_name      TEXT,
+            contact_name    TEXT,
+            direction       TEXT,
+            disposition     TEXT,
             created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             processed_at    TIMESTAMPTZ
         );
         CREATE INDEX IF NOT EXISTS idx_recordings_user   ON call_recordings(user_id);
         CREATE INDEX IF NOT EXISTS idx_recordings_status ON call_recordings(status);
         CREATE INDEX IF NOT EXISTS idx_recordings_date   ON call_recordings(call_date);
+
+        -- Add columns that may be missing on existing databases
+        ALTER TABLE call_recordings ADD COLUMN IF NOT EXISTS call_sid TEXT;
+        ALTER TABLE call_recordings ADD COLUMN IF NOT EXISTS contact_name TEXT;
+        ALTER TABLE call_recordings ADD COLUMN IF NOT EXISTS direction TEXT;
+        ALTER TABLE call_recordings ADD COLUMN IF NOT EXISTS disposition TEXT;
 
         -- DAILY ANALYTICS
         CREATE TABLE IF NOT EXISTS analytics_daily (
@@ -942,17 +952,19 @@ async def save_call_recording(user_id: str, recording_data: dict) -> str | None:
             transcript = json.dumps(transcript)
 
     rec_id = uuid.uuid4()
+    name = recording_data.get("agent_name") or recording_data.get("contact_name")
     await pool.execute(
         """INSERT INTO call_recordings
            (id, user_id, call_sid, recording_url, duration_seconds, call_date,
-            contact_name, caller_number, direction, disposition, transcript)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)""",
+            agent_name, contact_name, caller_number, direction, disposition, transcript)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
         rec_id, uid,
         call_sid,
         recording_data.get("recording_url"),
         recording_data.get("duration"),
         call_date,
-        recording_data.get("agent_name") or recording_data.get("contact_name"),
+        name,
+        name,
         recording_data.get("caller_number"),
         recording_data.get("direction"),
         recording_data.get("disposition"),
