@@ -4,6 +4,8 @@ Settings routes: user preferences, account linking, notifications.
 
 from __future__ import annotations
 
+import os
+
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -13,7 +15,7 @@ from src.core import database as db
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-GROKBOT_API_URL = "https://insurancegrokbot.click/api/v1/training"
+GROKBOT_API_URL = os.environ.get("GROKBOT_API_URL", "https://insurancegrokbot.com/api/v1/training")
 
 
 class UpdateSettingsRequest(BaseModel):
