@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/mobile.css">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4F46E5">
+    <meta name="theme-color" content="#00ff88">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
@@ -31,7 +31,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(79,70,229,0.1) 0%, transparent 60%);
+            background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(0,255,136,0.1) 0%, transparent 60%);
             pointer-events: none;
         }
 
@@ -308,7 +308,7 @@
             font-weight: 700;
             padding: 0.15rem 0.5rem;
             border-radius: 10px;
-            background: rgba(79,70,229,0.15);
+            background: rgba(0,255,136,0.15);
             color: var(--accent-blue);
         }
         .script-content-area {
@@ -451,12 +451,12 @@
             line-height: 1.7; border-left: 3px solid transparent;
         }
         .sp-speech-line.say {
-            background: rgba(79,70,229,0.06);
+            background: rgba(0,255,136,0.06);
             border-left-color: var(--accent-blue);
             color: var(--text-primary);
         }
         .sp-speech-line.compliance {
-            background: rgba(79,70,229,0.06);
+            background: rgba(0,255,136,0.06);
             border-left-color: var(--accent-blue);
             color: var(--text-primary);
         }
@@ -485,7 +485,7 @@
         }
         .sp-key-phrase {
             font-weight: 700; color: var(--text-primary);
-            background: rgba(79,70,229,0.1); padding: 0.05rem 0.2rem;
+            background: rgba(0,255,136,0.1); padding: 0.05rem 0.2rem;
             border-radius: 3px;
         }
         .sp-branch-block {
@@ -518,7 +518,7 @@
         }
         .sp-objection-response {
             padding: 0.4rem 0.75rem; margin-left: 0.5rem;
-            background: rgba(79,70,229,0.06);
+            background: rgba(0,255,136,0.06);
             border-left: 3px solid var(--accent-blue);
             border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
             font-size: 0.85rem; line-height: 1.6;
@@ -528,7 +528,7 @@
             margin: 0.5rem 0;
         }
         /* Badge colors for script practice */
-        .sp-badge-intro { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
+        .sp-badge-intro { background: rgba(0,255,136,0.15); color: var(--accent-blue); }
         .sp-badge-questions { background: rgba(6,182,212,0.15); color: var(--accent-cyan); }
         .sp-badge-objection { background: rgba(239,68,68,0.15); color: var(--accent-red); }
         .sp-badge-transition { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
@@ -547,7 +547,7 @@
         /* Active section highlight for auto-scroll */
         .sp-section-block.sp-active {
             border-color: var(--accent-blue);
-            box-shadow: 0 0 12px rgba(79,70,229,0.12);
+            box-shadow: 0 0 12px rgba(0,255,136,0.12);
         }
         @media (max-width: 768px) {
             .script-practice-layout { flex-direction: column; }
@@ -618,7 +618,7 @@
             line-height: 1.5;
             margin-top: 0.5rem;
         }
-        .report-cat .pros { color: #a5b4fc; }
+        .report-cat .pros { color: #88ffbb; }
         .report-cat .cons { color: var(--text-muted); }
 
         @media (max-width: 768px) {
@@ -706,7 +706,7 @@
         .tone-item:hover { border-color: var(--border-active); }
         .tone-item.active {
             border-color: var(--accent-blue);
-            background: rgba(79,70,229,0.08);
+            background: rgba(0,255,136,0.08);
         }
         .tone-icon { font-size: 1rem; flex-shrink: 0; }
         .tone-name { font-weight: 600; flex: 1; }
@@ -747,7 +747,7 @@
                 <p>Full call simulation or focused skill modules</p>
             </div>
 
-            <div onclick="selectMode('full')" style="cursor:pointer;padding:0.85rem 1rem;margin-bottom:0.5rem;border:2px solid var(--accent-blue);border-radius:var(--radius-md);transition:all .2s;background:rgba(79,70,229,0.05);">
+            <div onclick="selectMode('full')" style="cursor:pointer;padding:0.85rem 1rem;margin-bottom:0.5rem;border:2px solid var(--accent-blue);border-radius:var(--radius-md);transition:all .2s;background:rgba(0,255,136,0.05);">
                 <h3 style="font-size:1rem;margin-bottom:0.15rem;">Full Call Simulation</h3>
                 <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Complete end-to-end call with an AI prospect. All skills graded.</p>
             </div>
@@ -3036,7 +3036,7 @@
 
             // Color based on who's speaking: cyan for coach, blue for human
             const lineColor = voiceState === 'responding' ? '#06b6d4' : '#4f46e5';
-            const glowColor = voiceState === 'responding' ? 'rgba(6,182,212,0.2)' : 'rgba(79,70,229,0.2)';
+            const glowColor = voiceState === 'responding' ? 'rgba(6,182,212,0.2)' : 'rgba(0,255,136,0.2)';
 
             // Draw pitch line
             ctx.strokeStyle = lineColor;
