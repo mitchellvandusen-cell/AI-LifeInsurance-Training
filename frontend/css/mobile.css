@@ -11,8 +11,10 @@
     left: 0;
     right: 0;
     z-index: 200;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border-color);
+    background: linear-gradient(180deg, rgba(10,10,26,0.85) 0%, rgba(10,10,26,0.95) 100%);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border-top: 1px solid var(--glass-border-bottom);
     padding: 0.4rem 0;
     padding-bottom: env(safe-area-inset-bottom, 0.4rem);
 }
@@ -46,11 +48,11 @@
 }
 
 .mobile-nav-item.active {
-    color: var(--accent-blue);
+    color: var(--accent);
 }
 
 .mobile-nav-item:active {
-    color: var(--accent-blue);
+    color: var(--accent);
     transform: scale(0.95);
 }
 
@@ -62,10 +64,10 @@
     left: 0;
     right: 0;
     z-index: 150;
-    background: rgba(10, 10, 26, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(180deg, rgba(10,10,26,0.90) 0%, rgba(10,10,26,0.80) 100%);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border-bottom: 1px solid var(--glass-border-bottom);
     padding: 0.75rem 1rem;
     align-items: center;
     justify-content: space-between;
@@ -122,7 +124,10 @@
     right: -280px;
     width: 280px;
     height: 100%;
-    background: var(--bg-secondary);
+    background: linear-gradient(180deg, rgba(13,13,18,0.95) 0%, rgba(10,10,15,0.98) 100%);
+    backdrop-filter: blur(30px) saturate(160%);
+    -webkit-backdrop-filter: blur(30px) saturate(160%);
+    border-left: 1px solid var(--glass-border-bottom);
     z-index: 301;
     transition: right 0.3s ease;
     display: flex;
@@ -137,7 +142,7 @@
 
 .mobile-drawer-header {
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--glass-border-bottom);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -176,8 +181,8 @@
 
 .mobile-drawer-links a:hover,
 .mobile-drawer-links a.active {
-    background: rgba(79, 70, 229, 0.1);
-    color: var(--accent-blue);
+    background: rgba(0,255,136,0.08);
+    color: var(--accent);
 }
 
 .mobile-drawer-links a svg {
@@ -188,7 +193,7 @@
 
 .mobile-drawer-footer {
     padding: 1rem 1.5rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--glass-border-bottom);
     margin-top: auto;
 }
 

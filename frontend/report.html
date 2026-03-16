@@ -12,192 +12,10 @@
     <meta name="theme-color" content="#4F46E5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <style>
-        .report-header {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-        .grade-circle {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: 2.5rem;
-            flex-shrink: 0;
-        }
-        .grade-circle .score {
-            font-size: 0.9rem;
-            font-weight: 600;
-            opacity: 0.85;
-        }
-        .grade-A { background: rgba(79,70,229,0.12); color: #818cf8; border: 2px solid rgba(79,70,229,0.5); }
-        .grade-B { background: rgba(79,70,229,0.10); color: #a5b4fc; border: 2px solid rgba(79,70,229,0.35); }
-        .grade-C { background: rgba(79,70,229,0.06); color: #c7d2fe; border: 2px solid rgba(79,70,229,0.2); }
-        .grade-D { background: rgba(239,68,68,0.08); color: #fca5a5; border: 2px solid rgba(239,68,68,0.25); }
-        .grade-F { background: rgba(239,68,68,0.08); color: #fca5a5; border: 2px solid rgba(239,68,68,0.25); }
-        .report-meta { flex: 1; }
-        .report-meta h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-        .report-meta .meta-row {
-            display: flex;
-            gap: 1.5rem;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            flex-wrap: wrap;
-        }
-        /* Call context banner */
-        .call-context {
-            background: rgba(79,70,229,0.08);
-            border: 1px solid rgba(79,70,229,0.2);
-            border-radius: var(--radius-md);
-            padding: 1rem 1.25rem;
-            margin-bottom: 1.5rem;
-            font-size: 0.85rem;
-            line-height: 1.6;
-            color: var(--text-secondary);
-        }
-        .call-context .context-title {
-            font-weight: 700;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--accent-blue);
-            margin-bottom: 0.5rem;
-        }
-        .phases-reached {
-            display: flex;
-            gap: 0.35rem;
-            flex-wrap: wrap;
-            margin-top: 0.75rem;
-        }
-        .phase-chip {
-            padding: 0.2rem 0.6rem;
-            border-radius: var(--radius-full);
-            font-size: 0.72rem;
-            font-weight: 600;
-        }
-        .phase-chip.reached {
-            background: rgba(79,70,229,0.15);
-            color: #a5b4fc;
-        }
-        .phase-chip.not-reached {
-            background: var(--bg-input);
-            color: var(--text-muted);
-        }
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        .cat-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.25rem;
-        }
-        .cat-card.not-reached {
-            opacity: 0.55;
-            border-style: dashed;
-        }
-        .cat-card h4 {
-            font-size: 0.95rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .cat-card .cat-score {
-            font-weight: 800;
-            font-size: 1.1rem;
-        }
-        .cat-card .bar-track {
-            height: 8px;
-            background: var(--bg-input);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 0.75rem;
-        }
-        .cat-card .bar-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.6s ease;
-        }
-        .cat-card .feedback { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; }
-        .nr-badge {
-            display: inline-block;
-            padding: 0.15rem 0.5rem;
-            background: var(--bg-input);
-            color: var(--text-muted);
-            border-radius: var(--radius-sm);
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .deal-killers-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .deal-killers-section h3 { margin-bottom: 1rem; }
-        .dk-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-        .dk-item {
-            padding: 1rem;
-            border-radius: var(--radius-sm);
-            background: var(--bg-primary);
-        }
-        .dk-item h5 { font-size: 0.9rem; margin-bottom: 0.25rem; }
-        .dk-item p { font-size: 0.8rem; color: var(--text-muted); }
-        .dk-item.na { opacity: 0.5; border: 1px dashed var(--border-color); }
-        .style-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .style-section h3 { margin-bottom: 0.5rem; }
-        .style-badge {
-            display: inline-block;
-            padding: 0.35rem 1rem;
-            border-radius: var(--radius-full);
-            font-weight: 700;
-            font-size: 0.9rem;
-            background: rgba(79,70,229,0.15);
-            color: var(--accent-blue);
-            margin-bottom: 1rem;
-        }
-        .pros-cons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-        .pros-cons h5 { font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-muted); }
-        .pros-cons ul { list-style: none; padding: 0; }
-        .pros-cons li {
-            font-size: 0.85rem;
-            padding: 0.35rem 0;
-            color: var(--text-secondary);
-        }
-        .pros li::before { content: '+ '; color: #818cf8; font-weight: 700; }
-        .cons li::before { content: '- '; color: var(--text-muted); font-weight: 700; }
-    </style>
 </head>
 <body>
     <aside class="sidebar">
-        <div class="sidebar-logo"><a href="/dashboard" class="nav-logo" style="font-size:1.1rem;"><span class="logo-accent">InsuranceGrokBot</span> Training</a></div>
+        <div class="sidebar-logo"><a href="/dashboard" class="nav-logo"><span class="logo-accent">InsuranceGrokBot</span> Training</a></div>
         <nav class="sidebar-nav">
             <a href="/dashboard" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
             <a href="/training" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>Start Training</a>
@@ -209,20 +27,24 @@
             <a href="/billing" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
             <a href="/settings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
         </nav>
+        <div class="sidebar-footer">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme"></button>
+        </div>
     </aside>
 
     <main class="main-content">
-        <a href="/report-cards" style="color:var(--text-muted);font-size:0.85rem;text-decoration:none;display:inline-block;margin-bottom:1rem;">&larr; Back to Report Cards</a>
+        <a href="/report-cards" class="text-muted text-sm mb-2" style="display:inline-block;">&larr; Back to Report Cards</a>
 
         <div id="reportContent">
-            <div style="text-align:center;padding:3rem;color:var(--text-muted);">
+            <div class="empty-state">
                 <div class="spinner"></div>
-                <p style="margin-top:1rem;">Loading report card...</p>
+                <p class="mt-2">Loading report card...</p>
             </div>
         </div>
     </main>
 
     <script src="/js/api.js"></script>
+    <script src="/js/theme.js"></script>
     <script src="/js/mobile-nav.js"></script>
     <script>
         initMobileNav('report-cards');

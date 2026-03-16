@@ -12,103 +12,11 @@
     <meta name="theme-color" content="#4F46E5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <style>
-        .period-tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 2rem;
-        }
-        .period-tab {
-            padding: 0.5rem 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            background: transparent;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            font-family: var(--font-sans);
-            transition: all var(--transition);
-        }
-        .period-tab.active {
-            background: var(--accent-blue);
-            color: white;
-            border-color: var(--accent-blue);
-        }
-        .chart-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .chart-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-        .chart-canvas {
-            width: 100%;
-            height: 200px;
-            position: relative;
-        }
-        .bar-chart {
-            display: flex;
-            align-items: flex-end;
-            gap: 4px;
-            height: 100%;
-            padding-top: 1rem;
-        }
-        .bar-col {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        .bar {
-            width: 100%;
-            max-width: 32px;
-            border-radius: 4px 4px 0 0;
-            transition: height 0.5s ease;
-            min-height: 2px;
-        }
-        .bar-label {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            white-space: nowrap;
-        }
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-        .kpi-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 1.25rem;
-        }
-        .kpi-name {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-        }
-        .kpi-score {
-            font-size: 1.5rem;
-            font-weight: 800;
-        }
-        .kpi-bar {
-            margin-top: 0.5rem;
-        }
-    </style>
 </head>
 <body>
     <!-- Sidebar (same as dashboard) -->
     <aside class="sidebar">
-        <div class="sidebar-logo"><a href="/dashboard" class="nav-logo" style="font-size:1.1rem;"><span class="logo-accent">InsuranceGrokBot</span> Training</a></div>
+        <div class="sidebar-logo"><a href="/dashboard" class="nav-logo"><span class="logo-accent">InsuranceGrokBot</span> Training</a></div>
         <nav class="sidebar-nav">
             <a href="/dashboard" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
             <a href="/training" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>Start Training</a>
@@ -120,11 +28,16 @@
             <a href="/billing" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Billing</a>
             <a href="/settings" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
         </nav>
+        <div class="sidebar-footer">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme"></button>
+            <div class="sidebar-username" id="userName"></div>
+            <a href="#" onclick="API.logout(); return false;" class="sidebar-signout">Sign out</a>
+        </div>
     </aside>
 
     <main class="main-content">
-        <h1 style="margin-bottom:0.5rem;">Performance Analytics</h1>
-        <p style="margin-bottom:1.5rem;">Track your improvement over time across every KPI.</p>
+        <h1 class="mb-1">Performance Analytics</h1>
+        <p class="mb-3">Track your improvement over time across every KPI.</p>
 
         <div class="period-tabs">
             <button class="period-tab" data-days="7">7 Days</button>
@@ -150,7 +63,7 @@
         </div>
 
         <!-- KPI Breakdown -->
-        <h3 style="margin-bottom:1rem;">KPI Breakdown</h3>
+        <h3 class="mb-2">KPI Breakdown</h3>
         <div class="kpi-grid" id="kpiGrid"></div>
 
         <!-- Objection Stats -->
@@ -165,6 +78,7 @@
     </main>
 
     <script src="/js/api.js"></script>
+    <script src="/js/theme.js"></script>
     <script src="/js/mobile-nav.js"></script>
     <script>
         initMobileNav('analytics');

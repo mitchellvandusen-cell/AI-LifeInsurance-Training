@@ -13,9 +13,12 @@ function initMobileNav(activePage) {
     header.className = 'mobile-header';
     header.innerHTML = `
         <a href="/dashboard" class="mobile-logo"><span class="logo-accent">InsuranceGrokBot</span> Training</a>
-        <button class="mobile-menu-btn" onclick="toggleMobileDrawer()" aria-label="Menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme"></button>
+            <button class="mobile-menu-btn" onclick="toggleMobileDrawer()" aria-label="Menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+        </div>
     `;
     document.body.prepend(header);
 
@@ -80,8 +83,11 @@ function initMobileNav(activePage) {
             `).join('')}
         </div>
         <div class="mobile-drawer-footer">
-            <div style="font-size:0.85rem; color:var(--text-secondary);" id="mobileUserName"></div>
-            <a href="#" onclick="API.logout(); return false;" style="font-size:0.8rem; color:var(--text-muted);">Sign out</a>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <div class="sidebar-username" id="mobileUserName"></div>
+                <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme"></button>
+            </div>
+            <a href="#" onclick="API.logout(); return false;" class="sidebar-signout">Sign out</a>
         </div>
     `;
 
