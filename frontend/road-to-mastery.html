@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/mobile.css">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4F46E5">
+    <meta name="theme-color" content="#00ff88">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
@@ -135,7 +135,7 @@
         }
         .day-card.current {
             border-color: var(--accent-blue);
-            box-shadow: 0 0 20px rgba(79, 70, 229, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.1);
         }
         .day-card.locked {
             opacity: 0.5;
@@ -164,7 +164,7 @@
             color: var(--accent-green);
         }
         .day-status.in-progress {
-            background: rgba(79, 70, 229, 0.15);
+            background: rgba(0, 255, 136, 0.15);
             color: var(--accent-blue);
         }
         .day-status.locked-status {
@@ -203,7 +203,7 @@
         }
         .activity-item:hover {
             border-color: var(--accent-blue);
-            background: rgba(79, 70, 229, 0.05);
+            background: rgba(0, 255, 136, 0.05);
         }
         .activity-item.done {
             border-color: rgba(16, 185, 129, 0.3);
@@ -544,7 +544,7 @@
                 const phaseBadge = phaseDone
                     ? `<span class="phase-badge" style="background:rgba(16,185,129,0.15);color:var(--accent-green);">Complete</span>`
                     : phaseStarted
-                    ? `<span class="phase-badge" style="background:rgba(79,70,229,0.15);color:var(--accent-blue);">In Progress</span>`
+                    ? `<span class="phase-badge" style="background:rgba(0,255,136,0.15);color:var(--accent-blue);">In Progress</span>`
                     : `<span class="phase-badge" style="background:rgba(160,160,192,0.1);color:var(--text-muted);">Days ${phase.days[0]}-${phase.days[1]}</span>`;
 
                 const isCurrentPhase = currentDay >= phase.days[0] && currentDay <= phase.days[1];

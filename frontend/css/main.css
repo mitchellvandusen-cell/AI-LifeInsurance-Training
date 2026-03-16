@@ -23,14 +23,14 @@
     /* Status Colors */
     --accent-green: #00ff88;
     --accent-cyan: #06B6D4;
-    --accent-blue: #4F46E5;
+    --accent-blue: #00ff88;
     --accent-red: #EF4444;
     --accent-amber: #F59E0B;
     --accent-purple: #8B5CF6;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
-    --gradient-accent: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+    --gradient-primary: linear-gradient(135deg, #00ff88 0%, #06B6D4 100%);
+    --gradient-accent: linear-gradient(135deg, #00ff88 0%, #8B5CF6 100%);
     --gradient-success: linear-gradient(135deg, #00ff88 0%, #06B6D4 100%);
     --gradient-warm: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
 
@@ -177,7 +177,7 @@ body.light-theme .loading-overlay { background: rgba(240,244,255,0.9); }
 
 body.light-theme .badge-green { background: rgba(5,150,105,0.1); color: var(--accent-green); }
 body.light-theme .badge-red { background: rgba(239,68,68,0.1); }
-body.light-theme .badge-blue { background: rgba(79,70,229,0.1); }
+body.light-theme .badge-blue { background: rgba(0,255,136,0.1); }
 body.light-theme .badge-amber { background: rgba(245,158,11,0.1); }
 
 body.light-theme .auth-card {
@@ -201,8 +201,8 @@ body.light-theme .kpi-item {
 }
 
 body.light-theme .hero-badge {
-    background: rgba(79,70,229,0.06);
-    border-color: rgba(79,70,229,0.15);
+    background: rgba(0,255,136,0.06);
+    border-color: rgba(0,255,136,0.15);
 }
 
 body.light-theme .landing-mobile-nav {
@@ -234,7 +234,7 @@ body.light-theme .wallet-balance {
 
 body.light-theme .toast-success { background: rgba(5,150,105,0.95); }
 body.light-theme .toast-error { background: rgba(239,68,68,0.95); }
-body.light-theme .toast-info { background: rgba(79,70,229,0.95); }
+body.light-theme .toast-info { background: rgba(0,255,136,0.95); }
 
 body.light-theme .sidebar-footer { border-top-color: rgba(0,0,0,0.06); }
 
@@ -698,7 +698,7 @@ body.light-theme .theme-toggle-btn:hover {
 .badge-green { background: rgba(0,255,136,0.12); color: var(--accent-green); }
 .badge-red { background: rgba(239,68,68,0.15); color: var(--accent-red); }
 .badge-amber { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
-.badge-blue { background: rgba(79,70,229,0.15); color: var(--accent-blue); }
+.badge-blue { background: rgba(0,255,136,0.15); color: var(--accent-blue); }
 .badge-purple { background: rgba(139,92,246,0.15); color: var(--accent-purple); }
 
 /* ── Grade Badges ─────────────────────────────────────────── */
@@ -814,7 +814,7 @@ body.light-theme th, body.light-theme td { border-bottom-color: rgba(0,0,0,0.06)
 }
 .toast-success { background: rgba(0,255,136,0.85); color: #000; }
 .toast-error { background: rgba(239,68,68,0.9); color: white; }
-.toast-info { background: rgba(79,70,229,0.9); color: white; }
+.toast-info { background: rgba(0,255,136,0.9); color: white; }
 
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }
@@ -967,7 +967,7 @@ body.light-theme th, body.light-theme td { border-bottom-color: rgba(0,0,0,0.06)
     font-size: 1.5rem;
     flex-shrink: 0;
 }
-.action-icon-blue { background: rgba(79,70,229,0.15); }
+.action-icon-blue { background: rgba(0,255,136,0.15); }
 .action-icon-green { background: rgba(0,255,136,0.12); }
 .action-icon-cyan { background: rgba(6,182,212,0.15); }
 .action-icon-purple { background: rgba(139,92,246,0.15); }
@@ -976,7 +976,7 @@ body.light-theme .action-card {
     background: rgba(255,255,255,0.55);
     border-color: rgba(255,255,255,0.80);
 }
-body.light-theme .action-icon-blue { background: rgba(79,70,229,0.08); }
+body.light-theme .action-icon-blue { background: rgba(0,255,136,0.08); }
 body.light-theme .action-icon-green { background: rgba(5,150,105,0.08); }
 body.light-theme .action-icon-cyan { background: rgba(6,182,212,0.08); }
 
@@ -1312,7 +1312,7 @@ body.light-theme .setting-row { border-bottom-color: rgba(0,0,0,0.05); }
     display: flex; align-items: center; justify-content: center;
     font-size: 1.5rem; margin-bottom: 1.25rem;
 }
-.feature-icon.blue { background: rgba(79,70,229,0.15); }
+.feature-icon.blue { background: rgba(0,255,136,0.15); }
 .feature-icon.cyan { background: rgba(6,182,212,0.15); }
 .feature-icon.green { background: rgba(0,255,136,0.12); }
 .feature-icon.purple { background: rgba(139,92,246,0.15); }
