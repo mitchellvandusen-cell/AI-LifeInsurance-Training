@@ -298,7 +298,7 @@
     <!-- Sidebar (same as all pages) -->
     <aside class="sidebar">
         <div class="sidebar-logo">
-            <a href="/dashboard" class="nav-logo" style="font-size:1.1rem;">
+            <a href="/dashboard" class="nav-logo">
                 <span class="logo-accent">InsuranceGrokBot</span> Training
             </a>
         </div>
@@ -344,9 +344,8 @@
                 Settings
             </a>
         </nav>
-        <div style="padding: 0.75rem 1.5rem; border-top: 1px solid var(--border-color); margin-top: auto;">
-            <div style="font-size:0.85rem; color:var(--text-secondary);" id="userName"></div>
-            <a href="#" onclick="API.logout(); return false;" style="font-size:0.8rem; color:var(--text-muted);">Sign out</a>
+        <div class="sidebar-footer">
+            <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme"></button>
         </div>
     </aside>
 
@@ -359,6 +358,7 @@
     </main>
 
     <script src="/js/api.js"></script>
+    <script src="/js/theme.js"></script>
     <script src="/js/mobile-nav.js"></script>
     <script>
         initMobileNav('road-to-mastery');
