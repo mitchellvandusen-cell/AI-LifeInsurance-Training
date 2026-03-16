@@ -8,6 +8,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+import os
+
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 
@@ -16,7 +18,7 @@ from src.core import database as db
 
 router = APIRouter(prefix="/api/recordings", tags=["recordings"])
 
-GROKBOT_API_URL = "https://insurancegrokbot.click/api/v1/training"
+GROKBOT_API_URL = os.environ.get("GROKBOT_API_URL", "https://insurancegrokbot.com/api/v1/training")
 
 
 @router.get("/")
@@ -84,7 +86,7 @@ async def sync_dialer_recordings(request: Request):
                     )
 
                 data = resp.json()
-                recordings = data if isinstance(data, list) else data.get("recordings", [])
+                recordings = data if isinstance(data, list) else (data.get("recordings") or data.get("data") or [])
 
                 if not recordings:
                     break
@@ -92,7 +94,7 @@ async def sync_dialer_recordings(request: Request):
                 for rec in recordings:
                     recording_data = {
                         "call_sid": rec.get("call_sid"),
-                        "recording_url": rec.get("recording_url"),
+                        "recording_url": rec.get("audio_url") or rec.get("recording_url"),
                         "duration": rec.get("duration"),
                         "call_date": rec.get("call_date") or rec.get("created_at"),
                         "caller_number": rec.get("phone"),
@@ -105,8 +107,9 @@ async def sync_dialer_recordings(request: Request):
                     if rec_id:
                         imported.append(rec_id)
 
-                # If we got fewer than the limit, we've reached the end
-                if len(recordings) < limit:
+                # Use API's has_more flag when available, fall back to count check
+                has_more = data.get("has_more", len(recordings) >= limit) if isinstance(data, dict) else len(recordings) >= limit
+                if not has_more:
                     break
                 offset += limit
 
